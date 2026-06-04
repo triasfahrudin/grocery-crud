@@ -104,6 +104,7 @@ class GroceryCrud
     {
         $this->config = $config ?? new GCConfig();
         $this->db = $db ?? Database::connect();
+        $this->callbackManager = new CallbackManager();
         $this->uploadManager = new UploadManager($this->config);
         $this->renderer = new TableRenderer($this->config);
         $this->perPage = $this->config->perPage;
@@ -806,16 +807,7 @@ class GroceryCrud
             $this->where
         );
 
-        // Apply column callbacks
-        $columnCallbacks = $this->callbackManager->getColumnCallbacks();
-        foreach ($records as &$row) {
-            foreach ($columns as $col) {
-                if (isset($columnCallbacks[$col])) {
-                    $row[$col] = $columnCallbacks[$col]($row[$col] ?? '', $row);
-                }
-            }
-        }
-
+        // Note: column callbacks NOT applied to export (raw data only)
         if ($format === 'csv') {
             $exporter = new CsvExport();
             $content = $exporter->export($records, $this->columnLabels, $columns);
@@ -914,7 +906,8 @@ class GroceryCrud
         $record = null;
 
         if ($mode === 'edit' && $id !== null) {
-            $record = $this->model->getRow($id);
+            // Use raw row to preserve FK values (e.g., category_id=1, not "Electronics")
+            $record = $this->model->getRawRow($id);
             if ($record === null) {
                 return null;
             }

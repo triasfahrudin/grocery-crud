@@ -267,16 +267,28 @@ class CrudModel
     }
 
     /**
-     * Get a single record by primary key.
+     * Get a single record by primary key (raw, without relation replacements).
      *
      * @return array<string, mixed>|null
      */
-    public function getRow(mixed $id): ?array
+    public function getRawRow(mixed $id): ?array
     {
         $row = $this->db->table($this->table)
             ->where($this->primaryKey, $id)
             ->get()
             ->getRowArray();
+
+        return $row ?: null;
+    }
+
+    /**
+     * Get a single record by primary key with relation display values.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getRow(mixed $id): ?array
+    {
+        $row = $this->getRawRow($id);
 
         if ($row === null) {
             return null;
@@ -366,9 +378,12 @@ class CrudModel
             return null;
         }
 
+        // Detect the primary key of the related table
+        $relatedPk = $this->getPrimaryKeyOfTable($relConfig['relatedTable']);
+
         $row = $this->db->table($relConfig['relatedTable'])
             ->select($relConfig['relatedTitleField'])
-            ->where($relConfig['foreignKey'] ?? $relConfig['relatedTable'] . '_id', $foreignKey)
+            ->where($relatedPk, $foreignKey)
             ->get()
             ->getRowArray();
 
@@ -392,6 +407,20 @@ class CrudModel
             ->getRowArray();
 
         return $row[$field] ?? null;
+    }
+
+    /**
+     * Get primary key of any table.
+     */
+    private function getPrimaryKeyOfTable(string $table): string
+    {
+        $fields = $this->db->getFieldData($table);
+        foreach ($fields as $field) {
+            if (!empty($field->primary_key)) {
+                return $field->name;
+            }
+        }
+        return 'id';
     }
 
     /**
