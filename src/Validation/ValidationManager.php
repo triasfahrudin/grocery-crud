@@ -83,9 +83,23 @@ class ValidationManager
 
     /**
      * Mark a field as unique (ignoring a specific record for updates).
+     *
+     * Replaces any existing is_unique rule for the same field to avoid
+     * duplicate is_unique checks (the bare one would reject the current
+     * record's own value).
      */
     public function uniqueExcept(string $field, mixed $primaryKeyValue, ?string $label = null): void
     {
+        // Remove existing is_unique rules for this field
+        if (isset($this->fieldRules[$field])) {
+            $this->fieldRules[$field] = array_values(
+                array_filter(
+                    $this->fieldRules[$field],
+                    fn(array $r): bool => !str_starts_with($r['rule'], 'is_unique[')
+                )
+            );
+        }
+
         $this->setRule(
             $field,
             "is_unique[{$this->table}.{$field},{$this->primaryKey},{$primaryKeyValue}]",
