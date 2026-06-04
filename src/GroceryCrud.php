@@ -1098,6 +1098,9 @@ class GroceryCrud
     /**
      * Handle NtoN relation data on insert.
      */
+    /**
+     * Handle NtoN relation data on insert.
+     */
     private function handleNtoNInsert(mixed $insertId, array $postData): void
     {
         foreach ($this->relationManager->getRelationNtoN() as $field => $rel) {
@@ -1107,6 +1110,9 @@ class GroceryCrud
 
             $insertBatch = [];
             foreach ($postData[$field] as $targetId) {
+                if ($this->isEmptyRelationValue($targetId)) {
+                    continue;
+                }
                 $insertBatch[] = [
                     $rel['primaryKeyInJunction'] => $insertId,
                     $rel['foreignKeyInJunction'] => $targetId,
@@ -1134,6 +1140,9 @@ class GroceryCrud
             if (isset($postData[$field]) && is_array($postData[$field])) {
                 $insertBatch = [];
                 foreach ($postData[$field] as $targetId) {
+                    if ($this->isEmptyRelationValue($targetId)) {
+                        continue;
+                    }
                     $insertBatch[] = [
                         $rel['primaryKeyInJunction'] => $id,
                         $rel['foreignKeyInJunction'] => $targetId,
@@ -1144,6 +1153,17 @@ class GroceryCrud
                 }
             }
         }
+    }
+
+    /**
+     * Check if a relation value should be treated as empty/invalid.
+     *
+     * @param  mixed $value
+     * @return bool
+     */
+    private function isEmptyRelationValue(mixed $value): bool
+    {
+        return $value === '' || $value === null || $value === '0' || $value === 0;
     }
 
     /**

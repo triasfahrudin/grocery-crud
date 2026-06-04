@@ -112,7 +112,13 @@
 
         // Handle checkboxes not in FormData automatically
         $form.find('input[type="checkbox"]:not(:checked)').each(function () {
-            var name = $(this).attr('name');
+            var $cb = $(this);
+            var name = $cb.attr('name');
+            // Skip array fields (e.g., tags[]) — they're only meaningful when checked.
+            // Setting '0' on an array field makes PHP see ['0'], which causes FK errors.
+            if (name.indexOf('[]') !== -1) {
+                return;
+            }
             // FormData doesn't include unchecked checkboxes
             // We need to ensure the field is present
             if (!formData.has(name)) {
