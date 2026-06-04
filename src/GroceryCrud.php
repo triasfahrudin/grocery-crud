@@ -622,6 +622,9 @@ class GroceryCrud
                 ]);
             }
 
+            // Remove N-to-N fields (virtual, not actual columns) before insert
+            $data = $this->stripNtoNFields($data);
+
             // Insert
             $insertId = $this->model->insert($data);
 
@@ -717,6 +720,9 @@ class GroceryCrud
                     $data[$field] = $request->getPost($field . '_existing');
                 }
             }
+
+            // Remove N-to-N fields (virtual, not actual columns) before update
+            $data = $this->stripNtoNFields($data);
 
             // Update
             $updated = $this->model->update($id, $data);
@@ -1150,6 +1156,24 @@ class GroceryCrud
                 ->where($rel['primaryKeyInJunction'], $id)
                 ->delete();
         }
+    }
+
+    /**
+     * Strip N-to-N relation fields from data array.
+     *
+     * N-to-N fields (e.g., tags) are virtual — they don't exist as columns
+     * in the main table. They must be removed before insert/update to
+     * avoid "unknown column" SQL errors.
+     *
+     * @param  array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private function stripNtoNFields(array $data): array
+    {
+        foreach ($this->relationManager->getRelationNtoN() as $field => $rel) {
+            unset($data[$field]);
+        }
+        return $data;
     }
 
     /**
