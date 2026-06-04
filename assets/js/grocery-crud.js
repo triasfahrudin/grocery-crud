@@ -105,6 +105,10 @@
     // ======== File Upload FormData ========
     function buildFormData($form) {
         var formData = new FormData($form[0]);
+        var mode = $form.data('mode');
+
+        // Add the CRUD action (missing from FormData)
+        formData.append('gc_action', mode);
 
         // Handle checkboxes not in FormData automatically
         $form.find('input[type="checkbox"]:not(:checked)').each(function () {
