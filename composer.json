@@ -1,0 +1,56 @@
+{
+    "name": "triasfahrudin/grocery-crud",
+    "description": "Grocery CRUD Library for CodeIgniter 4 - Full-featured CRUD generator with relations, callbacks, uploads, and export.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "codeigniter",
+        "codeigniter4",
+        "ci4",
+        "crud",
+        "grocery-crud",
+        "scaffold",
+        "admin"
+    ],
+    "authors": [
+        {
+            "name": "Trias Fahrudin",
+            "homepage": "https://github.com/triasfahrudin",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.1",
+        "codeigniter4/codeigniter4": "^4.5",
+        "ext-mbstring": "*",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0"
+    },
+    "suggest": {
+        "ext-gd": "Required for image thumbnail generation in upload features",
+        "ext-zip": "Required for Excel export support",
+        "phpoffice/phpspreadsheet": "Advanced Excel export with formatting"
+    },
+    "autoload": {
+        "psr-4": {
+            "GroceryCrud\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "GroceryCrud\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "analyse": "phpstan analyse src/"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    }
+}

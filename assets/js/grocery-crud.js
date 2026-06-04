@@ -1,0 +1,403 @@
+/**
+ * Grocery CRUD - JavaScript functionality
+ * Handles AJAX CRUD operations, form submissions, and UI interactions
+ */
+(function ($) {
+    'use strict';
+
+    // ======== Alert Handler ========
+    function showAlert(message, type) {
+        type = type || 'success';
+        var icon = type === 'success' ? 'bi-check-circle-fill'
+                 : type === 'danger' ? 'bi-exclamation-triangle-fill'
+                 : type === 'warning' ? 'bi-exclamation-circle-fill'
+                 : 'bi-info-circle-fill';
+
+        var alertHtml = '<div class="gc-alert alert alert-' + type + ' alert-dismissible fade show shadow" role="alert">'
+            + '<i class="bi ' + icon + ' me-2"></i>' + message
+            + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>'
+            + '</div>';
+
+        var $alert = $(alertHtml);
+        $('body').append($alert);
+
+        setTimeout(function () {
+            $alert.alert('close');
+        }, 4000);
+    }
+
+    // ======== Loading Overlay ========
+    function showLoading() {
+        if ($('.gc-loading').length === 0) {
+            $('body').append('<div class="gc-loading"></div>');
+        }
+    }
+
+    function hideLoading() {
+        $('.gc-loading').remove();
+    }
+
+    // ======== Modal Manager ========
+    var GcModal = {
+        show: function (html) {
+            this.remove();
+            var modalHtml = '<div class="modal fade gc-modal" tabindex="-1" role="dialog">'
+                + '<div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">'
+                + '<div class="modal-content">'
+                + '<div class="modal-body p-0">'
+                + html
+                + '</div>'
+                + '</div>'
+                + '</div>'
+                + '</div>';
+
+            var $modal = $(modalHtml);
+            $('body').append($modal);
+            $modal.modal('show');
+
+            return $modal;
+        },
+        hide: function () {
+            $('.gc-modal').modal('hide');
+        },
+        remove: function () {
+            $('.gc-modal').remove();
+            $('.modal-backdrop').remove();
+            $('body').removeClass('modal-open');
+        }
+    };
+
+    // ======== Form Serializer (handles checkboxes) ========
+    function serializeForm($form) {
+        var data = {};
+        var formArray = $form.serializeArray();
+
+        // Handle checkboxes
+        $form.find('input[type="checkbox"]').each(function () {
+            var $cb = $(this);
+            if ($cb.prop('checked')) {
+                if (data[$cb.attr('name')] === undefined) {
+                    data[$cb.attr('name')] = [];
+                }
+                data[$cb.attr('name')].push($cb.val());
+            }
+        });
+
+        // Overwrite with serializeArray values (for non-checkbox inputs)
+        $.each(formArray, function (i, field) {
+            if (field.name.indexOf('[]') === -1) {
+                data[field.name] = field.value;
+            } else {
+                var name = field.name.replace('[]', '');
+                if (data[name] === undefined) {
+                    data[name] = [];
+                }
+                // Only add if not already added by checkbox handler
+                if ($.inArray(field.value, data[name]) === -1) {
+                    data[name].push(field.value);
+                }
+            }
+        });
+
+        return data;
+    }
+
+    // ======== File Upload FormData ========
+    function buildFormData($form) {
+        var formData = new FormData($form[0]);
+
+        // Handle checkboxes not in FormData automatically
+        $form.find('input[type="checkbox"]:not(:checked)').each(function () {
+            var name = $(this).attr('name');
+            // FormData doesn't include unchecked checkboxes
+            // We need to ensure the field is present
+            if (!formData.has(name)) {
+                formData.set(name, '0');
+            }
+        });
+
+        return formData;
+    }
+
+    // ======== CRUD Operations ========
+    function refreshList($wrapper) {
+        var crudId = $wrapper.attr('id');
+        var page = $wrapper.data('currentPage') || 1;
+        var search = $wrapper.find('.gc-search-input').val() || '';
+
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'GET',
+            data: {
+                gc_action: 'list',
+                page: page,
+                search: search
+            },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    $wrapper.replaceWith(response.html);
+                    // Re-bind events
+                    bindEvents();
+                } else {
+                    showAlert(response.message || 'Failed to load data.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred while loading data.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
+    function loadAddForm($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'GET',
+            data: { gc_action: 'add_form' },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    var $modal = GcModal.show(response.html);
+                    bindFormEvents($modal);
+                } else {
+                    showAlert(response.message || 'Failed to load form.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
+    function loadEditForm($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        var id = $btn.data('id');
+
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'GET',
+            data: { gc_action: 'edit_form', id: id },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    var $modal = GcModal.show(response.html);
+                    bindFormEvents($modal);
+                } else {
+                    showAlert(response.message || 'Failed to load form.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
+    function submitForm($form) {
+        var $modal = $form.closest('.modal');
+        var $submitBtn = $form.find('button[type="submit"]');
+        var mode = $form.data('mode');
+        var hasFile = $form.find('input[type="file"]').length > 0;
+
+        // Disable button
+        $submitBtn.prop('disabled', true).addClass('btn-gc-loading');
+
+        var ajaxConfig = {
+            url: window.location.href,
+            method: 'POST',
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    GcModal.hide();
+                    showAlert(response.message, 'success');
+                    // Refresh the list
+                    refreshList($('.grocery-crud-wrapper'));
+                } else {
+                    // Show validation errors
+                    if (response.errors) {
+                        // Clear previous errors
+                        $form.find('.has-error').removeClass('has-error');
+                        $form.find('.invalid-feedback').remove();
+
+                        $.each(response.errors, function (field, message) {
+                            var $field = $form.find('[name="' + field + '"], [name="' + field + '[]"]').first();
+                            var $group = $field.closest('.mb-3');
+                            $group.addClass('has-error');
+                            $group.append('<div class="invalid-feedback d-block">' + message + '</div>');
+                        });
+                    }
+                    showAlert(response.message || 'Operation failed.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred.', 'danger');
+            },
+            complete: function () {
+                $submitBtn.prop('disabled', false).removeClass('btn-gc-loading');
+            }
+        };
+
+        if (hasFile) {
+            ajaxConfig.data = buildFormData($form);
+            ajaxConfig.processData = false;
+            ajaxConfig.contentType = false;
+        } else {
+            ajaxConfig.data = $form.serialize() + '&gc_action=' + mode;
+        }
+
+        $.ajax(ajaxConfig);
+    }
+
+    function deleteRecord($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        var id = $btn.data('id');
+        var message = $wrapper.data('confirm-delete') || 'Are you sure you want to delete this record?';
+
+        if (!confirm(message)) {
+            return;
+        }
+
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: { gc_action: 'delete', id: id },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    showAlert(response.message, 'success');
+                    refreshList($wrapper);
+                } else {
+                    showAlert(response.message || 'Failed to delete record.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
+    function handleExport($btn, format) {
+        showLoading();
+        window.location.href = window.location.pathname
+            + '?gc_action=export&format=' + format;
+        setTimeout(function () {
+            hideLoading();
+        }, 2000);
+    }
+
+    // ======== Event Binding ========
+    function bindEvents() {
+        // Add button
+        $(document).off('click', '.btn-gc-add').on('click', '.btn-gc-add', function (e) {
+            e.preventDefault();
+            loadAddForm($(this));
+        });
+
+        // Edit button
+        $(document).off('click', '.btn-gc-edit').on('click', '.btn-gc-edit', function (e) {
+            e.preventDefault();
+            loadEditForm($(this));
+        });
+
+        // Delete button
+        $(document).off('click', '.btn-gc-delete').on('click', '.btn-gc-delete', function (e) {
+            e.preventDefault();
+            deleteRecord($(this));
+        });
+
+        // Pagination links
+        $(document).off('click', '.gc-page-link').on('click', '.gc-page-link', function (e) {
+            e.preventDefault();
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var page = $(this).data('page');
+            $wrapper.data('currentPage', page);
+            refreshList($wrapper);
+        });
+
+        // Search
+        $(document).off('keyup', '.gc-search-input').on('keyup', '.gc-search-input', $.debounce(function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            $wrapper.data('currentPage', 1);
+            refreshList($wrapper);
+        }, 400));
+
+        // Search button click
+        $(document).off('click', '.gc-search-btn').on('click', '.gc-search-btn', function (e) {
+            e.preventDefault();
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            $wrapper.data('currentPage', 1);
+            refreshList($wrapper);
+        });
+
+        // Export
+        $(document).off('click', '[data-export]').on('click', '[data-export]', function (e) {
+            e.preventDefault();
+            handleExport($(this), $(this).data('export'));
+        });
+    }
+
+    function bindFormEvents($modal) {
+        // Form submission
+        $modal.on('submit', '.gc-form', function (e) {
+            e.preventDefault();
+            submitForm($(this));
+        });
+
+        // Close button
+        $modal.on('click', '.gc-form-close', function (e) {
+            e.preventDefault();
+            GcModal.hide();
+        });
+
+        // Close on backdrop click
+        $modal.on('hidden.bs.modal', function () {
+            GcModal.remove();
+        });
+    }
+
+    // ======== Debounce helper ========
+    $.debounce = function (fn, delay) {
+        var timer = null;
+        return function () {
+            var context = this;
+            var args = arguments;
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                fn.apply(context, args);
+            }, delay);
+        };
+    };
+
+    // ======== Init ========
+    $(document).ready(function () {
+        bindEvents();
+
+        // Store confirmation messages
+        $('.grocery-crud-wrapper').each(function () {
+            var $wrapper = $(this);
+            var deleteMsg = $wrapper.find('[data-confirm-delete]').data('confirm-delete');
+            if (deleteMsg) {
+                $wrapper.data('confirm-delete', deleteMsg);
+            }
+        });
+    });
+
+})(jQuery);

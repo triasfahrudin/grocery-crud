@@ -1,0 +1,191 @@
+/* ============================================================
+   Grocery CRUD - Custom Styles
+   ============================================================ */
+
+/* Table styles */
+.grocery-crud-wrapper .table th {
+    font-weight: 600;
+    font-size: 0.875rem;
+    background-color: #f8f9fa;
+}
+
+.grocery-crud-wrapper .table td {
+    font-size: 0.875rem;
+    vertical-align: middle;
+}
+
+.grocery-crud-wrapper .table-hover tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.04);
+}
+
+/* Card header spacing */
+.grocery-crud-wrapper .card-header h5 {
+    letter-spacing: -0.02em;
+}
+
+/* Form styles */
+.grocery-crud-form-wrapper .form-label {
+    font-weight: 500;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.grocery-crud-form-wrapper .has-error .form-control,
+.grocery-crud-form-wrapper .has-error .form-select {
+    border-color: #dc3545;
+}
+
+.grocery-crud-form-wrapper .has-error .form-label {
+    color: #dc3545;
+}
+
+.grocery-crud-form-wrapper .invalid-feedback {
+    font-size: 0.8rem;
+}
+
+/* Action buttons */
+.btn-gc-edit,
+.btn-gc-delete {
+    transition: all 0.15s ease;
+}
+
+.btn-gc-edit:hover {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.btn-gc-delete:hover {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+/* Pagination */
+.grocery-crud-wrapper .pagination .page-link {
+    font-size: 0.825rem;
+    padding: 0.3rem 0.6rem;
+}
+
+/* Search input */
+.gc-search-input:focus {
+    box-shadow: none;
+    border-color: #86b7fe;
+}
+
+/* Loading overlay */
+.gc-loading {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.gc-loading::after {
+    content: '';
+    width: 40px;
+    height: 40px;
+    border: 4px solid #dee2e6;
+    border-top-color: #0d6efd;
+    border-radius: 50%;
+    animation: gc-spin 0.8s linear infinite;
+}
+
+@keyframes gc-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Alert messages */
+.gc-alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    min-width: 300px;
+    animation: gc-slide-in 0.3s ease;
+}
+
+@keyframes gc-slide-in {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Modal styles */
+.gc-modal .modal-header {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+.gc-modal .modal-footer {
+    border-top: 0;
+}
+
+/* Responsive tweaks */
+@media (max-width: 768px) {
+    .grocery-crud-wrapper .card-header {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .grocery-crud-wrapper .card-header > div {
+        width: 100%;
+    }
+
+    .grocery-crud-wrapper .table {
+        font-size: 0.8rem;
+    }
+}
+
+/* Checkbox list for NtoN */
+.grocery-crud-form-wrapper .form-check {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+}
+
+.grocery-crud-form-wrapper .form-check:hover {
+    background-color: #f8f9fa;
+}
+
+/* Image thumbnails in table */
+.gc-table img.gc-thumb {
+    width: 50px;
+    height: 50px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+/* Loading state for buttons */
+.btn-gc-loading {
+    position: relative;
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.btn-gc-loading::after {
+    content: '';
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.5rem;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: gc-spin 0.6s linear infinite;
+    vertical-align: middle;
+}
+
+/* Per-page selector */
+.gc-per-page {
+    width: auto;
+    display: inline-block;
+}
