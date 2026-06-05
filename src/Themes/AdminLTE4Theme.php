@@ -37,6 +37,7 @@ class AdminLTE4Theme implements ThemeInterface
     public function getJsFiles(): array
     {
         return [
+            'https://code.jquery.com/jquery-3.7.1.min.js',
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
             'https://cdn.jsdelivr.net/npm/admin-lte@4.0.0/dist/js/adminlte.min.js',
         ];
