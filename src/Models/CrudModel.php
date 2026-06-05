@@ -160,13 +160,25 @@ class CrudModel
     /**
      * Apply column filters to a builder.
      */
+    private array $filterTypes = [];
+
+    public function setFilterTypes(array $types): void
+    {
+        $this->filterTypes = $types;
+    }
+
     private function applyFilters($builder, array $filters): void
     {
         foreach ($filters as $field => $value) {
             if ($value === '' || $value === null) {
                 continue;
             }
-            $builder->where($field, $value);
+            $type = $this->filterTypes[$field] ?? 'dropdown';
+            if ($type === 'text') {
+                $builder->like($field, $value);
+            } else {
+                $builder->where($field, $value);
+            }
         }
     }
 

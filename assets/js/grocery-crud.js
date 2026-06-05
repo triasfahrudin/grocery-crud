@@ -143,6 +143,14 @@
             ? $searchInput[0].selectionStart
             : -1;
 
+        // Track filter input focus for restore after DOM replacement
+        var $focusedFilter = $wrapper.find('.gc-column-filter:focus');
+        var wasFilterFocused = $focusedFilter.length > 0;
+        var focusedFilterField = wasFilterFocused ? $focusedFilter.data('filter-field') : null;
+        var filterCaretPos = wasFilterFocused && $focusedFilter[0].selectionStart !== undefined
+            ? $focusedFilter[0].selectionStart
+            : -1;
+
         // Collect column filters from DOM
         var filters = {};
         $wrapper.find('.gc-column-filter').each(function () {
@@ -190,8 +198,16 @@
                     } else {
                         $clearBtn.hide();
                     }
-                    // Restore filter values (server re-renders them from currentFilters)
-                    // No need — server already renders correct filter values
+                    // Restore focus to filter input if previously focused
+                    if (wasFilterFocused && focusedFilterField) {
+                        var $newFilter = $parent.find('.grocery-crud-wrapper .gc-column-filter[data-filter-field="' + focusedFilterField + '"]');
+                        if ($newFilter.length) {
+                            $newFilter.focus();
+                            if (filterCaretPos >= 0 && $newFilter[0].setSelectionRange) {
+                                $newFilter[0].setSelectionRange(filterCaretPos, filterCaretPos);
+                            }
+                        }
+                    }
                 } else {
                     showAlert(response.message || 'Failed to load data.', 'danger');
                 }

@@ -101,6 +101,9 @@ class GroceryCrud
     /** @var array<string, array{type: string, options?: array}> */
     private array $columnFilters = [];
 
+    /** @var array<string, array{table: string, labelField: string, keyField: string, where: ?string, order: ?string}> */
+    private array $columnFilterRelations = [];
+
     /** @var array<string, string> */
     private array $batchActions = [];
 
@@ -532,6 +535,28 @@ class GroceryCrud
     }
 
     /**
+     * Set a column filter with options dynamically fetched from a related table.
+     *
+     * @param string      $field       Column name in current table
+     * @param string      $table       Related table name
+     * @param string      $labelField  Field to display as option label
+     * @param string|null $keyField    Key field (default: primary key of related table)
+     * @param string|null $where       Optional WHERE condition (e.g., "status = 'active'")
+     * @param string|null $order       Optional ORDER BY (e.g., "name ASC")
+     */
+    public function setColumnFilterRelation(string $field, string $table, string $labelField, ?string $keyField = null, ?string $where = null, ?string $order = null): self
+    {
+        $this->columnFilterRelations[$field] = [
+            'table'      => $table,
+            'labelField' => $labelField,
+            'keyField'   => $keyField ?? 'id',
+            'where'      => $where,
+            'order'      => $order,
+        ];
+        return $this;
+    }
+
+    /**
      * Set a batch action.
      *
      * Built-in actions: 'delete_selected'
@@ -923,6 +948,13 @@ class GroceryCrud
             array_unshift($orders, ['field' => $sortField, 'direction' => $direction]);
         }
 
+        // Set filter types so model knows LIKE vs exact match
+        $filterTypes = [];
+        foreach ($this->columnFilters as $field => $config) {
+            $filterTypes[$field] = $config['type'] ?? 'dropdown';
+        }
+        $this->model->setFilterTypes($filterTypes);
+
         $records = $this->model->getList(
             $columns,
             $perPage,
@@ -951,6 +983,22 @@ class GroceryCrud
             }
         }
 
+        // Fetch relation options for column filters
+        $mergedFilters = $this->columnFilters;
+        foreach ($this->columnFilterRelations as $field => $rel) {
+            $options = $this->fetchRelationOptions(
+                $rel['table'],
+                $rel['labelField'],
+                $rel['keyField'],
+                $rel['where'],
+                $rel['order']
+            );
+            $mergedFilters[$field] = [
+                'type'    => 'dropdown',
+                'options' => $options,
+            ];
+        }
+
         return $this->renderer->prepareListData([
             'columns'        => $columns,
             'columnLabels'   => $this->columnLabels,
@@ -968,10 +1016,37 @@ class GroceryCrud
             'crudId'         => $this->crudId,
             'sortField'      => $sortField,
             'sortDir'        => $sortDir,
-            'columnFilters'  => $this->columnFilters,
+            'columnFilters'  => $mergedFilters,
             'currentFilters' => $filters,
             'batchActions'   => $this->batchActions,
         ]);
+    }
+
+    /**
+     * Fetch options from a related table for column filter dropdowns.
+     *
+     * @return array<string, string> key => label pairs
+     */
+    private function fetchRelationOptions(string $table, string $labelField, string $keyField, ?string $where = null, ?string $order = null): array
+    {
+        $builder = $this->db->table($table);
+        $builder->select("$keyField, $labelField");
+
+        if ($where !== null && $where !== '') {
+            $builder->where($where);
+        }
+
+        if ($order !== null && $order !== '') {
+            $builder->orderBy($order);
+        }
+
+        $results = $builder->get()->getResultArray();
+        $options = ['' => '— All —'];
+        foreach ($results as $row) {
+            $options[(string) $row[$keyField]] = (string) $row[$labelField];
+        }
+
+        return $options;
     }
 
     /**
