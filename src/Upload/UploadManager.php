@@ -63,9 +63,11 @@ class UploadManager
         $maxSize = ($fieldConfig['maxSize'] ?? 2048) * 1024; // Convert KB to bytes
         $encryptName = $fieldConfig['encryptFileName'] ?? true;
 
+        // Get extension BEFORE file is moved (getExtension triggers finfo on temp path)
+        $ext = $file->getExtension();
+
         // Validate file type
         if ($allowedTypes !== '*') {
-            $ext = $file->getExtension();
             $allowed = explode('|', $allowedTypes);
             if (!in_array(strtolower($ext), $allowed, true)) {
                 throw GroceryCrudException::uploadFailed($field, 'Invalid file type: ' . $ext);
@@ -90,7 +92,7 @@ class UploadManager
         $file->move($uploadDir, $newName);
 
         // Generate thumbnail for images
-        if ($this->isImage($file->getExtension()) && isset($fieldConfig['thumbnailWidth'])) {
+        if ($this->isImage($ext) && isset($fieldConfig['thumbnailWidth'])) {
             $this->generateThumbnail(
                 $uploadDir . $newName,
                 $field,
