@@ -559,8 +559,10 @@ class GroceryCrud
         $page = (int) ($request->getGet('page') ?? $request->getPost('page') ?? 1);
         $search = $request->getGet('search') ?? $request->getPost('search') ?? null;
         $perPage = (int) ($request->getGet('perPage') ?? $request->getPost('perPage') ?? $this->perPage);
+        $sortField = $request->getGet('sort_field') ?? $request->getPost('sort_field') ?? null;
+        $sortDir = $request->getGet('sort_dir') ?? $request->getPost('sort_dir') ?? null;
 
-        $listData = $this->buildListData(max(1, $page), $search, $perPage);
+        $listData = $this->buildListData(max(1, $page), $search, $perPage, $sortField, $sortDir);
 
         return Services::response()
             ->setContentType('application/json')
@@ -858,7 +860,7 @@ class GroceryCrud
     /**
      * Build the data array for list rendering.
      */
-    private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null): array
+    private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null): array
     {
         $perPage = $perPage ?? $this->perPage;
         $offset = ($page - 1) * $perPage;
@@ -866,11 +868,21 @@ class GroceryCrud
 
         $searchableColumns = $this->searchable ? $columns : [];
 
+        // Merge request sort with default orderBy (request sort takes priority)
+        $orders = $this->orderBy;
+        if ($sortField !== null && $sortField !== '') {
+            $direction = strtoupper($sortDir ?? 'ASC');
+            if (!in_array($direction, ['ASC', 'DESC'], true)) {
+                $direction = 'ASC';
+            }
+            array_unshift($orders, ['field' => $sortField, 'direction' => $direction]);
+        }
+
         $records = $this->model->getList(
             $columns,
             $perPage,
             $offset,
-            $this->orderBy,
+            $orders,
             $this->where,
             $search,
             $searchableColumns
@@ -907,6 +919,8 @@ class GroceryCrud
             'enableExport'  => $this->enableExport,
             'exportFormats' => $this->config->exportFormats,
             'crudId'        => $this->crudId,
+            'sortField'     => $sortField,
+            'sortDir'       => $sortDir,
         ]);
     }
 

@@ -136,6 +136,8 @@
         var page = $wrapper.data('currentPage') || 1;
         var $searchInput = $wrapper.find('.gc-search-input');
         var search = $searchInput.val() || '';
+        var sortField = $wrapper.data('sortField') || null;
+        var sortDir = $wrapper.data('sortDir') || null;
         var wasFocused = document.activeElement === $searchInput[0];
         var caretPos = wasFocused && $searchInput[0].selectionStart !== undefined
             ? $searchInput[0].selectionStart
@@ -149,7 +151,9 @@
             data: {
                 gc_action: 'list',
                 page: page,
-                search: search
+                search: search,
+                sort_field: sortField,
+                sort_dir: sortDir
             },
             dataType: 'json',
             success: function (response) {
@@ -408,6 +412,17 @@
         $(document).off('click', '.gc-search-btn').on('click', '.gc-search-btn', function (e) {
             e.preventDefault();
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            $wrapper.data('currentPage', 1);
+            refreshList($wrapper);
+        });
+
+        // Sortable column headers
+        $(document).off('click', '.gc-sortable').on('click', '.gc-sortable', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var field = $(this).data('sort-field');
+            var dir = $(this).data('sort-dir');
+            $wrapper.data('sortField', field);
+            $wrapper.data('sortDir', dir);
             $wrapper.data('currentPage', 1);
             refreshList($wrapper);
         });

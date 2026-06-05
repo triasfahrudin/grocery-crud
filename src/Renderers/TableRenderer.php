@@ -60,6 +60,8 @@ class TableRenderer
                 'to'   => $totalCount > 0 ? $to : 0,
             ],
             'crudId'         => $crudData['crudId'] ?? 'crud_' . uniqid(),
+            'sortField'      => $crudData['sortField'] ?? null,
+            'sortDir'        => $crudData['sortDir'] ?? null,
         ];
     }
 

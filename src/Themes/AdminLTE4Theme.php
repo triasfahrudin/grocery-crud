@@ -65,6 +65,8 @@ class AdminLTE4Theme implements ThemeInterface
         $useDatatables = $data['useDatatables'] ?? false;
         $crudId       = $data['crudId'] ?? 'crud_' . uniqid();
         $searchable   = (bool) ($data['searchable'] ?? false);
+        $sortField    = $data['sortField'] ?? null;
+        $sortDir      = $data['sortDir'] ?? 'ASC';
         $exportFormats = $data['exportFormats'] ?? [];
         $enableExport = (bool) ($data['enableExport'] ?? false);
 
@@ -135,7 +137,11 @@ class AdminLTE4Theme implements ThemeInterface
 
         foreach ($columns as $col) {
             $label = $columnLabels[$col] ?? ucfirst(str_replace('_', ' ', $col));
-            $html .= '<th class="text-nowrap">' . htmlspecialchars($label) . '</th>';
+            $isSorted = $col === $sortField;
+            $dir = $isSorted ? $sortDir : 'ASC';
+            $nextDir = $isSorted && $dir === 'ASC' ? 'DESC' : 'ASC';
+            $arrow = $isSorted ? ($dir === 'ASC' ? ' &#9650;' : ' &#9660;') : '';
+            $html .= '<th class="text-nowrap gc-sortable" data-sort-field="' . $col . '" data-sort-dir="' . $nextDir . '">' . htmlspecialchars($label) . $arrow . '</th>';
         }
 
         if ($showActions || !empty($customActions)) {
