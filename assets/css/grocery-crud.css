@@ -130,6 +130,16 @@
     border-top: 0;
 }
 
+/* Reduce modal backdrop opacity (AdminLTE 4 default is too dark) */
+.gc-modal ~ .modal-backdrop {
+    --bs-backdrop-opacity: 0.3;
+}
+
+/* Ensure modal content has white background */
+.gc-modal .modal-content {
+    background-color: #fff;
+}
+
 /* Responsive tweaks */
 @media (max-width: 768px) {
     .grocery-crud-wrapper .card-header {
