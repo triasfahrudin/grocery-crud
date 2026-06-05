@@ -158,6 +158,19 @@ class CrudModel
     // ======== CRUD Operations ========
 
     /**
+     * Apply column filters to a builder.
+     */
+    private function applyFilters($builder, array $filters): void
+    {
+        foreach ($filters as $field => $value) {
+            if ($value === '' || $value === null) {
+                continue;
+            }
+            $builder->where($field, $value);
+        }
+    }
+
+    /**
      * Get paginated, filtered, sorted list of records.
      *
      * @param array<int, string>   $columns
@@ -167,6 +180,7 @@ class CrudModel
      * @param array<string, mixed> $where
      * @param string|null          $search
      * @param array<string, string> $searchableColumns
+     * @param array<string, string> $filters
      * @return array<int, array<string, mixed>>
      */
     public function getList(
@@ -176,7 +190,8 @@ class CrudModel
         array $orders = [],
         array $where = [],
         ?string $search = null,
-        array $searchableColumns = []
+        array $searchableColumns = [],
+        array $filters = []
     ): array {
         $builder = $this->db->table($this->table);
 
@@ -192,6 +207,9 @@ class CrudModel
                 $builder->where($key, $value);
             }
         }
+
+        // Column filters
+        $this->applyFilters($builder, $filters);
 
         // Search
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
@@ -239,7 +257,7 @@ class CrudModel
     /**
      * Get total record count.
      */
-    public function getTotalCount(array $where = [], ?string $search = null, array $searchableColumns = []): int
+    public function getTotalCount(array $where = [], ?string $search = null, array $searchableColumns = [], array $filters = []): int
     {
         $builder = $this->db->table($this->table);
 
@@ -250,6 +268,9 @@ class CrudModel
                 $builder->where($key, $value);
             }
         }
+
+        // Column filters
+        $this->applyFilters($builder, $filters);
 
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
             $builder->groupStart();
@@ -264,6 +285,23 @@ class CrudModel
         }
 
         return $builder->countAllResults();
+    }
+
+    /**
+     * Delete multiple records by primary key.
+     *
+     * @param array<int, mixed> $ids
+     * @return bool
+     */
+    public function deleteMultiple(array $ids): bool
+    {
+        if (empty($ids)) {
+            return false;
+        }
+
+        return $this->db->table($this->table)
+            ->whereIn($this->primaryKey, $ids)
+            ->delete();
     }
 
     /**

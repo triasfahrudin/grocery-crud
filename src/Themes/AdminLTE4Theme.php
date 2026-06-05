@@ -70,23 +70,32 @@ class AdminLTE4Theme implements ThemeInterface
         $exportFormats = $data['exportFormats'] ?? [];
         $enableExport = (bool) ($data['enableExport'] ?? false);
 
+        $columnFilters = $data['columnFilters'] ?? [];
+        $currentFilters = $data['currentFilters'] ?? [];
+        $batchActions  = $data['batchActions'] ?? [];
+        $hasBatch      = !empty($batchActions);
+
         $totalPages   = $perPage > 0 ? (int) ceil($totalCount / $perPage) : 1;
-        $colspan      = count($columns) + ($showActions ? 1 : 0) + (count($customActions) > 0 ? count($customActions) : 0);
+        $colspan      = count($columns) + ($showActions ? 1 : 0) + (count($customActions) > 0 ? count($customActions) : 0) + ($hasBatch ? 1 : 0);
 
         // Pre-resolve language strings
-        $lblExport      = $lang['export'] ?? 'Export';
-        $lblExportCsv   = $lang['export_csv'] ?? 'Export CSV';
-        $lblExportExcel = $lang['export_excel'] ?? 'Export Excel';
-        $lblAddRecord   = $lang['add_record'] ?? 'Add Record';
-        $lblSearch      = $lang['search'] ?? 'Search';
-        $lblActions     = $lang['actions'] ?? 'Actions';
-        $lblNoRecords   = $lang['no_records'] ?? 'No records found.';
-        $lblEdit        = $lang['edit'] ?? 'Edit';
-        $lblDelete      = $lang['delete'] ?? 'Delete';
-        $lblOf          = $lang['of'] ?? 'of';
-        $lblRecords     = $lang['records'] ?? 'records';
-        $lblPrevious    = $lang['previous'] ?? 'Previous';
-        $lblNext        = $lang['next'] ?? 'Next';
+        $lblExport       = $lang['export'] ?? 'Export';
+        $lblExportCsv    = $lang['export_csv'] ?? 'Export CSV';
+        $lblExportExcel  = $lang['export_excel'] ?? 'Export Excel';
+        $lblAddRecord    = $lang['add_record'] ?? 'Add Record';
+        $lblSearch       = $lang['search'] ?? 'Search';
+        $lblActions      = $lang['actions'] ?? 'Actions';
+        $lblNoRecords    = $lang['no_records'] ?? 'No records found.';
+        $lblEdit         = $lang['edit'] ?? 'Edit';
+        $lblDelete       = $lang['delete'] ?? 'Delete';
+        $lblOf           = $lang['of'] ?? 'of';
+        $lblRecords      = $lang['records'] ?? 'records';
+        $lblPrevious     = $lang['previous'] ?? 'Previous';
+        $lblNext         = $lang['next'] ?? 'Next';
+        $lblBatchDelete  = $lang['batch_delete'] ?? 'Delete Selected';
+        $lblSelectAll    = $lang['select_all'] ?? 'Select All';
+        $lblFilter       = $lang['filter'] ?? 'Filter';
+        $lblAll          = $lang['all'] ?? 'All';
 
         // Header
         $html = '<div class="grocery-crud-wrapper" id="' . $crudId . '">';
@@ -119,22 +128,43 @@ class AdminLTE4Theme implements ThemeInterface
         $html .= '</div></div>';
         $html .= '<div class="card-body">';
 
-        // Search bar
+        // Search bar + batch toolbar
+        $html .= '<div class="row mb-3 align-items-center">';
         if ($searchable) {
-            $html .= '<div class="row mb-3">';
             $html .= '<div class="col-md-6">';
             $html .= '<div class="input-group input-group-sm">';
             $html .= '<input type="text" class="form-control gc-search-input" placeholder="' . $lblSearch . '...">';
             $html .= '<button class="btn btn-outline-secondary gc-search-clear" type="button" style="display:none" tabindex="-1"><i class="bi bi-x-lg"></i></button>';
             $html .= '<span class="input-group-text"><i class="bi bi-search"></i></span>';
-            $html .= '</div></div></div>';
+            $html .= '</div></div>';
+        } else {
+            $html .= '<div class="col-md-6"></div>';
         }
+
+        // Batch action toolbar
+        if ($hasBatch) {
+            $html .= '<div class="col-md-6 text-end">';
+            $html .= '<div class="gc-batch-toolbar" style="display:none">';
+            $html .= '<span class="gc-selected-count badge bg-secondary me-2"><span class="gc-selected-num">0</span> ' . $lblRecords . '</span>';
+            foreach ($batchActions as $actionId => $label) {
+                $extraClass = $actionId === 'delete_selected' ? ' btn-danger' : ' btn-outline-secondary';
+                $html .= '<button type="button" class="btn btn-sm' . $extraClass . ' gc-batch-action" data-batch-action="' . $actionId . '">' . htmlspecialchars($label) . '</button>';
+            }
+            $html .= '</div></div>';
+        }
+
+        $html .= '</div>';
 
         // Table
         $html .= '<div class="table-responsive">';
         $html .= '<table class="table table-hover table-bordered align-middle mb-0 gc-table" data-crud-id="' . $crudId . '">';
-        $html .= '<thead><tr>';
+        $html .= '<thead>';
 
+        // Header row
+        $html .= '<tr>';
+        if ($hasBatch) {
+            $html .= '<th class="text-center" style="width:40px"><input type="checkbox" class="gc-select-all" title="' . $lblSelectAll . '"></th>';
+        }
         foreach ($columns as $col) {
             $label = $columnLabels[$col] ?? ucfirst(str_replace('_', ' ', $col));
             $isSorted = $col === $sortField;
@@ -148,13 +178,53 @@ class AdminLTE4Theme implements ThemeInterface
             $html .= '<th class="text-center text-nowrap" style="width:120px">' . $lblActions . '</th>';
         }
 
-        $html .= '</tr></thead><tbody>';
+        $html .= '</tr>';
+
+        // Filter row
+        if (!empty($columnFilters)) {
+            $html .= '<tr class="gc-filter-row">';
+            if ($hasBatch) {
+                $html .= '<td></td>';
+            }
+            foreach ($columns as $col) {
+                $html .= '<td>';
+                if (isset($columnFilters[$col])) {
+                    $filterDef = $columnFilters[$col];
+                    $filterType = $filterDef['type'] ?? 'text';
+                    $filterOptions = $filterDef['options'] ?? [];
+                    $currentVal = $currentFilters[$col] ?? '';
+                    if ($filterType === 'dropdown') {
+                        $html .= '<select class="form-select form-select-sm gc-column-filter" data-filter-field="' . $col . '">';
+                        $html .= '<option value="">' . $lblAll . '</option>';
+                        foreach ($filterOptions as $optValue => $optLabel) {
+                            $selected = (string) $currentVal === (string) $optValue ? ' selected' : '';
+                            $html .= '<option value="' . htmlspecialchars((string) $optValue) . '"' . $selected . '>' . htmlspecialchars((string) $optLabel) . '</option>';
+                        }
+                        $html .= '</select>';
+                    } else {
+                        $html .= '<input type="text" class="form-control form-control-sm gc-column-filter" data-filter-field="' . $col . '" placeholder="' . $lblFilter . '" value="' . htmlspecialchars((string) $currentVal) . '">';
+                    }
+                }
+                $html .= '</td>';
+            }
+            if ($showActions || !empty($customActions)) {
+                $html .= '<td></td>';
+            }
+            $html .= '</tr>';
+        }
+
+        $html .= '</thead><tbody>';
 
         if (empty($records)) {
-            $html .= '<tr><td colspan="' . $colspan . '" class="text-center text-muted py-4">' . $lblNoRecords . '</td></tr>';
+            $colspanDisplay = $colspan;
+            $html .= '<tr><td colspan="' . $colspanDisplay . '" class="text-center text-muted py-4">' . $lblNoRecords . '</td></tr>';
         } else {
             foreach ($records as $row) {
+                $rowId = htmlspecialchars((string) ($row[$primaryKey] ?? ''));
                 $html .= '<tr>';
+                if ($hasBatch) {
+                    $html .= '<td class="text-center"><input type="checkbox" class="gc-row-checkbox" value="' . $rowId . '"></td>';
+                }
                 foreach ($columns as $col) {
                     $value = $row[$col] ?? '';
                     $html .= '<td>' . $value . '</td>';

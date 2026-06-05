@@ -143,6 +143,17 @@
             ? $searchInput[0].selectionStart
             : -1;
 
+        // Collect column filters from DOM
+        var filters = {};
+        $wrapper.find('.gc-column-filter').each(function () {
+            var $el = $(this);
+            var field = $el.data('filter-field');
+            var val = $el.val();
+            if (val) {
+                filters[field] = val;
+            }
+        });
+
         showLoading();
 
         $.ajax({
@@ -153,7 +164,8 @@
                 page: page,
                 search: search,
                 sort_field: sortField,
-                sort_dir: sortDir
+                sort_dir: sortDir,
+                filters: Object.keys(filters).length > 0 ? JSON.stringify(filters) : undefined
             },
             dataType: 'json',
             success: function (response) {
@@ -178,6 +190,8 @@
                     } else {
                         $clearBtn.hide();
                     }
+                    // Restore filter values (server re-renders them from currentFilters)
+                    // No need — server already renders correct filter values
                 } else {
                     showAlert(response.message || 'Failed to load data.', 'danger');
                 }
@@ -408,13 +422,98 @@
             refreshList($wrapper);
         });
 
-        // Search button click
-        $(document).off('click', '.gc-search-btn').on('click', '.gc-search-btn', function (e) {
-            e.preventDefault();
+        // ======== Column Filters ========
+        var filterTimer = null;
+        $(document).off('change', '.gc-column-filter').on('change', '.gc-column-filter', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             $wrapper.data('currentPage', 1);
             refreshList($wrapper);
         });
+        $(document).off('input', '.gc-column-filter').on('input', '.gc-column-filter', function () {
+            var $self = $(this);
+            // Only debounce text inputs (selects use 'change' above)
+            if ($self.is('select')) return;
+            clearTimeout(filterTimer);
+            filterTimer = setTimeout(function () {
+                var $wrapper = $self.closest('.grocery-crud-wrapper');
+                $wrapper.data('currentPage', 1);
+                refreshList($wrapper);
+            }, 400);
+        });
+
+        // ======== Batch Actions ========
+        // Select-all checkbox
+        $(document).off('change', '.gc-select-all').on('change', '.gc-select-all', function () {
+            var isChecked = $(this).prop('checked');
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            $wrapper.find('.gc-row-checkbox').prop('checked', isChecked);
+            updateBatchToolbar($wrapper);
+        });
+
+        // Row checkbox
+        $(document).off('change', '.gc-row-checkbox').on('change', '.gc-row-checkbox', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var allChecked = $wrapper.find('.gc-row-checkbox').length === $wrapper.find('.gc-row-checkbox:checked').length;
+            $wrapper.find('.gc-select-all').prop('checked', allChecked);
+            updateBatchToolbar($wrapper);
+        });
+
+        // Batch action button
+        $(document).off('click', '.gc-batch-action').on('click', '.gc-batch-action', function (e) {
+            e.preventDefault();
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var actionId = $(this).data('batch-action');
+            var selectedIds = [];
+            $wrapper.find('.gc-row-checkbox:checked').each(function () {
+                selectedIds.push($(this).val());
+            });
+            if (selectedIds.length === 0) return;
+
+            if (actionId === 'delete_selected') {
+                if (!confirm('Are you sure you want to delete ' + selectedIds.length + ' selected record(s)?')) {
+                    return;
+                }
+            }
+
+            showLoading();
+
+            $.ajax({
+                url: window.location.href,
+                method: 'POST',
+                data: {
+                    gc_action: 'batch_action',
+                    batch_action: actionId,
+                    ids: selectedIds
+                },
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        showAlert(response.message || 'Action completed.', 'success');
+                        refreshList($wrapper);
+                    } else {
+                        showAlert(response.message || 'Action failed.', 'danger');
+                        hideLoading();
+                    }
+                },
+                error: function () {
+                    showAlert('An error occurred.', 'danger');
+                    hideLoading();
+                }
+            });
+        });
+
+        // Batch toolbar helper
+        function updateBatchToolbar($wrapper) {
+            var $toolbar = $wrapper.find('.gc-batch-toolbar');
+            var $num = $toolbar.find('.gc-selected-num');
+            var count = $wrapper.find('.gc-row-checkbox:checked').length;
+            if (count > 0) {
+                $toolbar.show();
+                $num.text(count);
+            } else {
+                $toolbar.hide();
+            }
+        }
 
         // Sortable column headers
         $(document).off('click', '.gc-sortable').on('click', '.gc-sortable', function () {

@@ -214,6 +214,34 @@
     background-color: rgba(0, 0, 0, 0.04);
 }
 
+/* Column filter row */
+.gc-filter-row td {
+    vertical-align: middle;
+    padding: 0.35rem 0.5rem;
+}
+
+.gc-filter-row .form-select,
+.gc-filter-row .form-control {
+    min-width: 100px;
+}
+
+/* Batch toolbar */
+.gc-batch-toolbar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.gc-batch-toolbar .gc-selected-count {
+    font-size: 0.8rem;
+}
+
+/* Checkbox columns */
+.gc-table th input[type="checkbox"],
+.gc-table td input[type="checkbox"] {
+    cursor: pointer;
+}
+
 /* Loading state for buttons */
 .btn-gc-loading {
     position: relative;

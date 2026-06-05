@@ -62,6 +62,9 @@ class TableRenderer
             'crudId'         => $crudData['crudId'] ?? 'crud_' . uniqid(),
             'sortField'      => $crudData['sortField'] ?? null,
             'sortDir'        => $crudData['sortDir'] ?? null,
+            'columnFilters'  => $crudData['columnFilters'] ?? [],
+            'currentFilters' => $crudData['currentFilters'] ?? [],
+            'batchActions'   => $crudData['batchActions'] ?? [],
         ];
     }
 

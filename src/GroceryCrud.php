@@ -98,6 +98,12 @@ class GroceryCrud
     /** @var array<int, string> */
     private array $uniqueFields = [];
 
+    /** @var array<string, array{type: string, options?: array}> */
+    private array $columnFilters = [];
+
+    /** @var array<string, string> */
+    private array $batchActions = [];
+
     private string $crudId;
 
     public function __construct(?GCConfig $config = null, ?BaseConnection $db = null)
@@ -510,6 +516,43 @@ class GroceryCrud
         return $this;
     }
 
+    /**
+     * Add a column filter which renders a filter control in the table header.
+     *
+     * Supported types: 'text', 'dropdown'
+     *
+     * @param string $field   Column name
+     * @param string $type    Filter type ('text' or 'dropdown')
+     * @param array  $options For 'dropdown': ['1' => 'Active', '0' => 'Inactive']
+     */
+    public function setColumnFilter(string $field, string $type, array $options = []): self
+    {
+        $this->columnFilters[$field] = ['type' => $type, 'options' => $options];
+        return $this;
+    }
+
+    /**
+     * Set a batch action.
+     *
+     * Built-in actions: 'delete_selected'
+     *
+     * @param string $actionId
+     * @param string $label
+     */
+    public function setBatchAction(string $actionId, string $label): self
+    {
+        $this->batchActions[$actionId] = $label;
+        return $this;
+    }
+
+    /**
+     * Alias for setBatchAction.
+     */
+    public function addBatchAction(string $actionId, string $label): self
+    {
+        return $this->setBatchAction($actionId, $label);
+    }
+
     // ======== Render Methods ========
 
     /**
@@ -561,17 +604,19 @@ class GroceryCrud
         $perPage = (int) ($request->getGet('perPage') ?? $request->getPost('perPage') ?? $this->perPage);
         $sortField = $request->getGet('sort_field') ?? $request->getPost('sort_field') ?? null;
         $sortDir = $request->getGet('sort_dir') ?? $request->getPost('sort_dir') ?? null;
+        $filtersJson = $request->getGet('filters') ?? $request->getPost('filters') ?? '{}';
+        $filters = json_decode($filtersJson, true) ?? [];
 
-        $listData = $this->buildListData(max(1, $page), $search, $perPage, $sortField, $sortDir);
+        $listData = $this->buildListData(max(1, $page), $search, $perPage, $sortField, $sortDir, $filters);
 
         return Services::response()
             ->setContentType('application/json')
             ->setJSON([
-                'success'     => true,
-                'html'        => $this->theme->renderList($listData),
-                'totalCount'  => $listData['totalCount'],
-                'currentPage' => $listData['currentPage'],
-                'perPage'     => $listData['perPage'],
+                'success'       => true,
+                'html'          => $this->theme->renderList($listData),
+                'totalCount'    => $listData['totalCount'],
+                'currentPage'   => $listData['currentPage'],
+                'perPage'       => $listData['perPage'],
             ]);
     }
 
@@ -860,7 +905,7 @@ class GroceryCrud
     /**
      * Build the data array for list rendering.
      */
-    private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null): array
+    private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null, array $filters = []): array
     {
         $perPage = $perPage ?? $this->perPage;
         $offset = ($page - 1) * $perPage;
@@ -885,13 +930,15 @@ class GroceryCrud
             $orders,
             $this->where,
             $search,
-            $searchableColumns
+            $searchableColumns,
+            $filters
         );
 
         $totalCount = $this->model->getTotalCount(
             $this->where,
             $search,
-            $searchableColumns
+            $searchableColumns,
+            $filters
         );
 
         // Apply column callbacks
@@ -905,22 +952,25 @@ class GroceryCrud
         }
 
         return $this->renderer->prepareListData([
-            'columns'       => $columns,
-            'columnLabels'  => $this->columnLabels,
-            'records'       => $records,
-            'totalCount'    => $totalCount,
-            'perPage'       => $perPage,
-            'currentPage'   => $page,
-            'subject'       => $this->subject,
-            'primaryKey'    => $this->primaryKey,
-            'actions'       => $this->actions,
-            'customActions' => $this->customActions,
-            'searchable'    => $this->searchable,
-            'enableExport'  => $this->enableExport,
-            'exportFormats' => $this->config->exportFormats,
-            'crudId'        => $this->crudId,
-            'sortField'     => $sortField,
-            'sortDir'       => $sortDir,
+            'columns'        => $columns,
+            'columnLabels'   => $this->columnLabels,
+            'records'        => $records,
+            'totalCount'     => $totalCount,
+            'perPage'        => $perPage,
+            'currentPage'    => $page,
+            'subject'        => $this->subject,
+            'primaryKey'     => $this->primaryKey,
+            'actions'        => $this->actions,
+            'customActions'  => $this->customActions,
+            'searchable'     => $this->searchable,
+            'enableExport'   => $this->enableExport,
+            'exportFormats'  => $this->config->exportFormats,
+            'crudId'         => $this->crudId,
+            'sortField'      => $sortField,
+            'sortDir'        => $sortDir,
+            'columnFilters'  => $this->columnFilters,
+            'currentFilters' => $filters,
+            'batchActions'   => $this->batchActions,
         ]);
     }
 
@@ -1229,15 +1279,56 @@ class GroceryCrud
     private function handleAjaxAction(string $action): ResponseInterface
     {
         return match ($action) {
-            'list'      => $this->ajaxList(),
-            'add_form'  => $this->ajaxAddForm(),
-            'add'       => $this->ajaxAdd(),
-            'edit_form' => $this->ajaxEditForm($this->getRequestId()),
-            'edit'      => $this->ajaxEdit($this->getRequestId()),
-            'delete'    => $this->ajaxDelete($this->getRequestId()),
-            'export'    => $this->ajaxExport($this->getExportFormat()),
-            default     => $this->jsonResponse(false, ['message' => 'Invalid action.']),
+            'list'          => $this->ajaxList(),
+            'add_form'      => $this->ajaxAddForm(),
+            'add'           => $this->ajaxAdd(),
+            'edit_form'     => $this->ajaxEditForm($this->getRequestId()),
+            'edit'          => $this->ajaxEdit($this->getRequestId()),
+            'delete'        => $this->ajaxDelete($this->getRequestId()),
+            'export'        => $this->ajaxExport($this->getExportFormat()),
+            'batch_action'  => $this->ajaxBatchAction(),
+            default         => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
+    }
+
+    /**
+     * Handle batch actions (e.g. delete selected).
+     */
+    private function ajaxBatchAction(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+        $batchAction = $request->getPost('batch_action') ?? $request->getGet('batch_action');
+        $ids = $request->getPost('ids') ?? $request->getGet('ids') ?? [];
+
+        if (empty($batchAction) || !isset($this->batchActions[$batchAction])) {
+            return $this->jsonResponse(false, ['message' => 'Invalid batch action.']);
+        }
+
+        if (!is_array($ids) || empty($ids)) {
+            return $this->jsonResponse(false, ['message' => 'No records selected.']);
+        }
+
+        try {
+            $result = match ($batchAction) {
+                'delete_selected' => $this->model->deleteMultiple($ids),
+                default => false,
+            };
+
+            if ($result) {
+                return $this->jsonResponse(true, [
+                    'message' => $this->getLang('batch_success') ?? 'Batch action completed.',
+                ]);
+            }
+
+            return $this->jsonResponse(false, [
+                'message' => $this->getLang('batch_fail') ?? 'Batch action failed.',
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
