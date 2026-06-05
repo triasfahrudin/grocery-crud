@@ -584,7 +584,7 @@ class AdminLTE4Theme implements ThemeInterface
                     $inputId   = $fieldId . '__INDEX__' . $sfName;
                     $template .= '<div class="mb-2">';
                     $template .= '<label for="' . $inputId . '" class="form-label small">' . htmlspecialchars($sfLabel) . '</label>';
-                    $template .= $this->renderRepeaterSubField($inputName, $inputId, $sfType, '', $sfOpts);
+                    $template .= $this->renderRepeaterSubField($inputName, $inputId, $sfType, '', $sfOpts, true);
                     $template .= '</div>';
                 }
                 $template .= '</div>';
@@ -607,19 +607,20 @@ class AdminLTE4Theme implements ThemeInterface
     /**
      * Render a sub-field within a repeater group.
      */
-    private function renderRepeaterSubField(string $name, string $id, string $type, mixed $value, array $options = []): string
+    private function renderRepeaterSubField(string $name, string $id, string $type, mixed $value, array $options = [], bool $disabled = false): string
     {
+        $d = $disabled ? ' disabled' : '';
         switch ($type) {
             case 'textarea':
-                return '<textarea class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" rows="2">' . htmlspecialchars((string) $value) . '</textarea>';
+                return '<textarea class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" rows="2"' . $d . '>' . htmlspecialchars((string) $value) . '</textarea>';
 
             case 'integer':
             case 'numeric':
-                return '<input type="number" step="any" class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '">';
+                return '<input type="number" step="any" class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '"' . $d . '>';
 
             case 'select':
             case 'dropdown':
-                $html = '<select class="form-select form-select-sm" id="' . $id . '" name="' . $name . '">';
+                $html = '<select class="form-select form-select-sm" id="' . $id . '" name="' . $name . '"' . $d . '>';
                 $html .= '<option value="">-- Select --</option>';
                 foreach ($options as $optValue => $optLabel) {
                     $selected = ((string) $optValue === (string) $value) ? ' selected' : '';
@@ -631,13 +632,13 @@ class AdminLTE4Theme implements ThemeInterface
             case 'boolean':
             case 'true_false':
                 $checked = !empty($value) ? ' checked' : '';
-                return '<div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="' . $id . '" name="' . $name . '" value="1"' . $checked . '></div>';
+                return '<div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="' . $id . '" name="' . $name . '" value="1"' . $checked . $d . '></div>';
 
             case 'hidden':
-                return '<input type="hidden" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '">';
+                return '<input type="hidden" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '"' . $d . '>';
 
             default: // text, string
-                return '<input type="text" class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '">';
+                return '<input type="text" class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '"' . $d . '>';
         }
     }
 }

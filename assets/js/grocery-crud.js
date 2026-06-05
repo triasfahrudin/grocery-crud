@@ -621,6 +621,7 @@
             var index = $container.find('.gc-repeater-item').not($container.find('.gc-repeater-template .gc-repeater-item')).length;
 
             var html = $template.html().replace(/__INDEX__/g, index);
+            html = html.replace(/ disabled/g, '');  // Remove disabled from cloned items
             $btn.before(html);
         });
 
