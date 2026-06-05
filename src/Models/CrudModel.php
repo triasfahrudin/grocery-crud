@@ -392,22 +392,6 @@ class CrudModel
     }
 
     /**
-     * Delete multiple records.
-     *
-     * @param  array<int, mixed> $ids
-     */
-    public function deleteMultiple(array $ids): bool
-    {
-        if (empty($ids)) {
-            return false;
-        }
-
-        return $this->db->table($this->table)
-            ->whereIn($this->primaryKey, $ids)
-            ->delete();
-    }
-
-    /**
      * Fetch the display value from a related table.
      */
     private function fetchRelatedValue(array $relConfig, mixed $foreignKey): ?string
