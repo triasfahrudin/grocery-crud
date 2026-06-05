@@ -182,15 +182,22 @@
 }
 
 /* Image viewer modal */
+.gc-image-viewer .modal-dialog {
+    max-width: 95vw;
+}
+
 .gc-image-viewer .modal-body {
     display: flex;
     align-items: center;
     justify-content: center;
-    min-height: 300px;
+    padding: 0.5rem;
+    min-height: auto;
 }
 
 .gc-image-viewer .modal-body img {
-    max-width: 100%;
+    max-width: 85vw;
+    max-height: 85vh;
+    width: auto;
     height: auto;
     border-radius: 4px;
 }

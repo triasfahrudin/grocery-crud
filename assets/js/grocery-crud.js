@@ -425,21 +425,56 @@
             if (!src) return;
 
             var modalHtml = '<div class="modal fade gc-image-viewer" tabindex="-1">'
-                + '<div class="modal-dialog modal-xl modal-dialog-centered">'
+                + '<div class="modal-dialog modal-dialog-centered">'
                 + '<div class="modal-content">'
                 + '<div class="modal-header border-0 pb-0">'
                 + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
                 + '</div>'
-                + '<div class="modal-body p-4">'
-                + '<img src="' + src + '" alt="" class="img-fluid">'
+                + '<div class="modal-body">'
+                + '<img src="' + src + '" alt="" style="display:none">'
                 + '</div>'
                 + '</div>'
                 + '</div>'
                 + '</div>';
 
             var $modal = $(modalHtml);
+            var $modalImg = $modal.find('img');
             $('body').append($modal);
             $modal.modal('show');
+
+            // Adjust dialog to image natural size after load
+            $modalImg.on('load', function () {
+                var $dialog = $modal.find('.modal-dialog');
+                var imgW = this.naturalWidth;
+                var imgH = this.naturalHeight;
+
+                // Cap at viewport - some margin
+                var maxW = window.innerWidth * 0.9;
+                var maxH = window.innerHeight * 0.85;
+
+                if (imgW > maxW || imgH > maxH) {
+                    // Image bigger than viewport — let CSS handle it
+                    $modalImg.show();
+                } else {
+                    // Image fits — size dialog to image
+                    $modalImg.css({display:'block', width: imgW + 'px', height: 'auto'});
+                    $dialog.css('max-width', (imgW + 40) + 'px');
+                }
+
+                // Re-center modal after content resize
+                $modal[0]._isShown && $modal.modal('handleUpdate');
+            });
+
+            // If already cached, trigger load manually
+            if ($modalImg[0].complete) {
+                $modalImg.trigger('load');
+            } else {
+                // Ensure img is shown even if load fails
+                $modalImg.on('error', function () {
+                    $modalImg.show();
+                });
+            }
+
             $modal.on('hidden.bs.modal', function () {
                 $modal.remove();
                 $('.modal-backdrop').remove();
