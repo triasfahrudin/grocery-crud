@@ -132,6 +132,7 @@
     // ======== CRUD Operations ========
     function refreshList($wrapper) {
         var crudId = $wrapper.attr('id');
+        var $parent = $wrapper.parent();
         var page = $wrapper.data('currentPage') || 1;
         var search = $wrapper.find('.gc-search-input').val() || '';
 
@@ -151,8 +152,8 @@
                     $wrapper.replaceWith(response.html);
                     // Re-bind events
                     bindEvents();
-                    // Restore search value
-                    $('#' + crudId + ' .gc-search-input').val(search);
+                    // Restore search value (crudId changes on re-render via uniqid)
+                    $parent.find('.grocery-crud-wrapper .gc-search-input').val(search);
                 } else {
                     showAlert(response.message || 'Failed to load data.', 'danger');
                 }
@@ -344,12 +345,22 @@
             refreshList($wrapper);
         });
 
-        // Search
+        // Search - realtime on keyup (debounced)
         $(document).off('keyup', '.gc-search-input').on('keyup', '.gc-search-input', $.debounce(function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             $wrapper.data('currentPage', 1);
             refreshList($wrapper);
         }, 400));
+
+        // Search - immediate on Enter key
+        $(document).off('keydown', '.gc-search-input').on('keydown', '.gc-search-input', function (e) {
+            if (e.keyCode === 13) {
+                e.preventDefault();
+                var $wrapper = $(this).closest('.grocery-crud-wrapper');
+                $wrapper.data('currentPage', 1);
+                refreshList($wrapper);
+            }
+        });
 
         // Search button click
         $(document).off('click', '.gc-search-btn').on('click', '.gc-search-btn', function (e) {
