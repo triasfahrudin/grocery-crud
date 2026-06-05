@@ -151,6 +151,8 @@
                     $wrapper.replaceWith(response.html);
                     // Re-bind events
                     bindEvents();
+                    // Restore search value
+                    $('#' + crudId + ' .gc-search-input').val(search);
                 } else {
                     showAlert(response.message || 'Failed to load data.', 'danger');
                 }
