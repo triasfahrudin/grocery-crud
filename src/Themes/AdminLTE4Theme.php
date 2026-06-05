@@ -588,7 +588,7 @@ class AdminLTE4Theme implements ThemeInterface
                     $template .= '</div>';
                 }
                 $template .= '</div>';
-                $html .= htmlspecialchars($template);
+                $html .= $template;
                 $html .= '</div>';
 
                 // Add button

@@ -621,7 +621,7 @@
             var index = $container.find('.gc-repeater-item').not($container.find('.gc-repeater-template .gc-repeater-item')).length;
 
             var html = $template.html().replace(/__INDEX__/g, index);
-            $btn.before('<div class="gc-repeater-item">' + html + '</div>');
+            $btn.before(html);
         });
 
         // Remove item
