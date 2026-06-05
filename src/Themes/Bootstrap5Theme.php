@@ -127,6 +127,7 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<div class="col-md-6">';
             $html .= '<div class="input-group input-group-sm">';
             $html .= '<input type="text" class="form-control gc-search-input" placeholder="' . $lblSearch . '...">';
+            $html .= '<button class="btn btn-outline-secondary gc-search-clear" type="button" style="display:none" tabindex="-1"><i class="bi bi-x-lg"></i></button>';
             $html .= '<button class="btn btn-outline-secondary gc-search-btn" type="button"><i class="bi bi-search"></i></button>';
             $html .= '</div></div></div>';
         }

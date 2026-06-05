@@ -167,6 +167,13 @@
                             $newSearchInput[0].setSelectionRange(caretPos, caretPos);
                         }
                     }
+                    // Sync clear button visibility (fresh HTML always has it hidden)
+                    var $clearBtn = $newSearchInput.closest('.input-group').find('.gc-search-clear');
+                    if (search) {
+                        $clearBtn.show();
+                    } else {
+                        $clearBtn.hide();
+                    }
                 } else {
                     showAlert(response.message || 'Failed to load data.', 'danger');
                 }
@@ -373,6 +380,28 @@
                 $wrapper.data('currentPage', 1);
                 refreshList($wrapper);
             }
+        });
+
+        // Show/hide clear search button on input change
+        $(document).off('input', '.gc-search-input').on('input', '.gc-search-input', function () {
+            var $clearBtn = $(this).closest('.input-group').find('.gc-search-clear');
+            if ($(this).val()) {
+                $clearBtn.show();
+            } else {
+                $clearBtn.hide();
+            }
+        });
+
+        // Clear search button
+        $(document).off('click', '.gc-search-clear').on('click', '.gc-search-clear', function (e) {
+            e.preventDefault();
+            var $input = $(this).closest('.input-group').find('.gc-search-input');
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            $input.val('');
+            $(this).hide();
+            $input.focus();
+            $wrapper.data('currentPage', 1);
+            refreshList($wrapper);
         });
 
         // Search button click
