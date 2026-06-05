@@ -417,6 +417,35 @@
             e.preventDefault();
             handleExport($(this), $(this).data('export'));
         });
+
+        // Image viewer - click thumbnail to show enlarged
+        $(document).off('click', '.gc-table img.gc-thumb').on('click', '.gc-table img.gc-thumb', function () {
+            var $img = $(this);
+            var src = $img.attr('src') || $img.data('src');
+            if (!src) return;
+
+            var modalHtml = '<div class="modal fade gc-image-viewer" tabindex="-1">'
+                + '<div class="modal-dialog modal-xl modal-dialog-centered">'
+                + '<div class="modal-content">'
+                + '<div class="modal-header border-0 pb-0">'
+                + '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>'
+                + '</div>'
+                + '<div class="modal-body p-4">'
+                + '<img src="' + src + '" alt="" class="img-fluid">'
+                + '</div>'
+                + '</div>'
+                + '</div>'
+                + '</div>';
+
+            var $modal = $(modalHtml);
+            $('body').append($modal);
+            $modal.modal('show');
+            $modal.on('hidden.bs.modal', function () {
+                $modal.remove();
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+            });
+        });
     }
 
     function bindFormEvents($modal) {

@@ -131,7 +131,8 @@
 }
 
 /* Reduce modal backdrop opacity (AdminLTE 4 default is too dark) */
-.gc-modal ~ .modal-backdrop {
+.gc-modal ~ .modal-backdrop,
+.gc-image-viewer ~ .modal-backdrop {
     --bs-backdrop-opacity: 0.3;
 }
 
@@ -171,6 +172,26 @@
     width: 50px;
     height: 50px;
     object-fit: cover;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+}
+
+.gc-table img.gc-thumb:hover {
+    opacity: 0.8;
+}
+
+/* Image viewer modal */
+.gc-image-viewer .modal-body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+}
+
+.gc-image-viewer .modal-body img {
+    max-width: 100%;
+    height: auto;
     border-radius: 4px;
 }
 
