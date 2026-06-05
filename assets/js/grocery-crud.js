@@ -136,6 +136,7 @@
         var page = $wrapper.data('currentPage') || 1;
         var $searchInput = $wrapper.find('.gc-search-input');
         var search = $searchInput.val() || '';
+        var advancedFilters = $wrapper.data('gcAdvancedFilters') || [];
         var sortField = $wrapper.data('sortField') || null;
         var sortDir = $wrapper.data('sortDir') || null;
         var wasFocused = document.activeElement === $searchInput[0];
@@ -173,7 +174,8 @@
                 search: search,
                 sort_field: sortField,
                 sort_dir: sortDir,
-                filters: Object.keys(filters).length > 0 ? JSON.stringify(filters) : undefined
+                filters: Object.keys(filters).length > 0 ? JSON.stringify(filters) : undefined,
+                advanced_filters: JSON.stringify(advancedFilters)
             },
             dataType: 'json',
             success: function (response) {
@@ -184,6 +186,11 @@
                     // Restore search value (crudId changes on re-render via uniqid)
                     var $newSearchInput = $parent.find('.grocery-crud-wrapper .gc-search-input');
                     $newSearchInput.val(search);
+                    // Restore advanced filters
+                    var savedFilters = $wrapper.data('gcAdvancedFilters');
+                    if (savedFilters && savedFilters.length) {
+                        $wrapper.data('gcAdvancedFilters', savedFilters);
+                    }
                     // Restore focus and caret position if previously focused
                     if (wasFocused) {
                         $newSearchInput.focus();
@@ -208,6 +215,9 @@
                             }
                         }
                     }
+                    // Populate columns menu and filter selects from table headers
+                    var $newWrapper = $parent.find('.grocery-crud-wrapper');
+                    populateColumnsAndFilters($newWrapper);
                 } else {
                     showAlert(response.message || 'Failed to load data.', 'danger');
                 }
@@ -270,6 +280,42 @@
             },
             complete: function () {
                 hideLoading();
+            }
+        });
+    }
+
+    // ======== Columns & Filter Populate ========
+    function populateColumnsAndFilters($wrapper) {
+        // Columns menu: populate checkboxes from table headers
+        var $menu = $wrapper.find('.gc-columns-menu');
+        if ($menu.length) {
+            $menu.empty();
+            $wrapper.find('.gc-table th[data-column]').each(function () {
+                var col = $(this).data('column');
+                var label = $(this).data('label') || col;
+                var isHidden = $(this).hasClass('d-none');
+                var $cb = $('<div class="form-check">'
+                    + '<input type="checkbox" class="form-check-input" id="col_'
+                    + col + '" data-column="' + col + '"' + (isHidden ? '' : ' checked') + '>'
+                    + '<label class="form-check-label" for="col_' + col + '">'
+                    + $('<span>').text(label).html()
+                    + '</label></div>');
+                $menu.append($cb);
+            });
+        }
+
+        // Filter column selects: populate options from table headers
+        $wrapper.find('.gc-filter-col').each(function () {
+            var $select = $(this);
+            var currentVal = $select.val();
+            // Only populate if empty (template only has the placeholder option)
+            if ($select.find('option[value]').length <= 1) {
+                $wrapper.find('.gc-table th[data-column]').each(function () {
+                    var col = $(this).data('column');
+                    var label = $(this).data('label') || col;
+                    $select.append('<option value="' + col + '">' + $('<span>').text(label).html() + '</option>');
+                });
+                if (currentVal) $select.val(currentVal);
             }
         });
     }
@@ -548,6 +594,131 @@
             handleExport($(this), $(this).data('export'));
         });
 
+        // ======== Columns Dropdown Toggle ========
+        $(document).off('change', '.gc-columns-menu input[type="checkbox"]').on('change', '.gc-columns-menu input[type="checkbox"]', function () {
+            var col = $(this).data('column');
+            var $table = $(this).closest('.grocery-crud-wrapper').find('.gc-table');
+            if ($(this).is(':checked')) {
+                $table.find('th[data-column="' + col + '"], td[data-column="' + col + '"]').removeClass('d-none');
+            } else {
+                $table.find('th[data-column="' + col + '"], td[data-column="' + col + '"]').addClass('d-none');
+            }
+        });
+
+        // ======== Filter Panel ========
+        // Toggle filter panel
+        $(document).off('click', '.gc-filter-btn').on('click', '.gc-filter-btn', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var $panel = $wrapper.find('.gc-filter-panel');
+            $panel.toggle();
+        });
+
+        // Add filter row
+        $(document).off('click', '.gc-filter-add').on('click', '.gc-filter-add', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var $rows = $wrapper.find('.gc-filter-rows');
+            var $template = $rows.find('.gc-filter-row-template').clone().removeClass('gc-filter-row-template').addClass('gc-filter-row').show();
+            $template.find('input').val('');
+            $template.find('select').prop('selectedIndex', 0);
+            $rows.append($template);
+        });
+
+        // Remove filter row
+        $(document).off('click', '.gc-filter-row-remove').on('click', '.gc-filter-row-remove', function () {
+            $(this).closest('.gc-filter-row').remove();
+        });
+
+        // Apply filters
+        $(document).off('click', '.gc-filter-apply').on('click', '.gc-filter-apply', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var filters = [];
+            $wrapper.find('.gc-filter-row').each(function () {
+                var col = $(this).find('.gc-filter-col').val();
+                var op = $(this).find('.gc-filter-op').val();
+                var val = $(this).find('.gc-filter-val').val();
+                if (col && val) {
+                    filters.push({field: col, operator: op, value: val});
+                }
+            });
+            $wrapper.data('gcAdvancedFilters', filters);
+            $wrapper.data('currentPage', 1);
+            refreshList($wrapper);
+        });
+
+        // Clear filters
+        $(document).off('click', '.gc-filter-clear').on('click', '.gc-filter-clear', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            $wrapper.find('.gc-filter-row').remove();
+            $wrapper.find('.gc-filter-panel').hide();
+            $wrapper.removeData('gcAdvancedFilters');
+            $wrapper.data('currentPage', 1);
+            refreshList($wrapper);
+        });
+
+        // ======== Settings Save/Load/Reset ========
+        // Save settings
+        $(document).off('click', '.gc-settings-save').on('click', '.gc-settings-save', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var url = window.location.href;
+            var settings = {
+                columns: {},
+                filters: $wrapper.data('gcAdvancedFilters') || []
+            };
+            $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
+                settings.columns[$(this).data('column')] = $(this).is(':checked');
+            });
+            try {
+                localStorage.setItem('gc_settings_' + btoa(url), JSON.stringify(settings));
+                showAlert('Settings saved.', 'success');
+            } catch (e) {
+                showAlert('Could not save settings.', 'danger');
+            }
+        });
+
+        // Load settings
+        $(document).off('click', '.gc-settings-load').on('click', '.gc-settings-load', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var url = window.location.href;
+            try {
+                var raw = localStorage.getItem('gc_settings_' + btoa(url));
+                if (!raw) { showAlert('No saved settings found.', 'warning'); return; }
+                var settings = JSON.parse(raw);
+                // Restore columns
+                if (settings.columns) {
+                    $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
+                        var col = $(this).data('column');
+                        if (settings.columns[col] !== undefined) {
+                            $(this).prop('checked', settings.columns[col]).trigger('change');
+                        }
+                    });
+                }
+                // Restore filters
+                if (settings.filters && settings.filters.length) {
+                    $wrapper.data('gcAdvancedFilters', settings.filters);
+                    refreshList($wrapper);
+                }
+                showAlert('Settings loaded.', 'success');
+            } catch (e) {
+                showAlert('Could not load settings.', 'danger');
+            }
+        });
+
+        // Reset settings
+        $(document).off('click', '.gc-settings-reset').on('click', '.gc-settings-reset', function () {
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var url = window.location.href;
+            try {
+                localStorage.removeItem('gc_settings_' + btoa(url));
+                $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
+                    $(this).prop('checked', true).trigger('change');
+                });
+                $wrapper.removeData('gcAdvancedFilters');
+                $wrapper.find('.gc-filter-row').remove();
+                $wrapper.find('.gc-filter-panel').hide();
+                showAlert('Settings reset to defaults.', 'success');
+            } catch (e) {}
+        });
+
         // Image viewer - click thumbnail to show enlarged
         $(document).off('click', '.gc-table img.gc-thumb').on('click', '.gc-table img.gc-thumb', function () {
             var $img = $(this);
@@ -628,6 +799,11 @@
         // Remove item
         $(document).off('click', '.gc-repeater-remove').on('click', '.gc-repeater-remove', function () {
             $(this).closest('.gc-repeater-item').remove();
+        });
+
+        // Populate columns menu and filter selects for existing wrappers
+        $(document).find('.grocery-crud-wrapper').each(function () {
+            populateColumnsAndFilters($(this));
         });
     }
 

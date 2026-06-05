@@ -74,6 +74,9 @@ class AdminLTE4Theme implements ThemeInterface
         $currentFilters = $data['currentFilters'] ?? [];
         $batchActions  = $data['batchActions'] ?? [];
         $hasBatch      = !empty($batchActions);
+        $enableFilters  = (bool) ($data['enableFilters'] ?? true);
+        $enableColumns  = (bool) ($data['enableColumns'] ?? true);
+        $enableSettings = (bool) ($data['enableSettings'] ?? true);
 
         $totalPages   = $perPage > 0 ? (int) ceil($totalCount / $perPage) : 1;
         $colspan      = count($columns) + ($showActions ? 1 : 0) + (count($customActions) > 0 ? count($customActions) : 0) + ($hasBatch ? 1 : 0);
@@ -118,6 +121,38 @@ class AdminLTE4Theme implements ThemeInterface
             $html .= '</ul></div>';
         }
 
+        // Filter button
+        if ($enableFilters) {
+            $html .= '<button type="button" class="btn btn-tool gc-filter-btn" title="' . ($lang['filters'] ?? 'Filters') . '">';
+            $html .= '<i class="bi bi-funnel"></i>';
+            $html .= '</button>';
+        }
+
+        // Columns button
+        if ($enableColumns) {
+            $html .= '<div class="dropdown">';
+            $html .= '<button type="button" class="btn btn-tool dropdown-toggle gc-columns-btn" title="' . ($lang['columns'] ?? 'Columns') . '" data-bs-toggle="dropdown" aria-expanded="false">';
+            $html .= '<i class="bi bi-layout-three-columns"></i>';
+            $html .= '</button>';
+            $html .= '<div class="dropdown-menu dropdown-menu-right gc-columns-menu p-2" style="min-width:200px"></div>';
+            $html .= '</div>';
+        }
+
+        // Settings button
+        if ($enableSettings) {
+            $html .= '<div class="dropdown">';
+            $html .= '<button type="button" class="btn btn-tool dropdown-toggle gc-tool-btn" title="' . ($lang['settings'] ?? 'Settings') . '" data-bs-toggle="dropdown" aria-expanded="false">';
+            $html .= '<i class="bi bi-gear"></i>';
+            $html .= '</button>';
+            $html .= '<ul class="dropdown-menu dropdown-menu-right gc-settings-menu">';
+            $html .= '<li><a class="dropdown-item gc-settings-save" href="#"><i class="bi bi-floppy me-2"></i>' . ($lang['save_settings'] ?? 'Save') . '</a></li>';
+            $html .= '<li><a class="dropdown-item gc-settings-load" href="#"><i class="bi bi-arrow-counterclockwise me-2"></i>' . ($lang['load_settings'] ?? 'Load') . '</a></li>';
+            $html .= '<li><hr class="dropdown-divider"></li>';
+            $html .= '<li><a class="dropdown-item gc-settings-reset" href="#"><i class="bi bi-trash me-2"></i>' . ($lang['reset_settings'] ?? 'Reset') . '</a></li>';
+            $html .= '</ul>';
+            $html .= '</div>';
+        }
+
         // Add button
         if ($hasAdd) {
             $html .= '<button type="button" class="btn btn-primary btn-sm btn-gc-add">';
@@ -127,6 +162,34 @@ class AdminLTE4Theme implements ThemeInterface
 
         $html .= '</div></div>';
         $html .= '<div class="card-body">';
+
+        // Filter panel (hidden by default)
+        if ($enableFilters) {
+            $html .= '<div class="gc-filter-panel mb-3 p-3 bg-light border rounded" style="display:none">';
+            $html .= '<div class="gc-filter-rows">';
+            // Template row (hidden, cloned by JS)
+            $html .= '<div class="gc-filter-row gc-filter-row-template" style="display:none">';
+            $html .= '<select class="form-select form-select-sm gc-filter-col" style="min-width:130px"><option value="">' . ($lang['select_column'] ?? 'Column') . '</option></select>';
+            $html .= '<select class="form-select form-select-sm gc-filter-op" style="min-width:110px">';
+            $html .= '<option value="contains">' . ($lang['contains'] ?? 'Contains') . '</option>';
+            $html .= '<option value="equals">' . ($lang['equals'] ?? 'Equals') . '</option>';
+            $html .= '<option value="not_equal">' . ($lang['not_equal'] ?? 'Not equal') . '</option>';
+            $html .= '<option value="starts_with">' . ($lang['starts_with'] ?? 'Starts with') . '</option>';
+            $html .= '<option value="ends_with">' . ($lang['ends_with'] ?? 'Ends with') . '</option>';
+            $html .= '<option value="greater_than">' . ($lang['greater_than'] ?? 'Greater than') . '</option>';
+            $html .= '<option value="less_than">' . ($lang['less_than'] ?? 'Less than') . '</option>';
+            $html .= '</select>';
+            $html .= '<input type="text" class="form-control form-control-sm gc-filter-val" placeholder="' . ($lang['value'] ?? 'Value') . '" style="min-width:150px">';
+            $html .= '<button type="button" class="gc-filter-row-remove" title="' . ($lang['remove'] ?? 'Remove') . '">&times;</button>';
+            $html .= '</div>';
+            $html .= '</div>';
+            $html .= '<div class="gc-filter-actions">';
+            $html .= '<button type="button" class="btn btn-sm btn-outline-primary gc-filter-add">+ ' . ($lang['add_filter'] ?? 'Add Filter') . '</button>';
+            $html .= ' <button type="button" class="btn btn-sm btn-primary gc-filter-apply">' . ($lang['apply'] ?? 'Apply') . '</button>';
+            $html .= ' <button type="button" class="btn btn-sm btn-outline-secondary gc-filter-clear">' . ($lang['clear'] ?? 'Clear') . '</button>';
+            $html .= '</div>';
+            $html .= '</div>';
+        }
 
         // Search bar + batch toolbar
         $html .= '<div class="row mb-3 align-items-center">';
@@ -171,7 +234,7 @@ class AdminLTE4Theme implements ThemeInterface
             $dir = $isSorted ? $sortDir : 'ASC';
             $nextDir = $isSorted && $dir === 'ASC' ? 'DESC' : 'ASC';
             $arrow = $isSorted ? ($dir === 'ASC' ? ' &#9650;' : ' &#9660;') : '';
-            $html .= '<th class="text-nowrap gc-sortable" data-sort-field="' . $col . '" data-sort-dir="' . $nextDir . '">' . htmlspecialchars($label) . $arrow . '</th>';
+            $html .= '<th class="text-nowrap gc-sortable" data-column="' . $col . '" data-label="' . htmlspecialchars($label) . '" data-sort-field="' . $col . '" data-sort-dir="' . $nextDir . '">' . htmlspecialchars($label) . $arrow . '</th>';
         }
 
         if ($showActions || !empty($customActions)) {
@@ -227,7 +290,7 @@ class AdminLTE4Theme implements ThemeInterface
                 }
                 foreach ($columns as $col) {
                     $value = $row[$col] ?? '';
-                    $html .= '<td>' . $value . '</td>';
+                    $html .= '<td data-column="' . $col . '">' . $value . '</td>';
                 }
 
                 if ($showActions || !empty($customActions)) {

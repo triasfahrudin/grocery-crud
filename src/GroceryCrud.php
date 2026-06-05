@@ -110,6 +110,10 @@ class GroceryCrud
     /** @var array<string, array{label: string, repeatables: array<int, array{name: string, label: string, type: string, rules?: string, options?: array}>, preset: string, foreignKey?: string, relatedTable?: string, relatedKey?: string}> */
     private array $repeaterFields = [];
 
+    private bool $enableFilters = true;
+    private bool $enableColumns = true;
+    private bool $enableSettings = true;
+
     private string $crudId;
 
     public function __construct(?GCConfig $config = null, ?BaseConnection $db = null)
@@ -583,12 +587,6 @@ class GroceryCrud
 
     /**
      * Define a repeater field (repeatable group of sub-fields).
-     *
-     * @param string $field       Column name (JSON column or has-many relation)
-     * @param string $label       Display label for the repeater
-     * @param array  $repeatables Array of field definitions: each with name, label, type, rules, options
-     * @param string $preset      Storage preset: 'json' (JSON column) or 'hasMany' (related table)
-     * @param array  $options     Extra options: foreignKey, relatedTable, relatedKey (for hasMany)
      */
     public function setRepeater(string $field, string $label, array $repeatables, string $preset = 'json', array $options = []): self
     {
@@ -600,6 +598,33 @@ class GroceryCrud
             'relatedTable' => $options['relatedTable'] ?? null,
             'relatedKey'  => $options['relatedKey'] ?? 'id',
         ];
+        return $this;
+    }
+
+    /**
+     * Remove the Filters button from the datagrid toolbar.
+     */
+    public function unsetFilters(): self
+    {
+        $this->enableFilters = false;
+        return $this;
+    }
+
+    /**
+     * Remove the Columns button from the datagrid toolbar.
+     */
+    public function unsetColumns(): self
+    {
+        $this->enableColumns = false;
+        return $this;
+    }
+
+    /**
+     * Remove the Settings button from the datagrid toolbar.
+     */
+    public function unsetSettings(): self
+    {
+        $this->enableSettings = false;
         return $this;
     }
 
@@ -656,8 +681,9 @@ class GroceryCrud
         $sortDir = $request->getGet('sort_dir') ?? $request->getPost('sort_dir') ?? null;
         $filtersJson = $request->getGet('filters') ?? $request->getPost('filters') ?? '{}';
         $filters = json_decode($filtersJson, true) ?? [];
+        $advancedFilters = json_decode($request->getGet('advanced_filters') ?? '[]', true) ?: [];
 
-        $listData = $this->buildListData(max(1, $page), $search, $perPage, $sortField, $sortDir, $filters);
+        $listData = $this->buildListData(max(1, $page), $search, $perPage, $sortField, $sortDir, $filters, $advancedFilters, $this->resolveColumns());
 
         return Services::response()
             ->setContentType('application/json')
@@ -967,11 +993,13 @@ class GroceryCrud
     /**
      * Build the data array for list rendering.
      */
-    private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null, array $filters = []): array
+    private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null, array $filters = [], array $advancedFilters = [], array $columns = []): array
     {
         $perPage = $perPage ?? $this->perPage;
         $offset = ($page - 1) * $perPage;
-        $columns = $this->resolveColumns();
+        if (empty($columns)) {
+            $columns = $this->resolveColumns();
+        }
 
         $searchableColumns = $this->searchable ? $columns : [];
 
@@ -991,6 +1019,15 @@ class GroceryCrud
             $filterTypes[$field] = $config['type'] ?? 'dropdown';
         }
         $this->model->setFilterTypes($filterTypes);
+
+        // Apply advanced filters
+        if (!empty($advancedFilters)) {
+            foreach ($advancedFilters as $filter) {
+                if (!empty($filter['field']) && !empty($filter['value'])) {
+                    $this->model->addAdvancedFilter($filter['field'], $filter['operator'] ?? 'contains', $filter['value']);
+                }
+            }
+        }
 
         $records = $this->model->getList(
             $columns,
@@ -1055,7 +1092,11 @@ class GroceryCrud
             'sortDir'        => $sortDir,
             'columnFilters'  => $mergedFilters,
             'currentFilters' => $filters,
+            'advancedFilters' => $advancedFilters,
             'batchActions'   => $this->batchActions,
+            'enableFilters'  => $this->enableFilters,
+            'enableColumns'  => $this->enableColumns,
+            'enableSettings' => $this->enableSettings,
         ]);
     }
 

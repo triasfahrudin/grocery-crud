@@ -167,6 +167,14 @@ class CrudModel
         $this->filterTypes = $types;
     }
 
+    /** @var array<int, array{field: string, operator: string, value: string}> */
+    private array $advancedFilters = [];
+
+    public function addAdvancedFilter(string $field, string $operator, string $value): void
+    {
+        $this->advancedFilters[] = ['field' => $field, 'operator' => $operator, 'value' => $value];
+    }
+
     private function applyFilters($builder, array $filters): void
     {
         foreach ($filters as $field => $value) {
@@ -223,6 +231,38 @@ class CrudModel
         // Column filters
         $this->applyFilters($builder, $filters);
 
+        // Apply advanced filters
+        foreach ($this->advancedFilters as $af) {
+            $field = $af['field'];
+            $value = $af['value'];
+            $operator = $af['operator'];
+
+            switch ($operator) {
+                case 'equals':
+                    $builder->where($field, $value);
+                    break;
+                case 'not_equal':
+                    $builder->where($field . ' !=', $value);
+                    break;
+                case 'starts_with':
+                    $builder->like($field, $value, 'after');
+                    break;
+                case 'ends_with':
+                    $builder->like($field, $value, 'before');
+                    break;
+                case 'greater_than':
+                    $builder->where($field . ' >', $value);
+                    break;
+                case 'less_than':
+                    $builder->where($field . ' <', $value);
+                    break;
+                case 'contains':
+                default:
+                    $builder->like($field, $value);
+                    break;
+            }
+        }
+
         // Search
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
             $builder->groupStart();
@@ -263,6 +303,7 @@ class CrudModel
             }
         }
 
+        $this->advancedFilters = [];
         return $results;
     }
 
@@ -284,6 +325,38 @@ class CrudModel
         // Column filters
         $this->applyFilters($builder, $filters);
 
+        // Apply advanced filters
+        foreach ($this->advancedFilters as $af) {
+            $field = $af['field'];
+            $value = $af['value'];
+            $operator = $af['operator'];
+
+            switch ($operator) {
+                case 'equals':
+                    $builder->where($field, $value);
+                    break;
+                case 'not_equal':
+                    $builder->where($field . ' !=', $value);
+                    break;
+                case 'starts_with':
+                    $builder->like($field, $value, 'after');
+                    break;
+                case 'ends_with':
+                    $builder->like($field, $value, 'before');
+                    break;
+                case 'greater_than':
+                    $builder->where($field . ' >', $value);
+                    break;
+                case 'less_than':
+                    $builder->where($field . ' <', $value);
+                    break;
+                case 'contains':
+                default:
+                    $builder->like($field, $value);
+                    break;
+            }
+        }
+
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
             $builder->groupStart();
             foreach ($searchableColumns as $idx => $col) {
@@ -296,6 +369,7 @@ class CrudModel
             $builder->groupEnd();
         }
 
+        $this->advancedFilters = [];
         return $builder->countAllResults();
     }
 
