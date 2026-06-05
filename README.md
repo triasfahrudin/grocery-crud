@@ -10,7 +10,7 @@ Library CRUD generator full-featured untuk CodeIgniter 4. Terinspirasi dari Groc
 - **Validation** — Validasi CI4 terintegrasi, unique, required
 - **Upload** — File & image upload dengan thumbnail
 - **Export** — CSV & Excel export
-- **Theme System** — Bootstrap 5 (default), mudah ditambahkan tema baru
+- **Theme System** — Bootstrap 5 & AdminLTE 4, mudah ditambahkan tema baru
 - **Multi-language** — English & Indonesian bawaan
 - **Search** — Pencarian real-time
 - **Custom Actions** — Tombol aksi kustom
@@ -107,7 +107,17 @@ $crud->callbackAfterInsert(function ($data) {
 });
 ```
 
-### 4. Dengan Upload & Validation
+### 4. Dropdown dengan Opsi Kustom
+
+```php
+$crud->setFieldType('is_active', 'dropdown', [
+    '1' => 'Active',
+    '0' => 'Inactive',
+]);
+$crud->displayAs('is_active', 'Status');
+```
+
+### 5. Dengan Upload & Validation
 
 ```php
 $crud->setUpload('image', [
@@ -120,6 +130,20 @@ $crud->unique('email');
 $crud->setRules('price', 'numeric|greater_than[0]');
 ```
 
+## Theme
+
+Theme bisa diubah dengan `setTheme()`:
+
+```php
+// Bootstrap 5 (default)
+$crud->setTheme('bootstrap5');
+
+// AdminLTE 4
+$crud->setTheme('adminlte4');
+```
+
+Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterface`.
+
 ## Dokumentasi API Lengkap
 
 ### Konfigurasi
@@ -128,7 +152,7 @@ $crud->setRules('price', 'numeric|greater_than[0]');
 |--------|-----------|
 | `setTable(string $table, ?string $subject)` | Set tabel utama |
 | `setSubject(string $subject)` | Set judul/subject |
-| `setTheme(string $theme)` | Set tema (default: bootstrap5) |
+| `setTheme(string $theme)` | Set tema (bootstrap5, adminlte4) |
 | `setLanguage(string $language)` | Set bahasa (english, indonesian) |
 | `setPerPage(int $perPage)` | Item per halaman |
 | `setSearchable(bool $searchable)` | Aktifkan/nonaktifkan search |
@@ -143,7 +167,7 @@ $crud->setRules('price', 'numeric|greater_than[0]');
 | `setAddFields(...$fields)` | Field khusus form add |
 | `setEditFields(...$fields)` | Field khusus form edit |
 | `displayAs(string $field, string $label)` | Label display untuk field |
-| `setFieldType(string $field, string $type)` | Override tipe field |
+| `setFieldType(string $field, string $type, array $options = [])` | Override tipe field + opsi (dropdown, dll) |
 | `setReadOnly(string $field)` | Field read-only |
 
 ### Relations
