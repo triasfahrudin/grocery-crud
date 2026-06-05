@@ -1134,6 +1134,11 @@ class GroceryCrud
 
         // Detect field types and values
         foreach ($fields as $field) {
+            // Skip repeater fields (already resolved above)
+            if (isset($this->repeaterFields[$field])) {
+                continue;
+            }
+
             // Type detection
             if (isset($this->fieldTypeOverrides[$field])) {
                 $override = $this->fieldTypeOverrides[$field];
