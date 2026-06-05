@@ -18,6 +18,7 @@ class Config extends BaseConfig
      */
     public array $themes = [
         'bootstrap5' => \GroceryCrud\Themes\Bootstrap5Theme::class,
+        'adminlte4'  => \GroceryCrud\Themes\AdminLTE4Theme::class,
     ];
 
     /**
