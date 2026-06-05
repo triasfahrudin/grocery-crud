@@ -1238,8 +1238,13 @@ class GroceryCrud
                 }
             } else {
                 // Keep existing file if no new upload
-                if ($request->getPost($field . '_existing')) {
-                    $data[$field] = $request->getPost($field . '_existing');
+                $existing = $request->getPost($field . '_existing');
+                if ($existing) {
+                    // Safety: if old data stored full URL, extract filename only
+                    if (str_contains($existing, '://')) {
+                        $existing = basename($existing);
+                    }
+                    $data[$field] = $existing;
                 }
             }
         }

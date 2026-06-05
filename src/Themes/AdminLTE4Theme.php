@@ -527,7 +527,7 @@ class AdminLTE4Theme implements ThemeInterface
                         $html .= '<i class="bi bi-paperclip"></i> ' . basename((string) $value) . '</a>';
                     }
                     $html .= '</div>';
-                    $html .= '<input type="hidden" name="' . $fieldName . '_existing" value="' . htmlspecialchars((string) $value) . '">';
+                    $html .= '<input type="hidden" name="' . $fieldName . '_existing" value="' . htmlspecialchars(basename((string) $value)) . '">';
                 }
                 break;
 
