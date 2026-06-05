@@ -134,7 +134,12 @@
         var crudId = $wrapper.attr('id');
         var $parent = $wrapper.parent();
         var page = $wrapper.data('currentPage') || 1;
-        var search = $wrapper.find('.gc-search-input').val() || '';
+        var $searchInput = $wrapper.find('.gc-search-input');
+        var search = $searchInput.val() || '';
+        var wasFocused = document.activeElement === $searchInput[0];
+        var caretPos = wasFocused && $searchInput[0].selectionStart !== undefined
+            ? $searchInput[0].selectionStart
+            : -1;
 
         showLoading();
 
@@ -153,7 +158,15 @@
                     // Re-bind events
                     bindEvents();
                     // Restore search value (crudId changes on re-render via uniqid)
-                    $parent.find('.grocery-crud-wrapper .gc-search-input').val(search);
+                    var $newSearchInput = $parent.find('.grocery-crud-wrapper .gc-search-input');
+                    $newSearchInput.val(search);
+                    // Restore focus and caret position if previously focused
+                    if (wasFocused) {
+                        $newSearchInput.focus();
+                        if (caretPos >= 0 && $newSearchInput[0].setSelectionRange) {
+                            $newSearchInput[0].setSelectionRange(caretPos, caretPos);
+                        }
+                    }
                 } else {
                     showAlert(response.message || 'Failed to load data.', 'danger');
                 }
