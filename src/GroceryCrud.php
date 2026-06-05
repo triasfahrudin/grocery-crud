@@ -721,6 +721,13 @@ class GroceryCrud
                 }
             }
 
+            // Strip _existing keys from data (hidden inputs, not real columns)
+            foreach (array_keys($data) as $key) {
+                if (str_ends_with($key, '_existing')) {
+                    unset($data[$key]);
+                }
+            }
+
             // Remove N-to-N fields (virtual, not actual columns) before update
             $data = $this->stripNtoNFields($data);
 
