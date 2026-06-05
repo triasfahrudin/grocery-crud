@@ -86,7 +86,7 @@ class GroceryCrud
     /** @var array<string, array<int, string>> */
     private array $enumCache = [];
 
-    /** @var array<string, string> */
+    /** @var array<string, array{type: string, options?: array}> */
     private array $fieldTypeOverrides = [];
 
     /** @var array<int, string> */
@@ -504,9 +504,9 @@ class GroceryCrud
     /**
      * Override auto-detected field type.
      */
-    public function setFieldType(string $field, string $type): self
+    public function setFieldType(string $field, string $type, array $options = []): self
     {
-        $this->fieldTypeOverrides[$field] = $type;
+        $this->fieldTypeOverrides[$field] = ['type' => $type, 'options' => $options];
         return $this;
     }
 
@@ -928,7 +928,11 @@ class GroceryCrud
         foreach ($fields as $field) {
             // Type detection
             if (isset($this->fieldTypeOverrides[$field])) {
-                $type = $this->fieldTypeOverrides[$field];
+                $override = $this->fieldTypeOverrides[$field];
+                $type = $override['type'];
+                if (!empty($override['options'])) {
+                    $fieldOptions[$field] = $override['options'];
+                }
             } elseif ($this->relationManager->hasRelation($field)) {
                 $relType = $this->relationManager->getRelationType($field);
                 $type = $relType === 'n_to_n' ? 'set' : 'dropdown';
@@ -948,8 +952,10 @@ class GroceryCrud
                 $fieldValues[$field] = '';
             }
 
-            // Options for dropdowns/relations
-            if ($type === 'dropdown' && $this->relationManager->getRelationType($field) === 'belongs_to') {
+            // Options for dropdowns/relations (skip if already set via setFieldType)
+            if (isset($fieldOptions[$field])) {
+                // Custom options provided, skip auto-detection
+            } elseif ($type === 'dropdown' && $this->relationManager->getRelationType($field) === 'belongs_to') {
                 $relData = $this->relationManager->getRelationData($field);
                 $options = [];
                 foreach ($relData as $item) {
