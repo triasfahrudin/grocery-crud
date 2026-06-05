@@ -107,6 +107,9 @@ class GroceryCrud
     /** @var array<string, string> */
     private array $batchActions = [];
 
+    /** @var array<string, array{label: string, repeatables: array<int, array{name: string, label: string, type: string, rules?: string, options?: array}>, preset: string, foreignKey?: string, relatedTable?: string, relatedKey?: string}> */
+    private array $repeaterFields = [];
+
     private string $crudId;
 
     public function __construct(?GCConfig $config = null, ?BaseConnection $db = null)
@@ -578,6 +581,28 @@ class GroceryCrud
         return $this->setBatchAction($actionId, $label);
     }
 
+    /**
+     * Define a repeater field (repeatable group of sub-fields).
+     *
+     * @param string $field       Column name (JSON column or has-many relation)
+     * @param string $label       Display label for the repeater
+     * @param array  $repeatables Array of field definitions: each with name, label, type, rules, options
+     * @param string $preset      Storage preset: 'json' (JSON column) or 'hasMany' (related table)
+     * @param array  $options     Extra options: foreignKey, relatedTable, relatedKey (for hasMany)
+     */
+    public function setRepeater(string $field, string $label, array $repeatables, string $preset = 'json', array $options = []): self
+    {
+        $this->repeaterFields[$field] = [
+            'label'       => $label,
+            'repeatables' => $repeatables,
+            'preset'      => $preset,
+            'foreignKey'  => $options['foreignKey'] ?? null,
+            'relatedTable' => $options['relatedTable'] ?? null,
+            'relatedKey'  => $options['relatedKey'] ?? 'id',
+        ];
+        return $this;
+    }
+
     // ======== Render Methods ========
 
     /**
@@ -694,6 +719,9 @@ class GroceryCrud
                 ]);
             }
 
+            // Process repeater fields (JSON encode / unset hasMany)
+            $this->processRepeaterDataBeforeSave($data);
+
             // Remove N-to-N fields (virtual, not actual columns) before insert
             $data = $this->stripNtoNFields($data);
 
@@ -705,6 +733,9 @@ class GroceryCrud
                     'message' => $this->getLang('insert_fail') ?? 'Failed to insert record.',
                 ]);
             }
+
+            // Handle repeater hasMany data
+            $this->processRepeaterDataAfterSave($insertId);
 
             // Handle NtoN relations
             $this->handleNtoNInsert($insertId, $request->getPost());
@@ -800,11 +831,17 @@ class GroceryCrud
                 }
             }
 
+            // Process repeater fields (JSON encode / unset hasMany)
+            $this->processRepeaterDataBeforeSave($data);
+
             // Remove N-to-N fields (virtual, not actual columns) before update
             $data = $this->stripNtoNFields($data);
 
             // Update
             $updated = $this->model->update($id, $data);
+
+            // Handle repeater hasMany data
+            $this->processRepeaterDataAfterSave($id);
 
             if (!$updated) {
                 return $this->jsonResponse(false, [
@@ -1069,6 +1106,31 @@ class GroceryCrud
         $fieldTypes = [];
         $fieldOptions = [];
         $uploadFields = [];
+        $repeaterData = [];
+
+        // Resolve repeater values
+        foreach ($this->repeaterFields as $rField => $rDef) {
+            if (!in_array($rField, $fields, true)) {
+                $fields[] = $rField;
+            }
+            $fieldTypes[$rField] = 'repeater';
+            if ($mode === 'edit' && $record !== null) {
+                if ($rDef['preset'] === 'json') {
+                    $raw = $record[$rField] ?? '[]';
+                    $repeaterData[$rField] = !empty($raw) && $raw !== '[]'
+                        ? (is_string($raw) ? json_decode($raw, true) ?? [] : $raw)
+                        : [];
+                } elseif ($rDef['preset'] === 'hasMany') {
+                    $repeaterData[$rField] = $this->model->getRelatedRows(
+                        $rDef['relatedTable'],
+                        $rDef['foreignKey'],
+                        $id
+                    );
+                }
+            } else {
+                $repeaterData[$rField] = [];
+            }
+        }
 
         // Detect field types and values
         foreach ($fields as $field) {
@@ -1169,6 +1231,8 @@ class GroceryCrud
             'readOnlyFields' => $this->readOnlyFields,
             'uploadFields'   => $uploadFields,
             'crudId'         => $this->crudId,
+            'repeaterFields' => $this->repeaterFields,
+            'repeaterData'   => $repeaterData,
         ];
     }
 
@@ -1451,5 +1515,68 @@ class GroceryCrud
         return $response
             ->setContentType('application/json')
             ->setJSON(array_merge(['success' => $success], $data));
+    }
+
+    // ======== Repeater Field Helpers ========
+
+    /**
+     * Process repeater data before save.
+     * For JSON preset: json_encode the array.
+     * For HasMany preset: unset from data (handled separately).
+     */
+    private function processRepeaterDataBeforeSave(array &$data): void
+    {
+        foreach ($this->repeaterFields as $field => $rDef) {
+            if (!isset($data[$field])) {
+                continue;
+            }
+            if ($rDef['preset'] === 'json') {
+                $data[$field] = json_encode(array_values($data[$field]));
+            } elseif ($rDef['preset'] === 'hasMany') {
+                // Store temporarily for later processing
+                $this->repeaterUnsaved[$field] = $data[$field];
+                unset($data[$field]);
+            }
+        }
+    }
+
+    /** @var array<string, array> Temporary storage for hasMany repeater data during save */
+    private array $repeaterUnsaved = [];
+
+    /**
+     * Save hasMany repeater data after the main record is saved.
+     */
+    private function saveRepeaterHasMany(string $field, mixed $parentId): void
+    {
+        $rDef = $this->repeaterFields[$field] ?? null;
+        $items = $this->repeaterUnsaved[$field] ?? [];
+        if ($rDef === null || empty($items)) {
+            return;
+        }
+
+        $relatedTable = $rDef['relatedTable'];
+        $foreignKey = $rDef['foreignKey'];
+        $relatedKey = $rDef['relatedKey'] ?? 'id';
+
+        // Delete existing related rows
+        $this->model->deleteRelatedRows($relatedTable, $foreignKey, $parentId);
+
+        // Insert new rows
+        foreach ($items as $item) {
+            $item[$foreignKey] = $parentId;
+            $this->model->insertRelatedRow($relatedTable, $item);
+        }
+    }
+
+    /**
+     * Process repeater data after the main record is saved.
+     */
+    private function processRepeaterDataAfterSave(mixed $recordId): void
+    {
+        foreach ($this->repeaterFields as $field => $rDef) {
+            if ($rDef['preset'] === 'hasMany') {
+                $this->saveRepeaterHasMany($field, $recordId);
+            }
+        }
     }
 }

@@ -423,6 +423,12 @@ class Bootstrap5Theme implements ThemeInterface
         $fieldId      = 'gc_field_' . $field;
         $fieldName    = $field;
 
+        // Repeater data
+        $repeaterDefs  = $data['repeaterFields'] ?? [];
+        $repeaterData  = $data['repeaterData'] ?? [];
+        $rDef          = $repeaterDefs[$field] ?? null;
+        $rValues       = $repeaterData[$field] ?? [];
+
         $html = '';
 
         switch ($type) {
@@ -535,11 +541,103 @@ class Bootstrap5Theme implements ThemeInterface
                 $html .= '<input type="text" class="form-control" id="' . $fieldId . '" value="' . htmlspecialchars((string) $value) . '" readonly disabled>';
                 break;
 
+            case 'repeater':
+                if ($rDef === null) break;
+                $repeatables = $rDef['repeatables'] ?? [];
+                $html .= '<div class="gc-repeater-container border rounded p-3">';
+
+                // Existing items
+                foreach ($rValues as $rIndex => $rItem) {
+                    $html .= '<div class="gc-repeater-item card card-body mb-2 p-3">';
+                    $html .= '<div class="d-flex justify-content-end mb-1">';
+                    $html .= '<button type="button" class="btn btn-sm btn-outline-danger gc-repeater-remove"><i class="bi bi-trash"></i></button>';
+                    $html .= '</div>';
+                    foreach ($repeatables as $subField) {
+                        $sfName  = $subField['name'];
+                        $sfLabel = $subField['label'] ?? ucfirst($sfName);
+                        $sfType  = $subField['type'] ?? 'text';
+                        $sfOpts  = $subField['options'] ?? [];
+                        $sfValue = $rItem[$sfName] ?? '';
+                        $inputName = $fieldName . '[' . $rIndex . '][' . $sfName . ']';
+                        $inputId   = $fieldId . '_' . $rIndex . '_' . $sfName;
+                        $html .= '<div class="mb-2">';
+                        $html .= '<label for="' . $inputId . '" class="form-label small">' . htmlspecialchars($sfLabel) . '</label>';
+                        $html .= $this->renderRepeaterSubField($inputName, $inputId, $sfType, $sfValue, $sfOpts);
+                        $html .= '</div>';
+                    }
+                    $html .= '</div>';
+                }
+
+                // Template for JS cloning
+                $html .= '<div class="gc-repeater-template" style="display:none">';
+                $template = '';
+                $template .= '<div class="gc-repeater-item card card-body mb-2 p-3">';
+                $template .= '<div class="d-flex justify-content-end mb-1">';
+                $template .= '<button type="button" class="btn btn-sm btn-outline-danger gc-repeater-remove"><i class="bi bi-trash"></i></button>';
+                $template .= '</div>';
+                foreach ($repeatables as $subField) {
+                    $sfName  = $subField['name'];
+                    $sfLabel = $subField['label'] ?? ucfirst($sfName);
+                    $sfType  = $subField['type'] ?? 'text';
+                    $sfOpts  = $subField['options'] ?? [];
+                    $inputName = $fieldName . '[__INDEX__][' . $sfName . ']';
+                    $inputId   = $fieldId . '__INDEX__' . $sfName;
+                    $template .= '<div class="mb-2">';
+                    $template .= '<label for="' . $inputId . '" class="form-label small">' . htmlspecialchars($sfLabel) . '</label>';
+                    $template .= $this->renderRepeaterSubField($inputName, $inputId, $sfType, '', $sfOpts);
+                    $template .= '</div>';
+                }
+                $template .= '</div>';
+                $html .= htmlspecialchars($template);
+                $html .= '</div>';
+
+                // Add button
+                $html .= '<button type="button" class="btn btn-sm btn-outline-primary mt-2 gc-repeater-add"><i class="bi bi-plus-lg"></i> Add Item</button>';
+                $html .= '</div>';
+                break;
+
             default: // text
                 $html .= '<input type="text" class="form-control" id="' . $fieldId . '" name="' . $fieldName . '" value="' . htmlspecialchars((string) $value) . '"' . $readonlyAttr . '>';
                 break;
         }
 
         return $html;
+    }
+
+    /**
+     * Render a sub-field within a repeater group.
+     */
+    private function renderRepeaterSubField(string $name, string $id, string $type, mixed $value, array $options = []): string
+    {
+        switch ($type) {
+            case 'textarea':
+                return '<textarea class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" rows="2">' . htmlspecialchars((string) $value) . '</textarea>';
+
+            case 'integer':
+            case 'numeric':
+                return '<input type="number" step="any" class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '">';
+
+            case 'select':
+            case 'dropdown':
+                $html = '<select class="form-select form-select-sm" id="' . $id . '" name="' . $name . '">';
+                $html .= '<option value="">-- Select --</option>';
+                foreach ($options as $optValue => $optLabel) {
+                    $selected = ((string) $optValue === (string) $value) ? ' selected' : '';
+                    $html .= '<option value="' . htmlspecialchars((string) $optValue) . '"' . $selected . '>' . htmlspecialchars((string) $optLabel) . '</option>';
+                }
+                $html .= '</select>';
+                return $html;
+
+            case 'boolean':
+            case 'true_false':
+                $checked = !empty($value) ? ' checked' : '';
+                return '<div class="form-check form-switch"><input class="form-check-input" type="checkbox" id="' . $id . '" name="' . $name . '" value="1"' . $checked . '></div>';
+
+            case 'hidden':
+                return '<input type="hidden" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '">';
+
+            default: // text, string
+                return '<input type="text" class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '">';
+        }
     }
 }

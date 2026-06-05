@@ -496,4 +496,41 @@ class CrudModel
     {
         return $this->db;
     }
+
+    // ======== Repeater HasMany Helpers ========
+
+    /**
+     * Get related rows for a hasMany repeater.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getRelatedRows(string $relatedTable, string $foreignKey, mixed $parentId): array
+    {
+        $pk = $this->getPrimaryKeyOfTable($relatedTable);
+
+        return $this->db->table($relatedTable)
+            ->where($foreignKey, $parentId)
+            ->orderBy($pk, 'ASC')
+            ->get()
+            ->getResultArray();
+    }
+
+    /**
+     * Delete all related rows for a hasMany relationship.
+     */
+    public function deleteRelatedRows(string $relatedTable, string $foreignKey, mixed $parentId): bool
+    {
+        return $this->db->table($relatedTable)
+            ->where($foreignKey, $parentId)
+            ->delete();
+    }
+
+    /**
+     * Insert a row into a related table.
+     */
+    public function insertRelatedRow(string $relatedTable, array $data): bool|int
+    {
+        return $this->db->table($relatedTable)
+            ->insert($data);
+    }
 }
