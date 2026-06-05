@@ -125,7 +125,7 @@ class Bootstrap5Theme implements ThemeInterface
 
         // Filter button
         if ($enableFilters) {
-            $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-tool-btn gc-btn-filters" title="' . ($lang['filters'] ?? 'Filters') . '">';
+            $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-tool-btn gc-filter-btn" title="' . ($lang['filters'] ?? 'Filters') . '">';
             $html .= '<i class="bi bi-funnel"></i></button>';
         }
 
@@ -167,7 +167,7 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<div class="gc-filter-panel mb-3 p-3 bg-light border rounded" style="display:none">';
             $html .= '<div class="gc-filter-rows">';
             // Template row (hidden, cloned by JS)
-            $html .= '<div class="gc-filter-row gc-filter-row-template" style="display:none">';
+            $html .= '<div class="gc-filter-item gc-filter-item-template" style="display:none">';
             $html .= '<select class="form-select form-select-sm gc-filter-col" style="min-width:130px"><option value="">' . ($lang['select_column'] ?? 'Column') . '</option></select>';
             $html .= '<select class="form-select form-select-sm gc-filter-op" style="min-width:110px">';
             $html .= '<option value="contains">' . ($lang['contains'] ?? 'Contains') . '</option>';
@@ -179,7 +179,7 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<option value="less_than">' . ($lang['less_than'] ?? 'Less than') . '</option>';
             $html .= '</select>';
             $html .= '<input type="text" class="form-control form-control-sm gc-filter-val" placeholder="' . ($lang['value'] ?? 'Value') . '" style="min-width:150px">';
-            $html .= '<button type="button" class="gc-filter-row-remove" title="' . ($lang['remove'] ?? 'Remove') . '">&times;</button>';
+            $html .= '<button type="button" class="gc-filter-item-remove" title="' . ($lang['remove'] ?? 'Remove') . '">&times;</button>';
             $html .= '</div>';
             $html .= '</div>';
             $html .= '<div class="gc-filter-actions">';
@@ -242,8 +242,8 @@ class Bootstrap5Theme implements ThemeInterface
 
         $html .= '</tr>';
 
-        // Filter row
-        if (!empty($columnFilters)) {
+        // Filter row (inline per-column) — hidden when new filter panel is active
+        if (!empty($columnFilters) && !($enableFilters ?? false)) {
             $html .= '<tr class="gc-filter-row">';
             if ($hasBatch) {
                 $html .= '<td></td>';

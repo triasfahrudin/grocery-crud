@@ -617,22 +617,22 @@
         $(document).off('click', '.gc-filter-add').on('click', '.gc-filter-add', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var $rows = $wrapper.find('.gc-filter-rows');
-            var $template = $rows.find('.gc-filter-row-template').clone().removeClass('gc-filter-row-template').addClass('gc-filter-row').show();
+            var $template = $rows.find('.gc-filter-item-template').clone().removeClass('gc-filter-item-template').addClass('gc-filter-item').show();
             $template.find('input').val('');
             $template.find('select').prop('selectedIndex', 0);
             $rows.append($template);
         });
 
         // Remove filter row
-        $(document).off('click', '.gc-filter-row-remove').on('click', '.gc-filter-row-remove', function () {
-            $(this).closest('.gc-filter-row').remove();
+        $(document).off('click', '.gc-filter-item-remove').on('click', '.gc-filter-item-remove', function () {
+            $(this).closest('.gc-filter-item').remove();
         });
 
         // Apply filters
         $(document).off('click', '.gc-filter-apply').on('click', '.gc-filter-apply', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var filters = [];
-            $wrapper.find('.gc-filter-row').each(function () {
+            $wrapper.find('.gc-filter-item').each(function () {
                 var col = $(this).find('.gc-filter-col').val();
                 var op = $(this).find('.gc-filter-op').val();
                 var val = $(this).find('.gc-filter-val').val();
@@ -648,7 +648,7 @@
         // Clear filters
         $(document).off('click', '.gc-filter-clear').on('click', '.gc-filter-clear', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
-            $wrapper.find('.gc-filter-row').remove();
+            $wrapper.find('.gc-filter-item').remove();
             $wrapper.find('.gc-filter-panel').hide();
             $wrapper.removeData('gcAdvancedFilters');
             $wrapper.data('currentPage', 1);
@@ -713,7 +713,7 @@
                     $(this).prop('checked', true).trigger('change');
                 });
                 $wrapper.removeData('gcAdvancedFilters');
-                $wrapper.find('.gc-filter-row').remove();
+                $wrapper.find('.gc-filter-item').remove();
                 $wrapper.find('.gc-filter-panel').hide();
                 showAlert('Settings reset to defaults.', 'success');
             } catch (e) {}
