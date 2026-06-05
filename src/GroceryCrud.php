@@ -1119,7 +1119,7 @@ class GroceryCrud
         }
 
         $results = $builder->get()->getResultArray();
-        $options = ['' => '— All —'];
+        $options = [];
         foreach ($results as $row) {
             $options[(string) $row[$keyField]] = (string) $row[$labelField];
         }
