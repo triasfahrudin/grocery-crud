@@ -244,7 +244,7 @@ class AdminLTE4Theme implements ThemeInterface
         $html .= '</tr>';
 
         // Filter row (inline per-column) — hidden when new filter panel is active
-        if (!empty($columnFilters) && !($enableFilters ?? false)) {
+        if (!empty($columnFilters)) {
             $html .= '<tr class="gc-filter-row">';
             if ($hasBatch) {
                 $html .= '<td></td>';
