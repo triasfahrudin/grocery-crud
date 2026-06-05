@@ -218,6 +218,26 @@
                     // Populate columns menu and filter selects from table headers
                     var $newWrapper = $parent.find('.grocery-crud-wrapper');
                     populateColumnsAndFilters($newWrapper);
+
+                    // Restore advanced filter panel items and visibility
+                    if (advancedFilters && advancedFilters.length) {
+                        var $panel = $newWrapper.find('.gc-filter-panel');
+                        var $rows = $panel.find('.gc-filter-rows');
+                        var $template = $rows.find('.gc-filter-item-template');
+
+                        advancedFilters.forEach(function (f) {
+                            var $item = $template.clone()
+                                .removeClass('gc-filter-item-template')
+                                .addClass('gc-filter-item')
+                                .show();
+                            $item.find('.gc-filter-col').val(f.field);
+                            $item.find('.gc-filter-op').val(f.operator);
+                            $item.find('.gc-filter-val').val(f.value);
+                            $rows.append($item);
+                        });
+
+                        $panel.show();
+                    }
                 } else {
                     showAlert(response.message || 'Failed to load data.', 'danger');
                 }
