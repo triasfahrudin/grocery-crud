@@ -55,6 +55,11 @@
             $('body').append($modal);
             $modal.modal('show');
 
+            // Initialize Materialize form elements if Materialize is loaded
+            if (typeof M !== 'undefined') {
+                M.updateTextFields();
+            }
+
             return $modal;
         },
         hide: function () {
