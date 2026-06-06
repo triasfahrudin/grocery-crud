@@ -967,6 +967,7 @@
 
         var gcColDrag = { active: false, $el: null, startY: 0, $target: null };
         $(document).on('mousedown', '.gc-columns-menu .form-check', function (e) {
+            console.log('[GC_COL] mousedown', $(this).find('.form-check-input').data('column'));
             gcColDrag.active = true;
             gcColDrag.$el = $(this);
             gcColDrag.startY = e.clientY;
@@ -976,6 +977,9 @@
             if (!gcColDrag.active || !gcColDrag.$el) return;
             // Check if mouse has moved enough to consider it a drag (not a click)
             if (Math.abs(e.clientY - gcColDrag.startY) < 3) return;
+            if (!gcColDrag.$el.hasClass('gc-dragging')) {
+                console.log('[GC_COL] drag started');
+            }
             // Find the element under cursor
             var el = document.elementFromPoint(e.clientX, e.clientY);
             if (!el) return;
