@@ -1328,21 +1328,28 @@
             var url = window.location.href;
             try {
                 var raw = localStorage.getItem('gc_settings_' + btoa(url));
+                console.log('[GC_AUTO] url=', url, 'has_raw=', !!raw, 'menu_len=', $wrapper.find('.gc-columns-menu .form-check').length);
                 if (raw) {
                     var settings = JSON.parse(raw);
+                    console.log('[GC_AUTO] settings=', settings);
                     if (settings.columnOrder && settings.columnOrder.length) {
+                        console.log('[GC_AUTO] applyColumnOrder', settings.columnOrder);
                         applyColumnOrder($wrapper, settings.columnOrder);
+                        console.log('[GC_AUTO] after applyColumnOrder');
                     }
                     if (settings.columns) {
                         $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                             var col = $(this).data('column');
                             if (settings.columns[col] !== undefined) {
+                                console.log('[GC_AUTO] toggling col', col, 'to', settings.columns[col]);
                                 $(this).prop('checked', settings.columns[col]).trigger('change');
                             }
                         });
                     }
                 }
-            } catch (e) {}
+            } catch (e) {
+                console.log('[GC_AUTO] error', e);
+            }
         });
 
         // Store confirmation messages
