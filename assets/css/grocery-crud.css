@@ -613,7 +613,7 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
 /* Prevent input/label from intercepting mousedown — div handles both drag and toggle */
 .gc-columns-menu .form-check-input,
 .gc-columns-menu .form-check-label {
-    pointer-events: none;
+    pointer-events: none !important;
 }
 .gc-columns-menu .form-check:active {
     cursor: grabbing;
@@ -632,12 +632,10 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
     width: 1em;
     height: 1em;
     flex-shrink: 0;
-    cursor: pointer;
     margin-left: 0;
     float: none;
     /* Override Materialize hiding native checkboxes */
     opacity: 1;
-    pointer-events: auto;
     position: static;
 }
 .gc-columns-menu .form-check-label {
