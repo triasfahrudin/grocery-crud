@@ -424,11 +424,20 @@ class CrudModel
 
                     $fkValues = array_column($relatedRows, $relatedPk);
 
+                    \log_message('error', '[GC_DEBUG] col=' . $col . ' table=' . $relatedTable . ' title=' . $relatedTitle . ' pk=' . $relatedPk . ' fk=' . $foreignKey . ' fkValues=' . json_encode($fkValues));
+
                     if (!empty($fkValues)) {
                         if ($idx === 0) {
                             $builder->whereIn("$this->table.$foreignKey", $fkValues);
                         } else {
                             $builder->orWhereIn("$this->table.$foreignKey", $fkValues);
+                        }
+                    } else {
+                        // No matching FK values — add a dummy condition to prevent empty group
+                        if ($idx === 0) {
+                            $builder->where('1=0', null, false);
+                        } else {
+                            $builder->orWhere('1=0', null, false);
                         }
                     }
                 } else {
@@ -440,6 +449,7 @@ class CrudModel
                 }
             }
             $builder->groupEnd();
+            \log_message('error', '[GC_DEBUG] search=' . $search . ' columns=' . json_encode($searchableColumns));
         }
 
         // Order by
@@ -546,7 +556,7 @@ class CrudModel
             }
         }
 
-        // Search (supports relation fields: fetch matching FK values from related table)
+        // Search (supports relation fields)
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
             $builder->groupStart();
             foreach ($searchableColumns as $idx => $col) {
@@ -565,11 +575,19 @@ class CrudModel
 
                     $fkValues = array_column($relatedRows, $relatedPk);
 
+                    \log_message('error', '[GC_DEBUG_TC] col=' . $col . ' table=' . $relatedTable . ' title=' . $relatedTitle . ' pk=' . $relatedPk . ' fk=' . $foreignKey . ' fkValues=' . json_encode($fkValues));
+
                     if (!empty($fkValues)) {
                         if ($idx === 0) {
                             $builder->whereIn("$this->table.$foreignKey", $fkValues);
                         } else {
                             $builder->orWhereIn("$this->table.$foreignKey", $fkValues);
+                        }
+                    } else {
+                        if ($idx === 0) {
+                            $builder->where('1=0', null, false);
+                        } else {
+                            $builder->orWhere('1=0', null, false);
                         }
                     }
                 } else {
@@ -581,6 +599,7 @@ class CrudModel
                 }
             }
             $builder->groupEnd();
+            \log_message('error', '[GC_DEBUG_TC] search=' . $search . ' columns=' . json_encode($searchableColumns));
         }
 
         $this->advancedFilters = [];
