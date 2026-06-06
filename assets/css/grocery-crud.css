@@ -605,8 +605,8 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
     color: #fff;
 }
 
-/* Form check fallback (columns menu checkboxes) */
-.form-check {
+/* Form check fallback (columns menu checkboxes only — NOT general form) */
+.gc-columns-menu .form-check {
     display: flex;
     align-items: center;
     gap: 0.5rem;
@@ -614,16 +614,16 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
     min-height: 1.5rem;
     cursor: pointer;
 }
-.form-check:hover {
+.gc-columns-menu .form-check:hover {
     background-color: rgba(0,0,0,0.03);
 }
-.form-check-input {
+.gc-columns-menu .form-check-input {
     width: 1em;
     height: 1em;
     flex-shrink: 0;
     cursor: pointer;
 }
-.form-check-label {
+.gc-columns-menu .form-check-label {
     cursor: pointer;
     font-size: 0.875rem;
 }
