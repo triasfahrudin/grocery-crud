@@ -4,18 +4,28 @@ Library CRUD generator full-featured untuk CodeIgniter 4. Terinspirasi dari Groc
 
 ## Fitur
 
-- **CRUD Lengkap** — Create, Read, Update, Delete dengan AJAX
-- **Relations** — Belongs_to & Many-to-many (NtoN)
-- **Callbacks** — beforeInsert, afterInsert, beforeUpdate, afterUpdate, beforeDelete, afterDelete, callbackColumn, callbackField
-- **Validation** — Validasi CI4 terintegrasi, unique, required
-- **Upload** — File & image upload dengan thumbnail
+- **CRUD Lengkap** — Create, Read, Update, Delete dengan AJAX, modal form, real-time list refresh
+- **Relations** — Belongs_to & Many-to-many (NtoN) dengan display value otomatis
+- **Sub-Grid** — Expandable nested tabel relasi di bawah setiap record
+- **Soft Delete** — Hapus sementara, restore, trash view, batch restore
+- **Batch Actions** — Delete Selected & Restore Selected dengan select-all checkbox
+- **Callbacks** — beforeInsert, afterInsert, beforeUpdate, afterUpdate, beforeDelete, afterDelete, callbackColumn, callbackField, callbackAddField, callbackEditField
+- **Validation** — Validasi CI4 terintegrasi (required, unique, custom rules)
+- **Upload** — File & image upload dengan thumbnail preview + image viewer (click to zoom)
 - **Export** — CSV & Excel export
+- **Search** — Pencarian real-time dengan debounce
+- **Column Filters** — Filter per-kolom (text, dropdown, relation dropdown)
+- **Advanced Filters** — Multi-condition filter panel (contains, equals, starts with, dll)
+- **Sortable Columns** — Sort asc/desc dengan klik header kolom
+- **Column Visibility** — Show/hide kolom dari dropdown menu
+- **Settings** — Save/load/reset konfigurasi kolom & filter ke localStorage
 - **Theme System** — Bootstrap 5 & AdminLTE 4, mudah ditambahkan tema baru
 - **Multi-language** — English & Indonesian bawaan
-- **Search** — Pencarian real-time
-- **Custom Actions** — Tombol aksi kustom
+- **Custom Actions** — Tombol aksi kustom per baris
+- **Repeater Fields** — Repeatable group of sub-fields (Nova-style)
 - **Field Type Detection** — Auto-detect tipe field dari database
-- **Field Type Override** — Override tipe field manual
+- **Field Type Override** — Override tipe field manual (dropdown, enum, color, dll)
+- **Cache Busting** — Version query param otomatis pada CSS/JS assets
 
 ## Instalasi
 
@@ -115,6 +125,12 @@ $crud->setFieldType('is_active', 'dropdown', [
     '0' => 'Inactive',
 ]);
 $crud->displayAs('is_active', 'Status');
+// Gunakan callbackColumn untuk menampilkan badge di list view
+$crud->callbackColumn('is_active', function ($value, $row) {
+    return $value == 1
+        ? '<span class="badge bg-success">Active</span>'
+        : '<span class="badge bg-secondary">Inactive</span>';
+});
 ```
 
 ### 5. Dengan Upload & Validation
@@ -130,9 +146,64 @@ $crud->unique('email');
 $crud->setRules('price', 'numeric|greater_than[0]');
 ```
 
-## Theme
+### 6. Column Filters
 
-Theme bisa diubah dengan `setTheme()`:
+```php
+// Filter text
+$crud->setColumnFilter('name', 'text');
+
+// Filter dropdown dengan opsi statis
+$crud->setColumnFilter('is_active', 'dropdown', ['1' => 'Active', '0' => 'Inactive']);
+
+// Filter dropdown dengan data dari tabel relasi
+$crud->setColumnFilterRelation('category_id', 'categories', 'name', 'id', "status = 'active'", 'name ASC');
+```
+
+### 7. Batch Actions
+
+```php
+// Delete Selected (built-in)
+$crud->setBatchAction('delete_selected', 'Delete Selected');
+
+// Restore Selected (built-in, untuk soft delete)
+$crud->setBatchAction('restore_selected', 'Restore Selected');
+```
+
+### 8. Soft Delete
+
+```php
+// Aktifkan soft delete (menyembunyikan record terhapus dari list)
+$crud->setSoftDelete();
+
+// Tampilkan trash view (record yang sudah di-soft-delete)
+$crud->withTrashed();
+
+// Atau lewat tombol Trash di toolbar (toggle otomatis)
+```
+
+### 9. Sub-Grid
+
+```php
+$crud->setSubGrid(
+    'variants',                      // Identifier field
+    'product_variants',              // Related table
+    'product_id',                    // FK di related table
+    ['name', 'price', 'stock'],      // Columns
+    ['name' => 'Variant', 'price' => 'Price', 'stock' => 'Stock'],  // Labels
+    []                               // Relations
+);
+```
+
+### 10. Repeater Fields
+
+```php
+$crud->setRepeater('specs', 'Product Specs', [
+    ['name' => 'key',   'label' => 'Specification', 'type' => 'text', 'rules' => 'required|max_length[100]'],
+    ['name' => 'value', 'label' => 'Value',          'type' => 'text', 'rules' => 'required|max_length[255]'],
+], 'json');
+```
+
+## Theme
 
 ```php
 // Bootstrap 5 (default)
@@ -150,13 +221,17 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 
 | Method | Deskripsi |
 |--------|-----------|
-| `setTable(string $table, ?string $subject)` | Set tabel utama |
+| `setTable(string $table, ?string $subject)` | Set tabel utama + subject |
 | `setSubject(string $subject)` | Set judul/subject |
-| `setTheme(string $theme)` | Set tema (bootstrap5, adminlte4) |
-| `setLanguage(string $language)` | Set bahasa (english, indonesian) |
-| `setPerPage(int $perPage)` | Item per halaman |
+| `setTheme(string $theme)` | Set tema (`bootstrap5`, `adminlte4`) |
+| `setLanguage(string $language)` | Set bahasa (`english`, `indonesian`) |
+| `setPerPage(int $perPage)` | Item per halaman (default: 25) |
 | `setSearchable(bool $searchable)` | Aktifkan/nonaktifkan search |
 | `setExportable(bool $exportable)` | Aktifkan/nonaktifkan export |
+| `setSoftDelete(bool $enabled)` | Aktifkan soft delete |
+| `withTrashed()` | Tampilkan record yang sudah di-soft-delete |
+| `orderBy(string $field, string $direction)` | Default order |
+| `where(array|string $key, mixed $value)` | WHERE condition |
 
 ### Columns & Fields
 
@@ -167,15 +242,27 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | `setAddFields(...$fields)` | Field khusus form add |
 | `setEditFields(...$fields)` | Field khusus form edit |
 | `displayAs(string $field, string $label)` | Label display untuk field |
-| `setFieldType(string $field, string $type, array $options = [])` | Override tipe field + opsi (dropdown, dll) |
-| `setReadOnly(string $field)` | Field read-only |
+| `setFieldType(string $field, string $type, array $options)` | Override tipe field (dropdown, enum, color, dll) |
+| `setReadOnly(string $field)` | Field read-only di form |
 
 ### Relations
 
 | Method | Deskripsi |
 |--------|-----------|
-| `setRelation($field, $relatedTable, $relatedTitleField, $where, $orderBy)` | Belongs_to relation |
-| `setRelationNtoN($field, $junctionTable, $pkInJunction, $fkInJunction, $targetTable, $targetTitleField, $where, $orderBy)` | Many-to-many relation |
+| `setRelation(string $field, string $table, string $title, ?$where, ?$orderBy)` | Belongs_to relation |
+| `setRelationNtoN(string $field, string $junction, string $pk, string $fk, string $target, string $title, ?$where, ?$orderBy)` | Many-to-many relation |
+
+### Sub-Grid
+
+| Method | Deskripsi |
+|--------|-----------|
+| `setSubGrid(string $field, string $table, string $fk, array $columns, array $labels, array $relations)` | Nested expandable table |
+
+### Repeater Fields
+
+| Method | Deskripsi |
+|--------|-----------|
+| `setRepeater(string $field, string $label, array $repeatables, string $preset, array $options)` | Repeatable group of sub-fields |
 
 ### Callbacks
 
@@ -187,7 +274,7 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | `callbackAfterUpdate(callable)` | Setelah update |
 | `callbackBeforeDelete(callable)` | Sebelum delete |
 | `callbackAfterDelete(callable)` | Setelah delete |
-| `callbackColumn(string $field, callable)` | Format tampilan kolom |
+| `callbackColumn(string $field, callable)` | Format tampilan kolom di list |
 | `callbackField(string $field, callable)` | Format field (add & edit) |
 | `callbackAddField(string $field, callable)` | Format field di form add |
 | `callbackEditField(string $field, callable)` | Format field di form edit |
@@ -198,27 +285,42 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 |--------|-----------|
 | `required(string $field)` | Field wajib diisi |
 | `unique(string $field)` | Field harus unik |
-| `setRules(string $field, string $rules)` | Set custom validation rules |
+| `setRules(string $field, string $rules, ?string $label)` | Custom validation rules CI4 |
 
 ### Upload
 
 | Method | Deskripsi |
 |--------|-----------|
-| `setUpload(string $field, array $config)` | Konfigurasi upload file |
+| `setUpload(string $field, array $config)` | Konfigurasi upload file (allowedTypes, maxSize, encryptFileName) |
 
 ### Actions
 
 | Method | Deskripsi |
 |--------|-----------|
-| `setActions(string ...$actions)` | Set default actions (add, edit, delete) |
-| `addAction(string $label, string $icon, string $url)` | Tambah custom action button |
+| `setActions(string ...$actions)` | Set default actions (`add`, `edit`, `delete`) |
+| `addAction(string $label, string $icon, string $url, string $cssClass)` | Custom action button per baris |
 
-### Query
+### Batch Actions
 
 | Method | Deskripsi |
 |--------|-----------|
-| `orderBy(string $field, string $direction)` | Default order |
-| `where($key, $value)` | WHERE condition |
+| `setBatchAction(string $actionId, string $label)` | Tambah batch action (built-in: `delete_selected`, `restore_selected`) |
+| `addBatchAction(string $actionId, string $label)` | Alias untuk `setBatchAction` |
+
+### Column Filters
+
+| Method | Deskripsi |
+|--------|-----------|
+| `setColumnFilter(string $field, string $type, array $options)` | Filter per-kolom (text, dropdown) |
+| `setColumnFilterRelation(string $field, string $table, string $label, ?$key, ?$where, ?$order)` | Filter dropdown dari tabel relasi |
+
+### Toolbar
+
+| Method | Deskripsi |
+|--------|-----------|
+| `unsetFilters()` | Sembunyikan tombol Filters |
+| `unsetColumns()` | Sembunyikan tombol Columns |
+| `unsetSettings()` | Sembunyikan tombol Settings |
 
 ## Tipe Field yang Didukung
 
@@ -243,6 +345,18 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | `url` | Input URL |
 | `phone` | Input tel |
 | `read_only` | Read-only text |
+
+## UI Features
+
+- **Select All** — Checkbox di header untuk select/deselect semua baris
+- **Sub-Grid** — Expandable row dengan nested table + loading state + header badge
+- **Image Viewer** — Klik thumbnail untuk lihat gambar ukuran penuh di modal
+- **Column Visibility** — Toggle show/hide kolom dari dropdown
+- **Settings** — Simpan/muat/reset konfigurasi kolom ke localStorage
+- **Sort** — Klik header kolom untuk sort asc/desc
+- **Advanced Filters** — Multi-condition filter (contains, equals, starts with, ends with, greater/less than)
+- **Export** — Download CSV atau Excel dari tombol toolbar
+- **Cache Busting** — Asset versioning otomatis dengan `?v=timestamp`
 
 ## License
 
