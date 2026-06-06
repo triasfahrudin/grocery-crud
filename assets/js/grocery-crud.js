@@ -1020,7 +1020,8 @@
             return; // Bootstrap is loaded, no polyfill needed
         }
 
-        // Dropdown polyfill
+        // Dropdown polyfill — skip when Materialize handles its own dropdowns
+        if (typeof M === 'undefined') {
             $(document).on('click.dropdown', '[data-bs-toggle="dropdown"]', function (e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -1051,10 +1052,9 @@
                     $('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu').hide();
                 }
             });
+        }
 
-        // Modal polyfill for non-Bootstrap themes
-        // Note: Always override because Materialize etc. also define $.fn.modal
-        // and we need Bootstrap-compatible modal behavior for GcModal
+        // Modal polyfill — always override (Materialize etc. define $.fn.modal too)
         $.fn.modal = function (action) {
                 if (action === 'show') {
                     return this.each(function () {

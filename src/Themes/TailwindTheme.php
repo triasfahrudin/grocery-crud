@@ -122,7 +122,7 @@ class TailwindTheme implements ThemeInterface
 
         if ($enableColumns) {
             $html .= '<div class="relative">';
-            $html .= '<button type="button" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 gc-tool-btn gc-btn-columns dropdown-toggle" title="' . ($lang['columns'] ?? 'Columns') . '">';
+            $html .= '<button type="button" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 gc-tool-btn gc-btn-columns dropdown-toggle" title="' . ($lang['columns'] ?? 'Columns') . '" data-bs-toggle="dropdown">';
             $html .= '<i class="bi bi-layout-three-columns"></i></button>';
             $html .= '<div class="dropdown-menu absolute right-0 mt-1 bg-white border rounded shadow-lg p-2 z-50 hidden gc-columns-menu" style="min-width:200px"></div>';
             $html .= '</div>';
@@ -130,7 +130,7 @@ class TailwindTheme implements ThemeInterface
 
         if ($enableSettings) {
             $html .= '<div class="relative">';
-            $html .= '<button type="button" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 gc-tool-btn gc-btn-settings dropdown-toggle" title="' . ($lang['settings'] ?? 'Settings') . '">';
+            $html .= '<button type="button" class="px-3 py-1.5 text-sm border border-gray-300 rounded hover:bg-gray-50 gc-tool-btn gc-btn-settings dropdown-toggle" title="' . ($lang['settings'] ?? 'Settings') . '" data-bs-toggle="dropdown">';
             $html .= '<i class="bi bi-gear"></i></button>';
             $html .= '<ul class="dropdown-menu absolute right-0 mt-1 bg-white border rounded shadow-lg py-1 z-50 hidden gc-settings-menu">';
             $html .= '<li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 gc-settings-save" href="#"><i class="bi bi-floppy mr-2"></i>' . ($lang['save_settings'] ?? 'Save') . '</a></li>';
