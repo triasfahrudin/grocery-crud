@@ -58,6 +58,16 @@
             // Initialize Materialize form elements if Materialize is loaded
             if (typeof M !== 'undefined') {
                 M.updateTextFields();
+
+                // Fix labels for selects and textareas in input-field
+                // (M.updateTextFields only handles text inputs)
+                $('.gc-modal .input-field select, .gc-modal .input-field textarea').each(function () {
+                    var $input = $(this);
+                    var $label = $input.siblings('label');
+                    if ($input.val() && !$label.hasClass('active')) {
+                        $label.addClass('active');
+                    }
+                });
             }
 
             return $modal;
