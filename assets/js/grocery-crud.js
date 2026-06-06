@@ -1124,6 +1124,26 @@
         bootstrapPolyfill();
         bindEvents();
 
+        // Auto-load saved column visibility from localStorage
+        $('.grocery-crud-wrapper').each(function () {
+            var $wrapper = $(this);
+            var url = window.location.href;
+            try {
+                var raw = localStorage.getItem('gc_settings_' + btoa(url));
+                if (raw) {
+                    var settings = JSON.parse(raw);
+                    if (settings.columns) {
+                        $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
+                            var col = $(this).data('column');
+                            if (settings.columns[col] !== undefined) {
+                                $(this).prop('checked', settings.columns[col]).trigger('change');
+                            }
+                        });
+                    }
+                }
+            } catch (e) {}
+        });
+
         // Store confirmation messages
         $('.grocery-crud-wrapper').each(function () {
             var $wrapper = $(this);
