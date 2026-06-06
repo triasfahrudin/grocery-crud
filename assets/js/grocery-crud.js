@@ -958,58 +958,72 @@
             refreshList($wrapper);
         });
 
-        // ======== Column Reorder: Drag & Drop ========
+        // ======== Column Reorder: Manual Drag (mousedown/mousemove/mouseup) ========
         // Since input/label have pointer-events:none, handle toggle via click on the .form-check div
         $(document).off('click', '.gc-columns-menu .form-check').on('click', '.gc-columns-menu .form-check', function () {
             var $input = $(this).find('.form-check-input');
             $input.prop('checked', !$input.is(':checked')).trigger('change');
         });
 
-        $(document).off('dragstart', '.gc-columns-menu .form-check').on('dragstart', '.gc-columns-menu .form-check', function (e) {
-            $(this).addClass('gc-dragging');
-            e.originalEvent.dataTransfer.effectAllowed = 'move';
-            e.originalEvent.dataTransfer.setData('text/plain', $(this).find('.form-check-input').data('column'));
+        var gcColDrag = { active: false, $el: null, startY: 0, $target: null };
+        $(document).on('mousedown', '.gc-columns-menu .form-check', function (e) {
+            gcColDrag.active = true;
+            gcColDrag.$el = $(this);
+            gcColDrag.startY = e.clientY;
+            gcColDrag.$target = null;
         });
-        $(document).off('dragend', '.gc-columns-menu .form-check').on('dragend', '.gc-columns-menu .form-check', function () {
-            $(this).removeClass('gc-dragging');
-            $('.gc-columns-menu .form-check').removeClass('gc-drag-over');
-        });
-        $(document).off('dragover', '.gc-columns-menu .form-check').on('dragover', '.gc-columns-menu .form-check', function (e) {
-            e.preventDefault();
-            e.originalEvent.dataTransfer.dropEffect = 'move';
-            $(this).addClass('gc-drag-over');
-        });
-        $(document).off('dragleave', '.gc-columns-menu .form-check').on('dragleave', '.gc-columns-menu .form-check', function () {
-            $(this).removeClass('gc-drag-over');
-        });
-        $(document).off('drop', '.gc-columns-menu .form-check').on('drop', '.gc-columns-menu .form-check', function (e) {
-            e.preventDefault();
-            $(this).removeClass('gc-drag-over');
-            var $dragged = $('.gc-dragging');
-            if (!$dragged.length || $dragged[0] === this) {
-                $('.gc-dragging').removeClass('gc-dragging');
+        $(document).on('mousemove', function (e) {
+            if (!gcColDrag.active || !gcColDrag.$el) return;
+            // Check if mouse has moved enough to consider it a drag (not a click)
+            if (Math.abs(e.clientY - gcColDrag.startY) < 3) return;
+            // Find the element under cursor
+            var el = document.elementFromPoint(e.clientX, e.clientY);
+            if (!el) return;
+            var $target = $(el).closest('.gc-columns-menu .form-check');
+            if (!$target.length || $target[0] === gcColDrag.$el[0]) {
+                // Remove visual feedback
+                if (gcColDrag.$target) {
+                    gcColDrag.$target.removeClass('gc-drag-over');
+                    gcColDrag.$target = null;
+                }
                 return;
             }
-            var $menu = $dragged.closest('.gc-columns-menu');
-            if ($(this).closest('.gc-columns-menu')[0] !== $menu[0]) {
-                $('.gc-dragging').removeClass('gc-dragging');
-                return;
+            // Different target — update visual feedback
+            if (gcColDrag.$target && gcColDrag.$target[0] !== $target[0]) {
+                gcColDrag.$target.removeClass('gc-drag-over');
             }
-            // Reorder in DOM
-            if ($(this).index() < $dragged.index()) {
-                $(this).before($dragged);
-            } else {
-                $(this).after($dragged);
+            $target.addClass('gc-drag-over');
+            gcColDrag.$target = $target;
+            gcColDrag.$el.addClass('gc-dragging');
+        });
+        $(document).on('mouseup', function () {
+            if (!gcColDrag.active) return;
+            gcColDrag.active = false;
+            gcColDrag.$el.removeClass('gc-dragging');
+            if (gcColDrag.$target) {
+                gcColDrag.$target.removeClass('gc-drag-over');
+                // Complete the drop: reorder DOM
+                var $dragged = gcColDrag.$el;
+                var $dropTarget = gcColDrag.$target;
+                var $menu = $dragged.closest('.gc-columns-menu');
+                if ($menu.length && $dropTarget.closest('.gc-columns-menu')[0] === $menu[0]) {
+                    if ($dropTarget.index() < $dragged.index()) {
+                        $dropTarget.before($dragged);
+                    } else {
+                        $dropTarget.after($dragged);
+                    }
+                    // Apply to table and save
+                    var $wrapper = $menu.closest('.grocery-crud-wrapper');
+                    var order = [];
+                    $menu.find('.form-check-input').each(function () {
+                        order.push($(this).data('column'));
+                    });
+                    applyColumnOrder($wrapper, order);
+                    saveColumnOrder($wrapper);
+                }
             }
-            $('.gc-dragging').removeClass('gc-dragging');
-            // Apply to table and save
-            var $wrapper = $menu.closest('.grocery-crud-wrapper');
-            var order = [];
-            $menu.find('.form-check-input').each(function () {
-                order.push($(this).data('column'));
-            });
-            applyColumnOrder($wrapper, order);
-            saveColumnOrder($wrapper);
+            gcColDrag.$el = null;
+            gcColDrag.$target = null;
         });
 
         // ======== Settings Save/Load/Reset ========
