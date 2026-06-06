@@ -610,6 +610,11 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
     cursor: grab;
     user-select: none;
 }
+/* Prevent input/label from intercepting mousedown — div handles both drag and toggle */
+.gc-columns-menu .form-check-input,
+.gc-columns-menu .form-check-label {
+    pointer-events: none;
+}
 .gc-columns-menu .form-check:active {
     cursor: grabbing;
 }

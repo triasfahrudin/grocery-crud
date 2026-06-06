@@ -959,6 +959,12 @@
         });
 
         // ======== Column Reorder: Drag & Drop ========
+        // Since input/label have pointer-events:none, handle toggle via click on the .form-check div
+        $(document).off('click', '.gc-columns-menu .form-check').on('click', '.gc-columns-menu .form-check', function () {
+            var $input = $(this).find('.form-check-input');
+            $input.prop('checked', !$input.is(':checked')).trigger('change');
+        });
+
         $(document).off('dragstart', '.gc-columns-menu .form-check').on('dragstart', '.gc-columns-menu .form-check', function (e) {
             $(this).addClass('gc-dragging');
             e.originalEvent.dataTransfer.effectAllowed = 'move';
