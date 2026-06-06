@@ -404,32 +404,32 @@ class CrudModel
             }
         }
 
-        // Search (supports relation fields: LEFT JOINs related table and searches on title)
+        // Search (supports relation fields: fetch matching FK values from related table)
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
             $builder->groupStart();
-            $joinedAliases = [];
             foreach ($searchableColumns as $idx => $col) {
                 if (isset($this->relationFields[$col])) {
-                    $relConfig       = $this->relationFields[$col];
-                    $relatedTable    = $relConfig['relatedTable'];
-                    $relatedTitle    = $relConfig['relatedTitleField'];
-                    $foreignKey      = $relConfig['foreignKey'];
-                    $relatedPk       = $this->getPrimaryKeyOfTable($relatedTable);
-                    $joinAlias       = 'gc_relsearch_' . $col;
+                    // For relation fields, query the related table directly for matching FKs
+                    $relConfig    = $this->relationFields[$col];
+                    $relatedTable = $relConfig['relatedTable'];
+                    $relatedTitle = $relConfig['relatedTitleField'];
+                    $foreignKey   = $relConfig['foreignKey'];
+                    $relatedPk    = $this->getPrimaryKeyOfTable($relatedTable);
 
-                    if (!isset($joinedAliases[$joinAlias])) {
-                        $builder->join(
-                            "$relatedTable AS $joinAlias",
-                            "$joinAlias.$relatedPk = $this->table.$foreignKey",
-                            'left'
-                        );
-                        $joinedAliases[$joinAlias] = true;
-                    }
+                    $relatedRows = $this->db->table($relatedTable)
+                        ->select($relatedPk)
+                        ->like($relatedTitle, $search)
+                        ->get()
+                        ->getResultArray();
 
-                    if ($idx === 0) {
-                        $builder->like("$joinAlias.$relatedTitle", $search);
-                    } else {
-                        $builder->orLike("$joinAlias.$relatedTitle", $search);
+                    $fkValues = array_column($relatedRows, $relatedPk);
+
+                    if (!empty($fkValues)) {
+                        if ($idx === 0) {
+                            $builder->whereIn("$this->table.$foreignKey", $fkValues);
+                        } else {
+                            $builder->orWhereIn("$this->table.$foreignKey", $fkValues);
+                        }
                     }
                 } else {
                     if ($idx === 0) {
@@ -546,32 +546,31 @@ class CrudModel
             }
         }
 
-        // Search (supports relation fields)
+        // Search (supports relation fields: fetch matching FK values from related table)
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
             $builder->groupStart();
-            $joinedAliases = [];
             foreach ($searchableColumns as $idx => $col) {
                 if (isset($this->relationFields[$col])) {
-                    $relConfig       = $this->relationFields[$col];
-                    $relatedTable    = $relConfig['relatedTable'];
-                    $relatedTitle    = $relConfig['relatedTitleField'];
-                    $foreignKey      = $relConfig['foreignKey'];
-                    $relatedPk       = $this->getPrimaryKeyOfTable($relatedTable);
-                    $joinAlias       = 'gc_relsearch_' . $col;
+                    $relConfig    = $this->relationFields[$col];
+                    $relatedTable = $relConfig['relatedTable'];
+                    $relatedTitle = $relConfig['relatedTitleField'];
+                    $foreignKey   = $relConfig['foreignKey'];
+                    $relatedPk    = $this->getPrimaryKeyOfTable($relatedTable);
 
-                    if (!isset($joinedAliases[$joinAlias])) {
-                        $builder->join(
-                            "$relatedTable AS $joinAlias",
-                            "$joinAlias.$relatedPk = $this->table.$foreignKey",
-                            'left'
-                        );
-                        $joinedAliases[$joinAlias] = true;
-                    }
+                    $relatedRows = $this->db->table($relatedTable)
+                        ->select($relatedPk)
+                        ->like($relatedTitle, $search)
+                        ->get()
+                        ->getResultArray();
 
-                    if ($idx === 0) {
-                        $builder->like("$joinAlias.$relatedTitle", $search);
-                    } else {
-                        $builder->orLike("$joinAlias.$relatedTitle", $search);
+                    $fkValues = array_column($relatedRows, $relatedPk);
+
+                    if (!empty($fkValues)) {
+                        if ($idx === 0) {
+                            $builder->whereIn("$this->table.$foreignKey", $fkValues);
+                        } else {
+                            $builder->orWhereIn("$this->table.$foreignKey", $fkValues);
+                        }
                     }
                 } else {
                     if ($idx === 0) {
