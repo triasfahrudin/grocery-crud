@@ -409,3 +409,173 @@ tr.gc-trashed:hover {
     border-color: #6c757d;
     background-color: #e9ecef;
 }
+
+/* ======== Sub-Grid ======== */
+
+/* Sub-grid row (hidden by default) — smooth slide animation */
+tr.gc-subgrid-row td {
+    padding: 0 !important;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+}
+
+tr.gc-subgrid-row {
+    transition: opacity 0.25s ease;
+}
+
+/* Sub-grid inner container */
+.gc-subgrid-inner {
+    padding: 0.75rem 1rem;
+}
+
+/* Sub-grid section header */
+.gc-subgrid-inner .subgrid-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.gc-subgrid-inner .subgrid-header .subgrid-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.gc-subgrid-inner .subgrid-header .subgrid-title i {
+    margin-right: 0.35rem;
+    font-size: 0.7rem;
+    color: #6c757d;
+}
+
+.gc-subgrid-inner .subgrid-header .subgrid-count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.15rem 0.6rem;
+    border-radius: 50px;
+    background-color: #0d6efd;
+    color: #fff;
+    letter-spacing: 0.02em;
+}
+
+/* Sub-grid table — clean, modern look */
+.gc-subgrid-inner .gc-subgrid-table {
+    font-size: 0.825rem;
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    width: 100%;
+    border: 1px solid #dee2e6;
+}
+
+.gc-subgrid-inner .gc-subgrid-table thead th {
+    font-weight: 700;
+    background-color: #343a40;
+    color: #fff;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border: none;
+    border-bottom: 2px solid #212529;
+}
+
+.gc-subgrid-inner .gc-subgrid-table thead th:not(:last-child) {
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gc-subgrid-inner .gc-subgrid-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.gc-subgrid-inner .gc-subgrid-table tbody tr:nth-child(even) {
+    background-color: rgba(0, 0, 0, 0.018);
+}
+
+.gc-subgrid-inner .gc-subgrid-table tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.045);
+}
+
+.gc-subgrid-inner .gc-subgrid-table tbody tr:nth-child(even):hover {
+    background-color: rgba(13, 110, 253, 0.065);
+}
+
+.gc-subgrid-inner .gc-subgrid-table td {
+    padding: 0.4rem 0.65rem;
+    vertical-align: middle;
+    border-top: 1px solid #f0f0f0;
+}
+
+.gc-subgrid-inner .gc-subgrid-table td:first-child {
+    border-left: 3px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.gc-subgrid-inner .gc-subgrid-table tbody tr:hover td:first-child {
+    border-left-color: #0d6efd;
+}
+
+/* Empty state */
+.gc-subgrid-inner .gc-subgrid-empty {
+    font-style: italic;
+    font-size: 0.825rem;
+    color: #adb5bd;
+    padding: 1.2rem 0.65rem;
+    text-align: center;
+}
+
+/* Sub-grid parent row accent when expanded */
+tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
+    background-color: #f0f4ff;
+}
+
+/* Expand toggle button — subtle and clean */
+.gc-subgrid-toggle {
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.7rem;
+    line-height: 1;
+    border-radius: 4px;
+    background-color: transparent;
+    color: #adb5bd;
+    cursor: pointer;
+}
+
+.gc-subgrid-toggle:hover {
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+    color: #495057;
+}
+
+.gc-subgrid-toggle i {
+    transition: transform 0.25s ease;
+    display: inline-block;
+}
+
+.gc-subgrid-toggle i.bi-chevron-down {
+    transform: rotate(90deg);
+}
+
+/* Sub-grid loading state — centered spinner */
+.gc-subgrid-content .gc-loading-sub {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem 0;
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.gc-subgrid-content .gc-loading-sub i {
+    animation: gc-spin 0.8s linear infinite;
+    display: inline-block;
+    font-size: 1.1rem;
+}

@@ -48,4 +48,13 @@ interface ThemeInterface
      * @return array<int, string>
      */
     public function getJsFiles(): array;
+
+    /**
+     * Render a sub-grid (expanded nested table).
+     *
+     * @param array<string, mixed> $config Sub-grid configuration
+     * @param array<int, array<string, mixed>> $records Sub-grid records
+     * @return string HTML output
+     */
+    public function renderSubGrid(array $config, array $records): string;
 }

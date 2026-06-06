@@ -55,6 +55,9 @@ class Indonesian
         'selected'          => 'dipilih',
         'no_item_selected'  => 'Tidak ada item dipilih.',
 
+        'batch_success'     => 'Aksi batch berhasil dilakukan.',
+        'batch_fail'        => 'Aksi batch gagal.',
+
         // Soft Delete
         'restore'           => 'Pulihkan',
         'restore_success'   => 'Data berhasil dipulihkan.',

@@ -116,6 +116,9 @@ class GroceryCrud
     /** @var array<string, array{label: string, repeatables: array<int, array{name: string, label: string, type: string, rules?: string, options?: array}>, preset: string, foreignKey?: string, relatedTable?: string, relatedKey?: string}> */
     private array $repeaterFields = [];
 
+    /** @var array<string, array{relatedTable: string, foreignKey: string, columns: array, columnLabels: array}> */
+    private array $subGrids = [];
+
     private bool $enableFilters = true;
     private bool $enableColumns = true;
     private bool $enableSettings = true;
@@ -636,6 +639,39 @@ class GroceryCrud
     }
 
     /**
+     * Define a sub-grid (nested CRUD table) that renders related records
+     * in an expandable row below each parent record.
+     *
+     * @param string $field           Virtual field name (identifier, not a real column)
+     * @param string $relatedTable    Related table name
+     * @param string $foreignKey      FK in related table pointing to parent
+     * @param array  $columns         Columns to display in sub-grid
+     * @param array  $columnLabels    Optional column labels
+     * @param array  $columnRelations Optional relation lookups for columns.
+     *                                Format: ['column' => ['relatedTable', 'displayField', 'localKey', 'foreignKey']]
+     *                                Example: ['tag_id' => ['tags', 'name', 'tag_id', 'id']]
+     */
+    public function setSubGrid(string $field, string $relatedTable, string $foreignKey, array $columns, array $columnLabels = [], array $columnRelations = []): self
+    {
+        $this->ensureInitialized();
+        $this->subGrids[$field] = [
+            'relatedTable'     => $relatedTable,
+            'foreignKey'       => $foreignKey,
+            'columns'          => $columns,
+            'columnLabels'     => $columnLabels,
+            'columnRelations'  => $columnRelations,
+        ];
+        $this->model->setSubGrid($field, [
+            'relatedTable'     => $relatedTable,
+            'foreignKey'       => $foreignKey,
+            'columns'          => $columns,
+            'columnLabels'     => $columnLabels,
+            'columnRelations'  => $columnRelations,
+        ]);
+        return $this;
+    }
+
+    /**
      * Remove the Filters button from the datagrid toolbar.
      */
     public function unsetFilters(): self
@@ -1037,6 +1073,38 @@ class GroceryCrud
     }
 
     /**
+     * Get sub-grid data for a parent record.
+     */
+    public function ajaxSubGrid(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+        $subGridField = $request->getGet('sub_grid') ?? $request->getPost('sub_grid');
+        $parentId = $request->getGet('parent_id') ?? $request->getPost('parent_id');
+
+        if ($subGridField === null || $parentId === null) {
+            return $this->jsonResponse(false, ['message' => 'Missing sub-grid parameters.']);
+        }
+
+        $config = $this->subGrids[$subGridField] ?? null;
+        if ($config === null) {
+            return $this->jsonResponse(false, ['message' => 'Sub-grid not found.']);
+        }
+
+        $records = $this->model->getSubGridData($subGridField, $parentId);
+
+        // Render sub-grid HTML
+        $html = $this->theme->renderSubGrid($config, $records);
+
+        return Services::response()
+            ->setContentType('application/json')
+            ->setJSON([
+                'success' => true,
+                'html'    => $html,
+            ]);
+    }
+
+    /**
      * Export data.
      */
     public function ajaxExport(string $format): ResponseInterface
@@ -1171,6 +1239,14 @@ class GroceryCrud
             ];
         }
 
+        // Build field options for columns (dropdown labels, etc.)
+        $fieldOptions = [];
+        foreach ($columns as $col) {
+            if (isset($this->fieldTypeOverrides[$col]) && !empty($this->fieldTypeOverrides[$col]['options'])) {
+                $fieldOptions[$col] = $this->fieldTypeOverrides[$col]['options'];
+            }
+        }
+
         return $this->renderer->prepareListData([
             'columns'        => $columns,
             'columnLabels'   => $this->columnLabels,
@@ -1197,6 +1273,8 @@ class GroceryCrud
             'enableSettings' => $this->enableSettings,
             'softDelete'     => $this->softDelete,
             'trashedView'    => $trashedView,
+            'subGrids'       => $this->subGrids,
+            'fieldOptions'   => $fieldOptions,
         ]);
     }
 
@@ -1579,6 +1657,7 @@ class GroceryCrud
             'batch_action'  => $this->ajaxBatchAction(),
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),
+            'sub_grid'      => $this->ajaxSubGrid(),
             default         => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
     }
@@ -1603,7 +1682,8 @@ class GroceryCrud
 
         try {
             $result = match ($batchAction) {
-                'delete_selected' => $this->model->deleteMultiple($ids),
+                'delete_selected'  => $this->model->deleteMultiple($ids),
+                'restore_selected' => $this->model->restoreMultiple($ids),
                 default => false,
             };
 

@@ -56,6 +56,10 @@ class English
         'no_item_selected'  => 'No item selected.',
 
         // Soft Delete
+        'batch_success'     => 'Batch action completed successfully.',
+        'batch_fail'        => 'Batch action failed.',
+
+        // Soft Delete
         'restore'           => 'Restore',
         'restore_success'   => 'Record restored successfully.',
         'restore_fail'      => 'Failed to restore record.',

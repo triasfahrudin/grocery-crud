@@ -480,6 +480,53 @@
         });
     }
 
+    function loadSubGrid($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        var $row = $btn.closest('tr');
+        var $subRow = $row.next('.gc-subgrid-row');
+        var subGridField = $btn.data('subgrid');
+        var parentId = $btn.data('parent-id');
+
+        if ($subRow.length === 0) return;
+
+        // If already loaded, just toggle
+        var $content = $subRow.find('.gc-subgrid-content');
+        var $table = $content.find('.gc-subgrid-inner');
+        if ($table.length > 0) {
+            $subRow.toggle();
+            $btn.find('i').toggleClass('bi-chevron-right bi-chevron-down');
+            return;
+        }
+
+        // Load via AJAX
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'GET',
+            data: {
+                gc_action: 'sub_grid',
+                sub_grid: subGridField,
+                parent_id: parentId
+            },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    $content.html(response.html);
+                    $subRow.show();
+                    $btn.find('i').removeClass('bi-chevron-right').addClass('bi-chevron-down');
+                } else {
+                    showAlert(response.message || 'Failed to load sub-grid.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred loading sub-grid.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
     function handleExport($btn, format) {
         showLoading();
         window.location.href = window.location.pathname
@@ -527,6 +574,12 @@
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             $wrapper.data('currentPage', 1);
             refreshList($wrapper);
+        });
+
+        // Sub-grid expand/collapse toggle
+        $(document).off('click', '.gc-subgrid-toggle').on('click', '.gc-subgrid-toggle', function (e) {
+            e.preventDefault();
+            loadSubGrid($(this));
         });
 
         // Pagination links

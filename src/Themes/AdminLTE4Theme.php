@@ -210,7 +210,11 @@ class AdminLTE4Theme implements ThemeInterface
             $html .= '<div class="gc-batch-toolbar" style="display:none">';
             $html .= '<span class="gc-selected-count badge bg-secondary me-2"><span class="gc-selected-num">0</span> ' . $lblRecords . '</span>';
             foreach ($batchActions as $actionId => $label) {
-                $extraClass = $actionId === 'delete_selected' ? ' btn-danger' : ' btn-outline-secondary';
+                $extraClass = match ($actionId) {
+                    'delete_selected'  => ' btn-danger',
+                    'restore_selected' => ' btn-success',
+                    default            => ' btn-outline-secondary',
+                };
                 $html .= '<button type="button" class="btn btn-sm' . $extraClass . ' gc-batch-action" data-batch-action="' . $actionId . '">' . htmlspecialchars($label) . '</button>';
             }
             $html .= '</div></div>';

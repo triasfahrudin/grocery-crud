@@ -32,6 +32,9 @@ class CrudModel
     /** @var array<string, array<string, mixed>> */
     private array $relationNtoN = [];
 
+    /** @var array<string, array<string, mixed>> */
+    private array $subGrids = [];
+
     public function __construct(BaseConnection $db, string $table)
     {
         $this->db = $db;
@@ -158,6 +161,71 @@ class CrudModel
     public function getRelationConfig(string $field): ?array
     {
         return $this->relationFields[$field] ?? null;
+    }
+
+    // ======== Sub-Grid ========
+
+    /**
+     * Register a sub-grid configuration.
+     *
+     * @param string $field      Virtual field name (identifier)
+     * @param array  $config     ['relatedTable', 'foreignKey', 'columns', 'columnLabels', 'primaryKey']
+     */
+    public function setSubGrid(string $field, array $config): void
+    {
+        $this->subGrids[$field] = $config;
+    }
+
+    /**
+     * Get sub-grid configs.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function getSubGrids(): array
+    {
+        return $this->subGrids;
+    }
+
+    /**
+     * Fetch sub-grid data for a parent record.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function getSubGridData(string $field, mixed $parentId): array
+    {
+        $config = $this->subGrids[$field] ?? null;
+        if ($config === null) {
+            return [];
+        }
+
+        $relatedTable     = $config['relatedTable'];
+        $foreignKey       = $config['foreignKey'];
+        $columns          = $config['columns'] ?? [];
+        $columnRelations  = $config['columnRelations'] ?? [];
+        $pk               = $config['primaryKey'] ?? $this->getPrimaryKeyOfTable($relatedTable);
+        $select           = [$relatedTable . '.' . $pk];
+        $builder          = $this->db->table($relatedTable);
+
+        foreach ($columns as $col) {
+            if (isset($columnRelations[$col])) {
+                [$relTable, $relDisplay, $relLocalKey, $relForeign] = $columnRelations[$col];
+                $alias = $relTable . '_' . $col;
+                $builder->join(
+                    "{$relTable} AS {$alias}",
+                    "{$alias}.{$relForeign} = {$relatedTable}.{$relLocalKey}",
+                    'left'
+                );
+                $select[] = "{$alias}.{$relDisplay} AS {$col}";
+            } else {
+                $select[] = $relatedTable . '.' . $col;
+            }
+        }
+
+        return $builder
+            ->select($select)
+            ->where($foreignKey, $parentId)
+            ->get()
+            ->getResultArray();
     }
 
     // ======== Soft Delete ========
@@ -361,16 +429,36 @@ class CrudModel
 
         $results = $builder->get()->getResultArray();
 
-        // If there are relation fields, fetch related data
+        // If there are relation fields, fetch related data in batch (eliminate N+1)
         if (!empty($this->relationFields)) {
-            foreach ($results as &$row) {
-                foreach ($this->relationFields as $relField => $relConfig) {
-                    $relatedValue = $this->fetchRelatedValue(
-                        $relConfig,
-                        $row[$relField] ?? null
-                    );
-                    if ($relatedValue !== null) {
-                        $row[$relField] = $relatedValue;
+            foreach ($this->relationFields as $relField => $relConfig) {
+                $relatedTable      = $relConfig['relatedTable'];
+                $relatedTitleField = $relConfig['relatedTitleField'];
+                $foreignKey        = $relConfig['foreignKey'];
+                $relatedPk         = $this->getPrimaryKeyOfTable($relatedTable);
+
+                // Collect all FK values
+                $fkValues = array_unique(array_filter(array_column($results, $foreignKey)));
+
+                if (!empty($fkValues)) {
+                    // Batch fetch all related titles
+                    $relatedRows = $this->db->table($relatedTable)
+                        ->select("$relatedPk, $relatedTitleField")
+                        ->whereIn($relatedPk, $fkValues)
+                        ->get()
+                        ->getResultArray();
+
+                    // Build lookup map
+                    $lookup = [];
+                    foreach ($relatedRows as $rr) {
+                        $lookup[$rr[$relatedPk]] = $rr[$relatedTitleField];
+                    }
+
+                    // Replace FK values with display values
+                    foreach ($results as &$row) {
+                        if (isset($lookup[$row[$relField]])) {
+                            $row[$relField] = $lookup[$row[$relField]];
+                        }
                     }
                 }
             }
@@ -447,6 +535,23 @@ class CrudModel
 
         $this->advancedFilters = [];
         return $builder->countAllResults();
+    }
+
+    /**
+     * Restore multiple soft-deleted records by primary key.
+     *
+     * @param array<int, mixed> $ids
+     * @return bool
+     */
+    public function restoreMultiple(array $ids): bool
+    {
+        if (empty($ids)) {
+            return false;
+        }
+
+        return $this->db->table($this->table)
+            ->whereIn($this->primaryKey, $ids)
+            ->update([$this->softDeleteField => null]);
     }
 
     /**

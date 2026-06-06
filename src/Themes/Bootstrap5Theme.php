@@ -82,6 +82,9 @@ class Bootstrap5Theme implements ThemeInterface
         $enableSettings = (bool) ($data['enableSettings'] ?? true);
         $softDelete     = (bool) ($data['softDelete'] ?? false);
         $trashedView    = (bool) ($data['trashedView'] ?? false);
+        $subGrids       = $data['subGrids'] ?? [];
+        $hasSubGrid     = !empty($subGrids) && !$trashedView;
+        $fieldOptions   = $data['fieldOptions'] ?? [];
 
         // Override actions for trashed view
         if ($trashedView) {
@@ -90,7 +93,7 @@ class Bootstrap5Theme implements ThemeInterface
         }
 
         $totalPages   = $perPage > 0 ? (int) ceil($totalCount / $perPage) : 1;
-        $colspan      = count($columns) + ($showActions ? 1 : 0) + (count($customActions) > 0 ? count($customActions) : 0) + ($hasBatch ? 1 : 0);
+        $colspan      = count($columns) + ($showActions ? 1 : 0) + (count($customActions) > 0 ? count($customActions) : 0) + ($hasBatch ? 1 : 0) + ($hasSubGrid ? 1 : 0);
 
         // Pre-resolve language strings
         $lblExport      = $lang['export'] ?? 'Export';
@@ -230,7 +233,11 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<div class="gc-batch-toolbar" style="display:none">';
             $html .= '<span class="gc-selected-count badge bg-secondary me-2"><span class="gc-selected-num">0</span> ' . $lblRecords . '</span>';
             foreach ($batchActions as $actionId => $label) {
-                $extraClass = $actionId === 'delete_selected' ? ' btn-danger' : ' btn-outline-secondary';
+                $extraClass = match ($actionId) {
+                    'delete_selected'  => ' btn-danger',
+                    'restore_selected' => ' btn-success',
+                    default            => ' btn-outline-secondary',
+                };
                 $html .= '<button type="button" class="btn btn-sm' . $extraClass . ' gc-batch-action" data-batch-action="' . $actionId . '">' . htmlspecialchars($label) . '</button>';
             }
             $html .= '</div></div>';
@@ -245,6 +252,9 @@ class Bootstrap5Theme implements ThemeInterface
 
         // Header row
         $html .= '<tr>';
+        if ($hasSubGrid) {
+            $html .= '<th class="text-center" style="width:40px"><i class="bi bi-chevron-expand"></i></th>';
+        }
         if ($hasBatch) {
             $html .= '<th class="text-center" style="width:40px"><input type="checkbox" class="gc-select-all" title="' . $lblSelectAll . '"></th>';
         }
@@ -266,6 +276,9 @@ class Bootstrap5Theme implements ThemeInterface
         // Filter row (inline per-column) — hidden when new filter panel is active
         if (!empty($columnFilters)) {
             $html .= '<tr class="gc-filter-row">';
+            if ($hasSubGrid) {
+                $html .= '<td></td>';
+            }
             if ($hasBatch) {
                 $html .= '<td></td>';
             }
@@ -304,13 +317,25 @@ class Bootstrap5Theme implements ThemeInterface
             foreach ($records as $row) {
                 $rowId = htmlspecialchars((string) ($row[$primaryKey] ?? ''));
                 $trashedClass = $trashedView ? ' class="gc-trashed"' : '';
-                $html .= '<tr' . $trashedClass . '>';
+                $html .= '<tr' . $trashedClass . ' data-parent-id="' . $rowId . '">';
+                if ($hasSubGrid) {
+                    $sgField = array_key_first($subGrids);
+                    $html .= '<td class="text-center">';
+                    $html .= '<button type="button" class="btn btn-sm btn-outline-secondary gc-subgrid-toggle" data-subgrid="' . htmlspecialchars($sgField) . '" data-parent-id="' . $rowId . '" title="Expand">';
+                    $html .= '<i class="bi bi-chevron-right"></i></button>';
+                    $html .= '</td>';
+                }
                 if ($hasBatch) {
                     $html .= '<td class="text-center"><input type="checkbox" class="gc-row-checkbox" value="' . $rowId . '"></td>';
                 }
                 foreach ($columns as $col) {
                     $value = $row[$col] ?? '';
-                    $html .= '<td data-column="' . $col . '">' . $value . '</td>';
+                    // Transform value using field options (e.g., dropdown labels)
+                    $displayValue = $value;
+                    if (!empty($fieldOptions[$col]) && isset($fieldOptions[$col][$value])) {
+                        $displayValue = $fieldOptions[$col][$value];
+                    }
+                    $html .= '<td data-column="' . $col . '">' . $displayValue . '</td>';
                 }
 
                 if ($showActions || !empty($customActions)) {
@@ -352,6 +377,18 @@ class Bootstrap5Theme implements ThemeInterface
                 }
 
                 $html .= '</tr>';
+
+                // Sub-grid row (hidden, expanded by JS)
+                if ($hasSubGrid) {
+                    $sgField = array_key_first($subGrids);
+                    $sgConfig = $subGrids[$sgField];
+                    $sgColspan = $colspan;
+                    $html .= '<tr class="gc-subgrid-row" style="display:none" data-parent-id="' . $rowId . '">';
+                    $html .= '<td colspan="' . $sgColspan . '">';
+                    $html .= '<div class="gc-subgrid-content" data-subgrid="' . htmlspecialchars($sgField) . '">';
+                    $html .= '<div class="gc-loading-sub"><i class="bi bi-arrow-clockwise"></i> Memuat data...</div>';
+                    $html .= '</div></td></tr>';
+                }
             }
         }
 
@@ -727,5 +764,57 @@ class Bootstrap5Theme implements ThemeInterface
             default: // text, string
                 return '<input type="text" class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '"' . $d . '>';
         }
+    }
+
+    /**
+     * Render sub-grid (nested table) HTML.
+     *
+     * @param array<string, mixed> $config
+     * @param array<int, array<string, mixed>> $records
+     * @return string
+     */
+    public function renderSubGrid(array $config, array $records): string
+    {
+        $columns      = $config['columns'] ?? [];
+        $columnLabels = $config['columnLabels'] ?? [];
+        $relatedTable = $config['relatedTable'] ?? '';
+        $recordCount  = count($records);
+
+        $html = '<div class="gc-subgrid-inner">';
+
+        // Header with table name and record count
+        $tableLabel = ucfirst(str_replace('_', ' ', $relatedTable));
+        $html .= '<div class="subgrid-header">';
+        $html .= '<span class="subgrid-title"><i class="bi bi-grid-3x3-gap-fill"></i>' . htmlspecialchars($tableLabel) . '</span>';
+        $html .= '<span class="subgrid-count">' . $recordCount . ' data</span>';
+        $html .= '</div>';
+
+        // Table
+        $html .= '<table class="gc-subgrid-table">';
+        $html .= '<thead><tr>';
+        foreach ($columns as $col) {
+            $label = $columnLabels[$col] ?? ucfirst(str_replace('_', ' ', $col));
+            $html .= '<th>' . htmlspecialchars($label) . '</th>';
+        }
+        $html .= '</tr></thead><tbody>';
+
+        if (empty($records)) {
+            $colspan = count($columns);
+            $html .= '<tr><td colspan="' . $colspan . '" class="gc-subgrid-empty">Tidak ada data terkait.</td></tr>';
+        } else {
+            foreach ($records as $row) {
+                $html .= '<tr>';
+                foreach ($columns as $col) {
+                    $value = $row[$col] ?? '';
+                    $html .= '<td>' . htmlspecialchars((string) $value) . '</td>';
+                }
+                $html .= '</tr>';
+            }
+        }
+
+        $html .= '</tbody></table>';
+        $html .= '</div>';
+
+        return $html;
     }
 }

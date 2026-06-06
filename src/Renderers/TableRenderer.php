@@ -67,6 +67,8 @@ class TableRenderer
             'batchActions'   => $crudData['batchActions'] ?? [],
             'softDelete'     => $crudData['softDelete'] ?? false,
             'trashedView'    => $crudData['trashedView'] ?? false,
+            'subGrids'       => $crudData['subGrids'] ?? [],
+            'fieldOptions'   => $crudData['fieldOptions'] ?? [],
         ];
     }
 
@@ -107,14 +109,14 @@ class TableRenderer
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{$this->config->defaultTheme}</title>
     {$cssLinks}
-    <link rel="stylesheet" href="/assets/grocery-crud/css/grocery-crud.css">
+    <link rel="stylesheet" href="/assets/grocery-crud/css/grocery-crud.css?v=1780776104">
 </head>
 <body>
     <div class="container-fluid py-4">
         {$content}
     </div>
     {$jsLinks}
-    <script src="/assets/grocery-crud/js/grocery-crud.js"></script>
+    <script src="/assets/grocery-crud/js/grocery-crud.js?v=1780775785"></script>
 </body>
 </html>
 HTML;
