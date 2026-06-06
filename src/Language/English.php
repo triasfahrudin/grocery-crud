@@ -54,5 +54,12 @@ class English
         'deselect_all'      => 'Deselect All',
         'selected'          => 'selected',
         'no_item_selected'  => 'No item selected.',
+
+        // Soft Delete
+        'restore'           => 'Restore',
+        'restore_success'   => 'Record restored successfully.',
+        'restore_fail'      => 'Failed to restore record.',
+        'trash_list'        => 'Trash',
+        'active_list'       => 'Active Records',
     ];
 }

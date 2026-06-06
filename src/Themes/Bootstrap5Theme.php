@@ -80,6 +80,14 @@ class Bootstrap5Theme implements ThemeInterface
         $enableFilters  = (bool) ($data['enableFilters'] ?? true);
         $enableColumns  = (bool) ($data['enableColumns'] ?? true);
         $enableSettings = (bool) ($data['enableSettings'] ?? true);
+        $softDelete     = (bool) ($data['softDelete'] ?? false);
+        $trashedView    = (bool) ($data['trashedView'] ?? false);
+
+        // Override actions for trashed view
+        if ($trashedView) {
+            $hasDelete = false;
+            $hasEdit   = false;
+        }
 
         $totalPages   = $perPage > 0 ? (int) ceil($totalCount / $perPage) : 1;
         $colspan      = count($columns) + ($showActions ? 1 : 0) + (count($customActions) > 0 ? count($customActions) : 0) + ($hasBatch ? 1 : 0);
@@ -150,6 +158,19 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<li><a class="dropdown-item gc-settings-reset" href="#"><i class="bi bi-trash me-2"></i>' . ($lang['reset_settings'] ?? 'Reset') . '</a></li>';
             $html .= '</ul>';
             $html .= '</div>';
+        }
+
+        // Trash / Active toggle button (soft delete)
+        if ($softDelete) {
+            if ($trashedView) {
+                $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-tool-btn gc-btn-active" title="' . ($lang['active_list'] ?? 'Active Records') . '">';
+                $html .= '<i class="bi bi-list-ul me-1"></i>' . ($lang['active_list'] ?? 'Active');
+                $html .= '</button>';
+            } else {
+                $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-tool-btn gc-btn-trash" title="' . ($lang['trash_list'] ?? 'Trash') . '">';
+                $html .= '<i class="bi bi-trash me-1"></i>' . ($lang['trash_list'] ?? 'Trash');
+                $html .= '</button>';
+            }
         }
 
         // Add button
@@ -282,7 +303,8 @@ class Bootstrap5Theme implements ThemeInterface
         } else {
             foreach ($records as $row) {
                 $rowId = htmlspecialchars((string) ($row[$primaryKey] ?? ''));
-                $html .= '<tr>';
+                $trashedClass = $trashedView ? ' class="gc-trashed"' : '';
+                $html .= '<tr' . $trashedClass . '>';
                 if ($hasBatch) {
                     $html .= '<td class="text-center"><input type="checkbox" class="gc-row-checkbox" value="' . $rowId . '"></td>';
                 }
@@ -295,8 +317,13 @@ class Bootstrap5Theme implements ThemeInterface
                     $html .= '<td class="text-center text-nowrap">';
                     $html .= '<div class="btn-group btn-group-sm">';
 
+                    // Restore button (trashed view)
+                    if ($trashedView) {
+                        $html .= '<button type="button" class="btn btn-outline-success btn-gc-restore" data-id="' . $rowId . '" title="' . ($lang['restore'] ?? 'Restore') . '">';
+                        $html .= '<i class="bi bi-arrow-counterclockwise"></i></button>';
+                    }
+
                     if ($hasEdit) {
-                        $rowId = htmlspecialchars((string) ($row[$primaryKey] ?? ''));
                         $html .= '<button type="button" class="btn btn-outline-primary btn-gc-edit" data-id="' . $rowId . '" title="' . $lblEdit . '">';
                         $html .= '<i class="bi bi-pencil"></i></button>';
                     }

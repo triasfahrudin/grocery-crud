@@ -395,6 +395,59 @@
         $.ajax(ajaxConfig);
     }
 
+    function restoreRecord($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        var id = $btn.data('id');
+
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: { gc_action: 'restore', id: id },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    showAlert(response.message, 'success');
+                    refreshList($wrapper);
+                } else {
+                    showAlert(response.message || 'Failed to restore record.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
+    function loadTrashList($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'GET',
+            data: { gc_action: 'trash_list' },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    $wrapper.replaceWith(response.html);
+                    bindEvents();
+                } else {
+                    showAlert(response.message || 'Failed to load trash.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
     function deleteRecord($btn) {
         var $wrapper = $btn.closest('.grocery-crud-wrapper');
         var id = $btn.data('id');
@@ -454,6 +507,26 @@
         $(document).off('click', '.btn-gc-delete').on('click', '.btn-gc-delete', function (e) {
             e.preventDefault();
             deleteRecord($(this));
+        });
+
+        // Restore button (trashed view)
+        $(document).off('click', '.btn-gc-restore').on('click', '.btn-gc-restore', function (e) {
+            e.preventDefault();
+            restoreRecord($(this));
+        });
+
+        // Trash list button
+        $(document).off('click', '.gc-btn-trash').on('click', '.gc-btn-trash', function (e) {
+            e.preventDefault();
+            loadTrashList($(this));
+        });
+
+        // Active list button (from trashed view)
+        $(document).off('click', '.gc-btn-active').on('click', '.gc-btn-active', function (e) {
+            e.preventDefault();
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            $wrapper.data('currentPage', 1);
+            refreshList($wrapper);
         });
 
         // Pagination links

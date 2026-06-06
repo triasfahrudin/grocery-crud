@@ -104,6 +104,12 @@ class GroceryCrud
     /** @var array<string, array{table: string, labelField: string, keyField: string, where: ?string, order: ?string}> */
     private array $columnFilterRelations = [];
 
+    /** @var bool Enable soft delete on the model */
+    private bool $softDelete = false;
+
+    /** @var bool Whether we are viewing trashed records */
+    private bool $trashedView = false;
+
     /** @var array<string, string> */
     private array $batchActions = [];
 
@@ -455,6 +461,34 @@ class GroceryCrud
         return $this;
     }
 
+    // ======== Soft Delete ========
+
+    /**
+     * Enable soft delete for the CRUD.
+     *
+     * When enabled, delete() will set deleted_at instead of hard-deleting.
+     * Use withTrashed() to view/restore soft-deleted records.
+     */
+    public function setSoftDelete(bool $enabled = true): self
+    {
+        $this->softDelete = $enabled;
+        $this->ensureInitialized();
+        $this->model->setSoftDelete($enabled);
+        return $this;
+    }
+
+    /**
+     * Show records including soft-deleted ones, as well as restore actions.
+     * Must be called before render().
+     */
+    public function withTrashed(): self
+    {
+        $this->trashedView = true;
+        $this->ensureInitialized();
+        $this->model->withTrashed();
+        return $this;
+    }
+
     // ======== Query Configuration ========
 
     /**
@@ -648,8 +682,13 @@ class GroceryCrud
             return $this->handleAjaxAction($action);
         }
 
+        // If trashed view, show trashed records on initial load
+        if ($this->trashedView) {
+            $this->model->onlyTrashed();
+        }
+
         // Render the list view
-        $listData = $this->buildListData(1);
+        $listData = $this->buildListData(1, null, null, null, null, [], [], [], $this->trashedView);
         $html = $this->theme->renderList($listData);
 
         // If it's an AJAX request, return JSON with HTML
@@ -940,6 +979,64 @@ class GroceryCrud
     }
 
     /**
+     * Restore a soft-deleted record.
+     */
+    public function ajaxRestore(mixed $id): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        try {
+            $restored = $this->model->restore($id);
+
+            if (!$restored) {
+                return $this->jsonResponse(false, [
+                    'message' => $this->getLang('restore_fail') ?? 'Failed to restore record.',
+                ]);
+            }
+
+            return $this->jsonResponse(true, [
+                'message' => $this->getLang('restore_success') ?? 'Record restored successfully.',
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Get list of trashed (soft-deleted) records.
+     */
+    public function ajaxTrashList(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $request = Services::request();
+        $page = (int) ($request->getGet('page') ?? $request->getPost('page') ?? 1);
+        $search = $request->getGet('search') ?? $request->getPost('search') ?? null;
+        $perPage = (int) ($request->getGet('perPage') ?? $request->getPost('perPage') ?? $this->perPage);
+        $sortField = $request->getGet('sort_field') ?? $request->getPost('sort_field') ?? null;
+        $sortDir = $request->getGet('sort_dir') ?? $request->getPost('sort_dir') ?? null;
+        $filtersJson = $request->getGet('filters') ?? $request->getPost('filters') ?? '{}';
+        $filters = json_decode($filtersJson, true) ?? [];
+
+        // Show only trashed records
+        $this->model->onlyTrashed();
+
+        $listData = $this->buildListData(max(1, $page), $search, $perPage, $sortField, $sortDir, $filters, [], $this->resolveColumns(), true);
+
+        return Services::response()
+            ->setContentType('application/json')
+            ->setJSON([
+                'success'       => true,
+                'html'          => $this->theme->renderList($listData),
+                'totalCount'    => $listData['totalCount'],
+                'currentPage'   => $listData['currentPage'],
+                'perPage'       => $listData['perPage'],
+            ]);
+    }
+
+    /**
      * Export data.
      */
     public function ajaxExport(string $format): ResponseInterface
@@ -947,6 +1044,7 @@ class GroceryCrud
         $this->ensureInitialized();
 
         $columns = $this->resolveColumns();
+
         $records = $this->model->getList(
             $columns,
             0, // no limit
@@ -993,7 +1091,7 @@ class GroceryCrud
     /**
      * Build the data array for list rendering.
      */
-    private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null, array $filters = [], array $advancedFilters = [], array $columns = []): array
+    private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null, array $filters = [], array $advancedFilters = [], array $columns = [], bool $trashedView = false): array
     {
         $perPage = $perPage ?? $this->perPage;
         $offset = ($page - 1) * $perPage;
@@ -1097,6 +1195,8 @@ class GroceryCrud
             'enableFilters'  => $this->enableFilters,
             'enableColumns'  => $this->enableColumns,
             'enableSettings' => $this->enableSettings,
+            'softDelete'     => $this->softDelete,
+            'trashedView'    => $trashedView,
         ]);
     }
 
@@ -1477,6 +1577,8 @@ class GroceryCrud
             'delete'        => $this->ajaxDelete($this->getRequestId()),
             'export'        => $this->ajaxExport($this->getExportFormat()),
             'batch_action'  => $this->ajaxBatchAction(),
+            'restore'       => $this->ajaxRestore($this->getRequestId()),
+            'trash_list'    => $this->ajaxTrashList(),
             default         => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
     }

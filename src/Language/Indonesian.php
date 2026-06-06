@@ -54,5 +54,12 @@ class Indonesian
         'deselect_all'      => 'Batalkan Semua',
         'selected'          => 'dipilih',
         'no_item_selected'  => 'Tidak ada item dipilih.',
+
+        // Soft Delete
+        'restore'           => 'Pulihkan',
+        'restore_success'   => 'Data berhasil dipulihkan.',
+        'restore_fail'      => 'Gagal memulihkan data.',
+        'trash_list'        => 'Sampah',
+        'active_list'       => 'Data Aktif',
     ];
 }

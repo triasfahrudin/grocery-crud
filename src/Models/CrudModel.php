@@ -21,6 +21,11 @@ class CrudModel
     /** @var array<string, array<int, string>> */
     private array $enumValues = [];
 
+    // ======== Soft Delete Properties ========
+    private bool $softDelete = false;
+    private string $trashedFilter = 'exclude'; // 'exclude', 'with', 'only'
+    private string $softDeleteField = 'deleted_at';
+
     /** @var array<string, array<string, mixed>> */
     private array $relationFields = [];
 
@@ -155,6 +160,71 @@ class CrudModel
         return $this->relationFields[$field] ?? null;
     }
 
+    // ======== Soft Delete ========
+
+    /**
+     * Enable or disable soft delete.
+     */
+    public function setSoftDelete(bool $enabled = true): self
+    {
+        $this->softDelete = $enabled;
+        return $this;
+    }
+
+    /**
+     * Include soft-deleted records in queries (no filter).
+     */
+    public function withTrashed(): self
+    {
+        $this->trashedFilter = 'with';
+        return $this;
+    }
+
+    /**
+     * Only show soft-deleted records.
+     */
+    public function onlyTrashed(): self
+    {
+        $this->trashedFilter = 'only';
+        return $this;
+    }
+
+    /**
+     * Restore a soft-deleted record by primary key.
+     */
+    public function restore(mixed $id): bool
+    {
+        return $this->db->table($this->table)
+            ->where($this->primaryKey, $id)
+            ->update([$this->softDeleteField => null]);
+    }
+
+    /**
+     * Permanently delete a record (hard delete regardless of soft delete setting).
+     */
+    public function forceDelete(mixed $id): bool
+    {
+        return $this->db->table($this->table)
+            ->where($this->primaryKey, $id)
+            ->delete();
+    }
+
+    /**
+     * Apply soft delete filter to a query builder.
+     */
+    private function applySoftDeleteFilter($builder): void
+    {
+        if (!$this->softDelete) {
+            return;
+        }
+        if ($this->trashedFilter === 'exclude') {
+            $builder->where($this->softDeleteField, null);
+        } elseif ($this->trashedFilter === 'only') {
+            $builder->where($this->softDeleteField . ' IS NOT NULL');
+        }
+        // 'with' = no filter
+    }
+
     // ======== CRUD Operations ========
 
     /**
@@ -227,6 +297,9 @@ class CrudModel
                 $builder->where($key, $value);
             }
         }
+
+        // Soft delete filter
+        $this->applySoftDeleteFilter($builder);
 
         // Column filters
         $this->applyFilters($builder, $filters);
@@ -322,6 +395,9 @@ class CrudModel
             }
         }
 
+        // Soft delete filter
+        $this->applySoftDeleteFilter($builder);
+
         // Column filters
         $this->applyFilters($builder, $filters);
 
@@ -374,7 +450,7 @@ class CrudModel
     }
 
     /**
-     * Delete multiple records by primary key.
+     * Delete multiple records by primary key (soft delete if enabled).
      *
      * @param array<int, mixed> $ids
      * @return bool
@@ -383,6 +459,12 @@ class CrudModel
     {
         if (empty($ids)) {
             return false;
+        }
+
+        if ($this->softDelete) {
+            return $this->db->table($this->table)
+                ->whereIn($this->primaryKey, $ids)
+                ->update([$this->softDeleteField => date('Y-m-d H:i:s')]);
         }
 
         return $this->db->table($this->table)
@@ -468,10 +550,16 @@ class CrudModel
     }
 
     /**
-     * Delete a record.
+     * Delete a record (soft delete if enabled, otherwise hard delete).
      */
     public function delete(mixed $id): bool
     {
+        if ($this->softDelete) {
+            return $this->db->table($this->table)
+                ->where($this->primaryKey, $id)
+                ->update([$this->softDeleteField => date('Y-m-d H:i:s')]);
+        }
+
         return $this->db->table($this->table)
             ->where($this->primaryKey, $id)
             ->delete();

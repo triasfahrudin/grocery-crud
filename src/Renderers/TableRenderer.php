@@ -65,6 +65,8 @@ class TableRenderer
             'columnFilters'  => $crudData['columnFilters'] ?? [],
             'currentFilters' => $crudData['currentFilters'] ?? [],
             'batchActions'   => $crudData['batchActions'] ?? [],
+            'softDelete'     => $crudData['softDelete'] ?? false,
+            'trashedView'    => $crudData['trashedView'] ?? false,
         ];
     }
 

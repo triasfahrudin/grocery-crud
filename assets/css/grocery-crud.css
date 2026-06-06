@@ -378,3 +378,34 @@
         width: 100%;
     }
 }
+
+/* ======== Soft Delete / Trashed ======== */
+
+/* Trashed rows - muted, italic */
+tr.gc-trashed {
+    opacity: 0.6;
+    background-color: #f8f9fa;
+}
+
+tr.gc-trashed td {
+    font-style: italic;
+    color: #6c757d;
+}
+
+tr.gc-trashed:hover {
+    opacity: 0.8;
+    background-color: #f1f3f5 !important;
+}
+
+/* Restore button */
+.btn-gc-restore:hover {
+    background-color: #198754;
+    color: #fff;
+}
+
+/* Trash toggle button active state */
+.gc-btn-trash.active,
+.gc-btn-active.active {
+    border-color: #6c757d;
+    background-color: #e9ecef;
+}
