@@ -283,7 +283,7 @@ class Bootstrap5Theme implements ThemeInterface
                 $html .= '<td></td>';
             }
             foreach ($columns as $col) {
-                $html .= '<td>';
+                $html .= '<td data-column="' . $col . '">';
                 if (isset($columnFilters[$col])) {
                     $filterDef = $columnFilters[$col];
                     $filterType = $filterDef['type'] ?? 'text';

@@ -246,7 +246,7 @@ class TailwindTheme implements ThemeInterface
                 $html .= '<td></td>';
             }
             foreach ($columns as $col) {
-                $html .= '<td class="px-1 py-1">';
+                $html .= '<td data-column="' . $col . '" class="px-1 py-1">';
                 if (isset($columnFilters[$col])) {
                     $filterDef = $columnFilters[$col];
                     $filterType = $filterDef['type'] ?? 'text';
