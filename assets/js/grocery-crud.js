@@ -1023,8 +1023,6 @@
             $input.prop('checked', !$input.is(':checked')).trigger('change');
         });
 
-        }
-
         // ======== Settings Save/Load/Reset ========
         // Save settings
         $(document).off('click', '.gc-settings-save').on('click', '.gc-settings-save', function () {
