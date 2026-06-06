@@ -486,6 +486,62 @@
         } catch (e) {}
     }
 
+    /**
+     * Initialize table-dragger on all tables inside the given wrapper.
+     * Uses .gc-drag-handle inside headers so sorting (click on header text)
+     * and dragging (click on handle) don't conflict.
+     */
+    function initTableDragger($wrapper) {
+        if (typeof tableDragger !== 'function') return;
+        // Destroy any previous instance on this wrapper
+        var prev = $wrapper.data('gcDragger');
+        if (prev) { try { prev.destroy(); } catch(e) {} }
+        var $table = $wrapper.find('.gc-table');
+        if (!$table.length) return;
+        try {
+            // Add drag handle to each data-column header in the first header row
+            $table.find('thead tr:first-child th[data-column]').each(function () {
+                if (!$(this).find('.gc-drag-handle').length) {
+                    $('<span class="gc-drag-handle">⠿</span> ').prependTo(this);
+                }
+            });
+            var dragger = tableDragger($table[0], {
+                mode: 'column',
+                dragHandler: '.gc-drag-handle',
+                animation: 200
+            });
+            $wrapper.data('gcDragger', dragger);
+            dragger.on('drop', function (oldIndex, newIndex, el, mode) {
+                // table-dragger already reordered table DOM
+                // Read new column order from table headers
+                var newOrder = [];
+                $table[0].querySelectorAll('thead th[data-column]').forEach(function (th) {
+                    newOrder.push(th.getAttribute('data-column'));
+                });
+                if (!newOrder.length) return;
+                // Sync columns menu order to match
+                var $menu = $wrapper.find('.gc-columns-menu');
+                if ($menu.length) {
+                    var sorted = [];
+                    newOrder.forEach(function (col) {
+                        var $item = $menu.find('.form-check-input[data-column="' + col + '"]').closest('.form-check');
+                        if ($item.length) sorted.push($item[0]);
+                    });
+                    // Append any remaining items at end
+                    $menu.find('.form-check').each(function () {
+                        if (sorted.indexOf(this) === -1) sorted.push(this);
+                    });
+                    $menu.find('.form-check').detach();
+                    sorted.forEach(function (el) { $menu.append(el); });
+                }
+                // Save order
+                saveColumnOrder($wrapper);
+            });
+        } catch (e) {
+            console.warn('[GC] table-dragger init failed:', e);
+        }
+    }
+
     function submitForm($form) {
         var $modal = $form.closest('.modal');
         var $submitBtn = $form.find('button[type="submit"]');
@@ -967,60 +1023,6 @@
             $input.prop('checked', !$input.is(':checked')).trigger('change');
         });
 
-        /**
-         * Initialize table-dragger on all tables inside the given wrapper.
-         * Uses .gc-drag-handle inside headers so sorting (click on header text) 
-         * and dragging (click on handle) don't conflict.
-         */
-        function initTableDragger($wrapper) {
-            if (typeof tableDragger !== 'function') return;
-            // Destroy any previous instance on this wrapper
-            var prev = $wrapper.data('gcDragger');
-            if (prev) { try { prev.destroy(); } catch(e) {} }
-            var $table = $wrapper.find('.gc-table');
-            if (!$table.length) return;
-            try {
-                // Add drag handle to each data-column header in the first header row
-                $table.find('thead tr:first-child th[data-column]').each(function () {
-                    if (!$(this).find('.gc-drag-handle').length) {
-                        $(this).prepend('<span class="gc-drag-handle">⠿</span> ');
-                    }
-                });
-                var dragger = tableDragger($table[0], {
-                    mode: 'column',
-                    dragHandler: '.gc-drag-handle',
-                    animation: 200
-                });
-                $wrapper.data('gcDragger', dragger);
-                dragger.on('drop', function (oldIndex, newIndex, el, mode) {
-                    // table-dragger already reordered table DOM
-                    // Read new column order from table headers
-                    var newOrder = [];
-                    $table[0].querySelectorAll('thead th[data-column]').forEach(function (th) {
-                        newOrder.push(th.getAttribute('data-column'));
-                    });
-                    if (!newOrder.length) return;
-                    // Sync columns menu order to match
-                    var $menu = $wrapper.find('.gc-columns-menu');
-                    if ($menu.length) {
-                        var sorted = [];
-                        newOrder.forEach(function (col) {
-                            var $item = $menu.find('.form-check-input[data-column="' + col + '"]').closest('.form-check');
-                            if ($item.length) sorted.push($item[0]);
-                        });
-                        // Append any remaining items at end
-                        $menu.find('.form-check').each(function () {
-                            if (sorted.indexOf(this) === -1) sorted.push(this);
-                        });
-                        $menu.find('.form-check').detach();
-                        sorted.forEach(function (el) { $menu.append(el); });
-                    }
-                    // Save order
-                    saveColumnOrder($wrapper);
-                });
-            } catch (e) {
-                console.warn('[GC] table-dragger init failed:', e);
-            }
         }
 
         // ======== Settings Save/Load/Reset ========
