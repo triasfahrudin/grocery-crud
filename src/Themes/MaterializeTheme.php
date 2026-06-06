@@ -120,7 +120,7 @@ class MaterializeTheme implements ThemeInterface
 
         if ($enableColumns) {
             $html .= '<a class="dropdown-trigger btn-small waves-effect waves-light grey lighten-3 black-text gc-tool-btn gc-btn-columns" href="#" data-target="' . $crudId . '_cols" title="' . ($lang['columns'] ?? 'Columns') . '"><i class="material-icons">view_column</i></a>';
-            $html .= '<ul id="' . $crudId . '_cols" class="dropdown-content gc-columns-menu" style="min-width:200px"></ul>';
+            $html .= '<div id="' . $crudId . '_cols" class="dropdown-content gc-columns-menu" style="min-width:200px"></div>';
         }
 
         if ($enableSettings) {
