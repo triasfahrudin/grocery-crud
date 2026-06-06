@@ -404,14 +404,39 @@ class CrudModel
             }
         }
 
-        // Search
+        // Search (supports relation fields: LEFT JOINs related table and searches on title)
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
             $builder->groupStart();
+            $joinedAliases = [];
             foreach ($searchableColumns as $idx => $col) {
-                if ($idx === 0) {
-                    $builder->like($col, $search);
+                if (isset($this->relationFields[$col])) {
+                    $relConfig       = $this->relationFields[$col];
+                    $relatedTable    = $relConfig['relatedTable'];
+                    $relatedTitle    = $relConfig['relatedTitleField'];
+                    $foreignKey      = $relConfig['foreignKey'];
+                    $relatedPk       = $this->getPrimaryKeyOfTable($relatedTable);
+                    $joinAlias       = 'gc_relsearch_' . $col;
+
+                    if (!isset($joinedAliases[$joinAlias])) {
+                        $builder->join(
+                            "$relatedTable AS $joinAlias",
+                            "$joinAlias.$relatedPk = $this->table.$foreignKey",
+                            'left'
+                        );
+                        $joinedAliases[$joinAlias] = true;
+                    }
+
+                    if ($idx === 0) {
+                        $builder->like("$joinAlias.$relatedTitle", $search);
+                    } else {
+                        $builder->orLike("$joinAlias.$relatedTitle", $search);
+                    }
                 } else {
-                    $builder->orLike($col, $search);
+                    if ($idx === 0) {
+                        $builder->like($col, $search);
+                    } else {
+                        $builder->orLike($col, $search);
+                    }
                 }
             }
             $builder->groupEnd();
@@ -521,13 +546,39 @@ class CrudModel
             }
         }
 
+        // Search (supports relation fields)
         if ($search !== null && $search !== '' && !empty($searchableColumns)) {
             $builder->groupStart();
+            $joinedAliases = [];
             foreach ($searchableColumns as $idx => $col) {
-                if ($idx === 0) {
-                    $builder->like($col, $search);
+                if (isset($this->relationFields[$col])) {
+                    $relConfig       = $this->relationFields[$col];
+                    $relatedTable    = $relConfig['relatedTable'];
+                    $relatedTitle    = $relConfig['relatedTitleField'];
+                    $foreignKey      = $relConfig['foreignKey'];
+                    $relatedPk       = $this->getPrimaryKeyOfTable($relatedTable);
+                    $joinAlias       = 'gc_relsearch_' . $col;
+
+                    if (!isset($joinedAliases[$joinAlias])) {
+                        $builder->join(
+                            "$relatedTable AS $joinAlias",
+                            "$joinAlias.$relatedPk = $this->table.$foreignKey",
+                            'left'
+                        );
+                        $joinedAliases[$joinAlias] = true;
+                    }
+
+                    if ($idx === 0) {
+                        $builder->like("$joinAlias.$relatedTitle", $search);
+                    } else {
+                        $builder->orLike("$joinAlias.$relatedTitle", $search);
+                    }
                 } else {
-                    $builder->orLike($col, $search);
+                    if ($idx === 0) {
+                        $builder->like($col, $search);
+                    } else {
+                        $builder->orLike($col, $search);
+                    }
                 }
             }
             $builder->groupEnd();
