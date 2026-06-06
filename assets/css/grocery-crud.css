@@ -607,7 +607,18 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
     gap: 0.5rem;
     padding: 0.25rem 0.5rem;
     min-height: 1.5rem;
-    cursor: pointer;
+    cursor: grab;
+    user-select: none;
+}
+.gc-columns-menu .form-check:active {
+    cursor: grabbing;
+}
+.gc-columns-menu .form-check.gc-dragging {
+    opacity: 0.4;
+}
+.gc-columns-menu .form-check.gc-drag-over {
+    border-top: 2px solid #0d6efd;
+    background-color: rgba(13, 110, 253, 0.05);
 }
 .gc-columns-menu .form-check:hover {
     background-color: rgba(0,0,0,0.03);

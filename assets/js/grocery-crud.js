@@ -251,6 +251,18 @@
                         });
                     }
 
+                    // Restore saved column order from localStorage
+                    try {
+                        var url = window.location.href;
+                        var raw = localStorage.getItem('gc_settings_' + btoa(url));
+                        if (raw) {
+                            var settings = JSON.parse(raw);
+                            if (settings.columnOrder && settings.columnOrder.length) {
+                                applyColumnOrder($newWrapper, settings.columnOrder);
+                            }
+                        }
+                    } catch (e) {}
+
                     // Restore advanced filter panel items and visibility
                     if (advancedFilters && advancedFilters.length) {
                         var $panel = $newWrapper.find('.gc-filter-panel');
@@ -346,7 +358,7 @@
                 var col = $(this).data('column');
                 var label = $(this).data('label') || col;
                 var isHidden = $(this).hasClass('d-none');
-                var $cb = $('<div class="form-check">'
+                var $cb = $('<div class="form-check" draggable="true">'
                     + '<input type="checkbox" class="form-check-input" id="col_'
                     + col + '" data-column="' + col + '"' + (isHidden ? '' : ' checked') + '>'
                     + '<label class="form-check-label" for="col_' + col + '">'
@@ -370,6 +382,106 @@
                 if (currentVal) $select.val(currentVal);
             }
         });
+    }
+
+    /**
+     * Reorder table columns and columns menu to match saved order.
+     */
+    function applyColumnOrder($wrapper, columnOrder) {
+        if (!columnOrder || !columnOrder.length) return;
+
+        // 1. Reorder columns menu checkboxes
+        var $menu = $wrapper.find('.gc-columns-menu');
+        if ($menu.length) {
+            var items = [];
+            $menu.find('.form-check').each(function () {
+                var col = $(this).find('.form-check-input').data('column');
+                items.push({ col: col, $el: $(this) });
+            });
+            items.sort(function (a, b) {
+                var ia = columnOrder.indexOf(a.col);
+                var ib = columnOrder.indexOf(b.col);
+                if (ia === -1) ia = 999;
+                if (ib === -1) ib = 999;
+                return ia - ib;
+            });
+            // Detach and re-append in sorted order
+            $menu.find('.form-check').detach();
+            items.forEach(function (item) {
+                $menu.append(item.$el);
+            });
+        }
+
+        // 2. Reorder table columns
+        var $table = $wrapper.find('.gc-table');
+        if (!$table.length) return;
+
+        $table.find('thead tr, tbody tr').each(function () {
+            var $row = $(this);
+            var $dataCells = $row.find('[data-column]');
+            if ($dataCells.length < 2) return;
+
+            // Collect cells in an array
+            var cells = [];
+            $dataCells.each(function () {
+                cells.push({ col: $(this).data('column'), $el: $(this) });
+            });
+
+            // Sort by columnOrder
+            cells.sort(function (a, b) {
+                var ia = columnOrder.indexOf(a.col);
+                var ib = columnOrder.indexOf(b.col);
+                if (ia === -1) ia = 999;
+                if (ib === -1) ib = 999;
+                return ia - ib;
+            });
+
+            // Find reference: element just before the first data-cell
+            var $firstDataCell = $dataCells.first();
+            var $prev = $firstDataCell.prev();
+            var hasPrev = $prev.length > 0;
+
+            // Detach all data cells
+            $dataCells.detach();
+
+            // Insert sorted cells after prev (or at start of row)
+            var sortedEls = cells.map(function (c) { return c.$el[0]; });
+            if (hasPrev) {
+                $prev.after(sortedEls);
+            } else {
+                $row.prepend(sortedEls);
+            }
+        });
+
+        // Restore d-none visibility on any columns that were hidden
+        if ($wrapper.find('.gc-columns-menu').length) {
+            $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
+                var col = $(this).data('column');
+                if (!$(this).is(':checked')) {
+                    $table.find('th[data-column="' + col + '"], td[data-column="' + col + '"]').addClass('d-none');
+                }
+            });
+        }
+    }
+
+    /**
+     * Save current column order from the columns menu to localStorage.
+     */
+    function saveColumnOrder($wrapper) {
+        var menu = $wrapper.find('.gc-columns-menu');
+        if (!menu.length) return;
+        var order = [];
+        menu.find('.form-check-input').each(function () {
+            order.push($(this).data('column'));
+        });
+        var url = window.location.href;
+        try {
+            var key = 'gc_settings_' + btoa(url);
+            var raw = localStorage.getItem(key);
+            var settings = raw ? JSON.parse(raw) : { columns: {}, filters: [] };
+            settings.columnOrder = order;
+            localStorage.setItem(key, JSON.stringify(settings));
+        } catch (e) {}
     }
 
     function submitForm($form) {
@@ -846,6 +958,54 @@
             refreshList($wrapper);
         });
 
+        // ======== Column Reorder: Drag & Drop ========
+        $(document).off('dragstart', '.gc-columns-menu .form-check').on('dragstart', '.gc-columns-menu .form-check', function (e) {
+            $(this).addClass('gc-dragging');
+            e.originalEvent.dataTransfer.effectAllowed = 'move';
+            e.originalEvent.dataTransfer.setData('text/plain', $(this).find('.form-check-input').data('column'));
+        });
+        $(document).off('dragend', '.gc-columns-menu .form-check').on('dragend', '.gc-columns-menu .form-check', function () {
+            $(this).removeClass('gc-dragging');
+            $('.gc-columns-menu .form-check').removeClass('gc-drag-over');
+        });
+        $(document).off('dragover', '.gc-columns-menu .form-check').on('dragover', '.gc-columns-menu .form-check', function (e) {
+            e.preventDefault();
+            e.originalEvent.dataTransfer.dropEffect = 'move';
+            $(this).addClass('gc-drag-over');
+        });
+        $(document).off('dragleave', '.gc-columns-menu .form-check').on('dragleave', '.gc-columns-menu .form-check', function () {
+            $(this).removeClass('gc-drag-over');
+        });
+        $(document).off('drop', '.gc-columns-menu .form-check').on('drop', '.gc-columns-menu .form-check', function (e) {
+            e.preventDefault();
+            $(this).removeClass('gc-drag-over');
+            var $dragged = $('.gc-dragging');
+            if (!$dragged.length || $dragged[0] === this) {
+                $('.gc-dragging').removeClass('gc-dragging');
+                return;
+            }
+            var $menu = $dragged.closest('.gc-columns-menu');
+            if ($(this).closest('.gc-columns-menu')[0] !== $menu[0]) {
+                $('.gc-dragging').removeClass('gc-dragging');
+                return;
+            }
+            // Reorder in DOM
+            if ($(this).index() < $dragged.index()) {
+                $(this).before($dragged);
+            } else {
+                $(this).after($dragged);
+            }
+            $('.gc-dragging').removeClass('gc-dragging');
+            // Apply to table and save
+            var $wrapper = $menu.closest('.grocery-crud-wrapper');
+            var order = [];
+            $menu.find('.form-check-input').each(function () {
+                order.push($(this).data('column'));
+            });
+            applyColumnOrder($wrapper, order);
+            saveColumnOrder($wrapper);
+        });
+
         // ======== Settings Save/Load/Reset ========
         // Save settings
         $(document).off('click', '.gc-settings-save').on('click', '.gc-settings-save', function () {
@@ -853,10 +1013,12 @@
             var url = window.location.href;
             var settings = {
                 columns: {},
+                columnOrder: [],
                 filters: $wrapper.data('gcAdvancedFilters') || []
             };
             $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                 settings.columns[$(this).data('column')] = $(this).is(':checked');
+                settings.columnOrder.push($(this).data('column'));
             });
             try {
                 localStorage.setItem('gc_settings_' + btoa(url), JSON.stringify(settings));
@@ -874,7 +1036,11 @@
                 var raw = localStorage.getItem('gc_settings_' + btoa(url));
                 if (!raw) { showAlert('No saved settings found.', 'warning'); return; }
                 var settings = JSON.parse(raw);
-                // Restore columns
+                // Restore column order
+                if (settings.columnOrder && settings.columnOrder.length) {
+                    applyColumnOrder($wrapper, settings.columnOrder);
+                }
+                // Restore column visibility
                 if (settings.columns) {
                     $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                         var col = $(this).data('column');
@@ -900,6 +1066,14 @@
             var url = window.location.href;
             try {
                 localStorage.removeItem('gc_settings_' + btoa(url));
+                // Reset column order to original (from table headers)
+                var order = [];
+                $wrapper.find('.gc-table th[data-column]').each(function () {
+                    order.push($(this).data('column'));
+                });
+                if (order.length) {
+                    applyColumnOrder($wrapper, order);
+                }
                 $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                     $(this).prop('checked', true).trigger('change');
                 });
@@ -1132,6 +1306,9 @@
                 var raw = localStorage.getItem('gc_settings_' + btoa(url));
                 if (raw) {
                     var settings = JSON.parse(raw);
+                    if (settings.columnOrder && settings.columnOrder.length) {
+                        applyColumnOrder($wrapper, settings.columnOrder);
+                    }
                     if (settings.columns) {
                         $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                             var col = $(this).data('column');
