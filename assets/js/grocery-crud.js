@@ -1038,8 +1038,9 @@
             });
 
         // Modal polyfill for non-Bootstrap themes
-        if (typeof $.fn.modal !== 'function') {
-            $.fn.modal = function (action) {
+        // Note: Always override because Materialize etc. also define $.fn.modal
+        // and we need Bootstrap-compatible modal behavior for GcModal
+        $.fn.modal = function (action) {
                 if (action === 'show') {
                     return this.each(function () {
                         $(this).addClass('show').css('display', 'block');
@@ -1058,7 +1059,6 @@
                     });
                 }
             };
-        }
 
         // Alert polyfill
         if (typeof $.fn.alert !== 'function') {
