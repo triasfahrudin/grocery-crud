@@ -574,6 +574,11 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
    Theme-agnostic fallback styles for non-Bootstrap themes
    ============================================================ */
 
+/* d-none fallback (used by columns toggle, etc.) */
+.d-none {
+    display: none !important;
+}
+
 /* Badge fallback (used by callbackColumn is_active) */
 .badge {
     display: inline-block;
