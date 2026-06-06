@@ -167,6 +167,14 @@
             ? $focusedFilter[0].selectionStart
             : -1;
 
+        // Save hidden columns state before refresh (columns menu will be regenerated)
+        var hiddenColumns = [];
+        $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
+            if (!$(this).is(':checked')) {
+                hiddenColumns.push($(this).data('column'));
+            }
+        });
+
         // Collect column filters from DOM
         var filters = {};
         $wrapper.find('.gc-column-filter').each(function () {
@@ -233,6 +241,15 @@
                     // Populate columns menu and filter selects from table headers
                     var $newWrapper = $parent.find('.grocery-crud-wrapper');
                     populateColumnsAndFilters($newWrapper);
+
+                    // Restore hidden columns state (user unchecked some checkboxes before refresh)
+                    if (hiddenColumns.length) {
+                        hiddenColumns.forEach(function (col) {
+                            $newWrapper.find('.gc-columns-menu input[data-column="' + col + '"]')
+                                .prop('checked', false)
+                                .trigger('change');
+                        });
+                    }
 
                     // Restore advanced filter panel items and visibility
                     if (advancedFilters && advancedFilters.length) {
