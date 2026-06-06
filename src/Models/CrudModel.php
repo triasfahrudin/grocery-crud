@@ -463,6 +463,7 @@ class CrudModel
         }
 
         $results = $builder->get()->getResultArray();
+        \log_message('error', '[GC_RESULT] count=' . count($results) . ' query=' . $this->db->getLastQuery());
 
         // If there are relation fields, fetch related data in batch (eliminate N+1)
         if (!empty($this->relationFields)) {
@@ -603,7 +604,10 @@ class CrudModel
         }
 
         $this->advancedFilters = [];
-        return $builder->countAllResults();
+        $sql = $builder->getCompiledSelect(false);
+        $totalCount = $builder->countAllResults();
+        \log_message('error', '[GC_COUNT] total=' . $totalCount . ' sql=' . $sql);
+        return $totalCount;
     }
 
     /**
