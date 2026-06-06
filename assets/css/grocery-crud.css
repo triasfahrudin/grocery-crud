@@ -614,10 +614,18 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
     cursor: pointer;
     margin-left: 0;
     float: none;
+    /* Override Materialize hiding native checkboxes */
+    opacity: 1;
+    pointer-events: auto;
+    position: static;
 }
 .gc-columns-menu .form-check-label {
     cursor: pointer;
     font-size: 0.875rem;
+    color: inherit;
+    line-height: 1.4;
+    min-width: 0;
+    word-break: break-word;
 }
 
 /* Alert fallback */
