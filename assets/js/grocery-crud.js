@@ -969,6 +969,8 @@
 
         /**
          * Initialize table-dragger on all tables inside the given wrapper.
+         * Uses .gc-drag-handle inside headers so sorting (click on header text) 
+         * and dragging (click on handle) don't conflict.
          */
         function initTableDragger($wrapper) {
             if (typeof tableDragger !== 'function') return;
@@ -978,9 +980,15 @@
             var $table = $wrapper.find('.gc-table');
             if (!$table.length) return;
             try {
+                // Add drag handle to each data-column header in the first header row
+                $table.find('thead tr:first-child th[data-column]').each(function () {
+                    if (!$(this).find('.gc-drag-handle').length) {
+                        $(this).prepend('<span class="gc-drag-handle">⠿</span> ');
+                    }
+                });
                 var dragger = tableDragger($table[0], {
                     mode: 'column',
-                    dragHandler: 'th[data-column]',
+                    dragHandler: '.gc-drag-handle',
                     animation: 200
                 });
                 $wrapper.data('gcDragger', dragger);

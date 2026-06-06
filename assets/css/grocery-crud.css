@@ -18,11 +18,18 @@
     background-color: rgba(13, 110, 253, 0.04);
 }
 
-/* table-dragger: drag cursor on draggable headers */
-.gc-table thead th[data-column] {
+/* table-dragger: drag handle inside headers */
+.gc-drag-handle {
     cursor: grab;
+    opacity: 0.4;
+    font-size: 0.8em;
+    user-select: none;
+    display: inline;
 }
-.gc-table thead th[data-column]:active {
+.gc-drag-handle:hover {
+    opacity: 0.8;
+}
+.gc-drag-handle:active {
     cursor: grabbing;
 }
 
