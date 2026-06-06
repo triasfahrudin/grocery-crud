@@ -20,7 +20,6 @@ class Config extends BaseConfig
         'bootstrap5'  => \GroceryCrud\Themes\Bootstrap5Theme::class,
         'adminlte4'   => \GroceryCrud\Themes\AdminLTE4Theme::class,
         'tailwind'    => \GroceryCrud\Themes\TailwindTheme::class,
-        'bulma'       => \GroceryCrud\Themes\BulmaTheme::class,
         'materialize' => \GroceryCrud\Themes\MaterializeTheme::class,
     ];
 
