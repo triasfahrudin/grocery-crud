@@ -979,6 +979,15 @@
         $(document).find('.grocery-crud-wrapper').each(function () {
             populateColumnsAndFilters($(this));
         });
+
+        // Initialize Materialize dropdowns after wrapper render
+        if (typeof M !== 'undefined') {
+            $('.grocery-crud-wrapper .dropdown-trigger').each(function () {
+                if (!M.Dropdown.getInstance(this)) {
+                    $(this).dropdown();
+                }
+            });
+        }
     }
 
     function bindFormEvents($modal) {
@@ -1020,7 +1029,8 @@
             return; // Bootstrap is loaded, no polyfill needed
         }
 
-        // Dropdown polyfill — skip when Materialize handles its own dropdowns
+        // Dropdown polyfill — handle Bootstrap-style dropdowns for non-Bootstrap themes.
+        // Materialize uses its own dropdown system (.dropdown-trigger), so it is excluded.
         if (typeof M === 'undefined') {
             $(document).on('click.dropdown', '[data-bs-toggle="dropdown"]', function (e) {
                 e.preventDefault();
