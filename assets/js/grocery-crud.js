@@ -262,6 +262,8 @@
                             }
                         }
                     } catch (e) {}
+                    // Initialize table-dragger on the refreshed table
+                    initTableDragger($newWrapper);
 
                     // Restore advanced filter panel items and visibility
                     if (advancedFilters && advancedFilters.length) {
@@ -958,77 +960,60 @@
             refreshList($wrapper);
         });
 
-        // ======== Column Reorder: Manual Drag (mousedown/mousemove/mouseup) ========
+        // ======== Column Reorder via table-dragger ========
         // Since input/label have pointer-events:none, handle toggle via click on the .form-check div
         $(document).off('click', '.gc-columns-menu .form-check').on('click', '.gc-columns-menu .form-check', function () {
             var $input = $(this).find('.form-check-input');
             $input.prop('checked', !$input.is(':checked')).trigger('change');
         });
 
-        var gcColDrag = { active: false, $el: null, startY: 0, $target: null };
-        $(document).on('mousedown', '.gc-columns-menu .form-check', function (e) {
-            console.log('[GC_COL] mousedown', $(this).find('.form-check-input').data('column'));
-            gcColDrag.active = true;
-            gcColDrag.$el = $(this);
-            gcColDrag.startY = e.clientY;
-            gcColDrag.$target = null;
-        });
-        $(document).on('mousemove', function (e) {
-            if (!gcColDrag.active || !gcColDrag.$el) return;
-            // Check if mouse has moved enough to consider it a drag (not a click)
-            if (Math.abs(e.clientY - gcColDrag.startY) < 3) return;
-            if (!gcColDrag.$el.hasClass('gc-dragging')) {
-                console.log('[GC_COL] drag started');
-            }
-            // Find the element under cursor
-            var el = document.elementFromPoint(e.clientX, e.clientY);
-            if (!el) return;
-            var $target = $(el).closest('.gc-columns-menu .form-check');
-            if (!$target.length || $target[0] === gcColDrag.$el[0]) {
-                // Remove visual feedback
-                if (gcColDrag.$target) {
-                    gcColDrag.$target.removeClass('gc-drag-over');
-                    gcColDrag.$target = null;
-                }
-                return;
-            }
-            // Different target — update visual feedback
-            if (gcColDrag.$target && gcColDrag.$target[0] !== $target[0]) {
-                gcColDrag.$target.removeClass('gc-drag-over');
-            }
-            $target.addClass('gc-drag-over');
-            gcColDrag.$target = $target;
-            gcColDrag.$el.addClass('gc-dragging');
-        });
-        $(document).on('mouseup', function () {
-            if (!gcColDrag.active) return;
-            gcColDrag.active = false;
-            gcColDrag.$el.removeClass('gc-dragging');
-            if (gcColDrag.$target) {
-                gcColDrag.$target.removeClass('gc-drag-over');
-                // Complete the drop: reorder DOM
-                var $dragged = gcColDrag.$el;
-                var $dropTarget = gcColDrag.$target;
-                var $menu = $dragged.closest('.gc-columns-menu');
-                if ($menu.length && $dropTarget.closest('.gc-columns-menu')[0] === $menu[0]) {
-                    if ($dropTarget.index() < $dragged.index()) {
-                        $dropTarget.before($dragged);
-                    } else {
-                        $dropTarget.after($dragged);
-                    }
-                    // Apply to table and save
-                    var $wrapper = $menu.closest('.grocery-crud-wrapper');
-                    var order = [];
-                    $menu.find('.form-check-input').each(function () {
-                        order.push($(this).data('column'));
+        /**
+         * Initialize table-dragger on all tables inside the given wrapper.
+         */
+        function initTableDragger($wrapper) {
+            if (typeof tableDragger !== 'function') return;
+            // Destroy any previous instance on this wrapper
+            var prev = $wrapper.data('gcDragger');
+            if (prev) { try { prev.destroy(); } catch(e) {} }
+            var $table = $wrapper.find('.gc-table');
+            if (!$table.length) return;
+            try {
+                var dragger = tableDragger($table[0], {
+                    mode: 'column',
+                    dragHandler: 'th[data-column]',
+                    animation: 200
+                });
+                $wrapper.data('gcDragger', dragger);
+                dragger.on('drop', function (oldIndex, newIndex, el, mode) {
+                    // table-dragger already reordered table DOM
+                    // Read new column order from table headers
+                    var newOrder = [];
+                    $table[0].querySelectorAll('thead th[data-column]').forEach(function (th) {
+                        newOrder.push(th.getAttribute('data-column'));
                     });
-                    applyColumnOrder($wrapper, order);
+                    if (!newOrder.length) return;
+                    // Sync columns menu order to match
+                    var $menu = $wrapper.find('.gc-columns-menu');
+                    if ($menu.length) {
+                        var sorted = [];
+                        newOrder.forEach(function (col) {
+                            var $item = $menu.find('.form-check-input[data-column="' + col + '"]').closest('.form-check');
+                            if ($item.length) sorted.push($item[0]);
+                        });
+                        // Append any remaining items at end
+                        $menu.find('.form-check').each(function () {
+                            if (sorted.indexOf(this) === -1) sorted.push(this);
+                        });
+                        $menu.find('.form-check').detach();
+                        sorted.forEach(function (el) { $menu.append(el); });
+                    }
+                    // Save order
                     saveColumnOrder($wrapper);
-                }
+                });
+            } catch (e) {
+                console.warn('[GC] table-dragger init failed:', e);
             }
-            gcColDrag.$el = null;
-            gcColDrag.$target = null;
-        });
+        }
 
         // ======== Settings Save/Load/Reset ========
         // Save settings
@@ -1350,6 +1335,8 @@
             } catch (e) {
                 console.log('[GC_AUTO] error', e);
             }
+            // Initialize table-dragger after settings are restored
+            initTableDragger($wrapper);
         });
 
         // Store confirmation messages

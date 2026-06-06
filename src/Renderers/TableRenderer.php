@@ -120,6 +120,7 @@ class TableRenderer
         {$content}
     </div>
     {$jsLinks}
+    <script src="https://unpkg.com/table-dragger@2.0.5/dist/table-dragger.min.js"></script>
     <script src="/assets/grocery-crud/js/grocery-crud.js?v={$jsV}"></script>
 </body>
 </html>
