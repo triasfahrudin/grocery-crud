@@ -17,8 +17,11 @@ class Config extends BaseConfig
      * Registered themes.
      */
     public array $themes = [
-        'bootstrap5' => \GroceryCrud\Themes\Bootstrap5Theme::class,
-        'adminlte4'  => \GroceryCrud\Themes\AdminLTE4Theme::class,
+        'bootstrap5'  => \GroceryCrud\Themes\Bootstrap5Theme::class,
+        'adminlte4'   => \GroceryCrud\Themes\AdminLTE4Theme::class,
+        'tailwind'    => \GroceryCrud\Themes\TailwindTheme::class,
+        'bulma'       => \GroceryCrud\Themes\BulmaTheme::class,
+        'materialize' => \GroceryCrud\Themes\MaterializeTheme::class,
     ];
 
     /**

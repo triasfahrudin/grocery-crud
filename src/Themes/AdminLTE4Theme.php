@@ -708,4 +708,68 @@ class AdminLTE4Theme implements ThemeInterface
                 return '<input type="text" class="form-control form-control-sm" id="' . $id . '" name="' . $name . '" value="' . htmlspecialchars((string) $value) . '"' . $d . '>';
         }
     }
+
+    /**
+     * Render sub-grid (nested table) HTML.
+     *
+     * @param array<string, mixed> $config
+     * @param array<int, array<string, mixed>> $records
+     * @return string
+     */
+    public function renderSubGrid(array $config, array $records): string
+    {
+        $columns      = $config['columns'] ?? [];
+        $columnLabels = $config['columnLabels'] ?? [];
+        $relatedTable = $config['relatedTable'] ?? '';
+        $recordCount  = count($records);
+
+        $html = '<style>
+            .gc-subgrid-inner { margin:8px 0; }
+            .subgrid-header { display:flex; align-items:center; gap:10px; padding:8px 12px; background:#343a40; color:#fff; border-radius:6px 6px 0 0; }
+            .subgrid-title { font-weight:600; font-size:0.95rem; display:flex; align-items:center; gap:6px; }
+            .subgrid-count { margin-left:auto; font-size:0.8rem; background:rgba(255,255,255,0.15); padding:2px 10px; border-radius:10px; }
+            .gc-subgrid-table { width:100%; border-collapse:collapse; background:#fff; border:1px solid #dee2e6; border-radius:0 0 6px 6px; overflow:hidden; }
+            .gc-subgrid-table thead th { background:#f8f9fa; padding:8px 12px; font-size:0.85rem; font-weight:600; text-transform:uppercase; letter-spacing:0.03em; color:#495057; border-bottom:2px solid #dee2e6; }
+            .gc-subgrid-table tbody td { padding:8px 12px; font-size:0.9rem; border-bottom:1px solid #f0f0f0; color:#333; }
+            .gc-subgrid-table tbody tr:last-child td { border-bottom:none; }
+            .gc-subgrid-table tbody tr:hover td { background:#f1f8ff; border-left:3px solid #0d6efd; }
+            .gc-subgrid-empty { text-align:center; color:#999; font-style:italic; padding:20px !important; }
+        </style>';
+        $html .= '<div class="gc-subgrid-inner">';
+
+        // Header with table name and record count
+        $tableLabel = ucfirst(str_replace('_', ' ', $relatedTable));
+        $html .= '<div class="subgrid-header">';
+        $html .= '<span class="subgrid-title"><i class="bi bi-grid-3x3-gap-fill"></i>' . htmlspecialchars($tableLabel) . '</span>';
+        $html .= '<span class="subgrid-count">' . $recordCount . ' data</span>';
+        $html .= '</div>';
+
+        // Table
+        $html .= '<table class="gc-subgrid-table">';
+        $html .= '<thead><tr>';
+        foreach ($columns as $col) {
+            $label = $columnLabels[$col] ?? ucfirst(str_replace('_', ' ', $col));
+            $html .= '<th>' . htmlspecialchars($label) . '</th>';
+        }
+        $html .= '</tr></thead><tbody>';
+
+        if (empty($records)) {
+            $colspan = count($columns);
+            $html .= '<tr><td colspan="' . $colspan . '" class="gc-subgrid-empty">Tidak ada data terkait.</td></tr>';
+        } else {
+            foreach ($records as $row) {
+                $html .= '<tr>';
+                foreach ($columns as $col) {
+                    $value = $row[$col] ?? '';
+                    $html .= '<td>' . htmlspecialchars((string) $value) . '</td>';
+                }
+                $html .= '</tr>';
+            }
+        }
+
+        $html .= '</tbody></table>';
+        $html .= '</div>';
+
+        return $html;
+    }
 }

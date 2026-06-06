@@ -101,22 +101,26 @@ class TableRenderer
             $jsLinks .= '<script src="' . $js . '"></script>' . "\n";
         }
 
+        $themeName = ucfirst($theme->getName());
+        $cssV = filemtime(__DIR__ . '/../../assets/css/grocery-crud.css');
+        $jsV  = filemtime(__DIR__ . '/../../assets/js/grocery-crud.js');
+
         return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{$this->config->defaultTheme}</title>
+    <title>{$themeName} - Grocery CRUD</title>
     {$cssLinks}
-    <link rel="stylesheet" href="/assets/grocery-crud/css/grocery-crud.css?v=1780776104">
+    <link rel="stylesheet" href="/assets/grocery-crud/css/grocery-crud.css?v={$cssV}">
 </head>
 <body>
     <div class="container-fluid py-4">
         {$content}
     </div>
     {$jsLinks}
-    <script src="/assets/grocery-crud/js/grocery-crud.js?v=1780775785"></script>
+    <script src="/assets/grocery-crud/js/grocery-crud.js?v={$jsV}"></script>
 </body>
 </html>
 HTML;

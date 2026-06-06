@@ -677,22 +677,35 @@
             });
             if (selectedIds.length === 0) return;
 
+            // Detect if we're in trash view (the "Active Records" button only appears there)
+            var isTrashView = $wrapper.find('.gc-btn-active').length > 0;
+
             if (actionId === 'delete_selected') {
-                if (!confirm('Are you sure you want to delete ' + selectedIds.length + ' selected record(s)?')) {
+                var msg = isTrashView
+                    ? 'Are you sure you want to permanently delete ' + selectedIds.length + ' selected record(s)? This cannot be undone.'
+                    : 'Are you sure you want to delete ' + selectedIds.length + ' selected record(s)?';
+                if (!confirm(msg)) {
                     return;
                 }
             }
 
             showLoading();
 
+            var requestData = {
+                gc_action: 'batch_action',
+                batch_action: actionId,
+                ids: selectedIds
+            };
+
+            // When in trash view, delete_selected should permanently delete
+            if (isTrashView && actionId === 'delete_selected') {
+                requestData.permanent_delete = 1;
+            }
+
             $.ajax({
                 url: window.location.href,
                 method: 'POST',
-                data: {
-                    gc_action: 'batch_action',
-                    batch_action: actionId,
-                    ids: selectedIds
-                },
+                data: requestData,
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
@@ -986,7 +999,87 @@
     };
 
     // ======== Init ========
+    // ======== Bootstrap polyfill for non-Bootstrap themes ========
+    function bootstrapPolyfill() {
+        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Dropdown === 'function') {
+            return; // Bootstrap is loaded, no polyfill needed
+        }
+
+        // Dropdown polyfill
+            $(document).on('click.dropdown', '[data-bs-toggle="dropdown"]', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                var $btn = $(this);
+                var $wrapper = $btn.closest('.dropdown, .relative');
+                var $menu = $wrapper.find('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu');
+                if ($menu.length === 0) {
+                    $menu = $btn.next('.dropdown-menu, .dropdown-content, ul');
+                }
+
+                // Close all other dropdowns
+                $('[data-bs-toggle="dropdown"]').not($btn).each(function () {
+                    var $otherWrapper = $(this).closest('.dropdown, .relative');
+                    var $otherMenu = $otherWrapper.find('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu');
+                    if ($otherMenu.length === 0) {
+                        $otherMenu = $(this).next('.dropdown-menu, .dropdown-content, ul');
+                    }
+                    $otherMenu.hide();
+                });
+
+                $menu.toggle();
+            });
+
+            // Close dropdowns on outside click
+            $(document).on('click.dropdown', function (e) {
+                if (!$(e.target).closest('[data-bs-toggle="dropdown"]').length
+                    && !$(e.target).closest('.dropdown-menu, .dropdown-content').length) {
+                    $('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu').hide();
+                }
+            });
+
+        // Modal polyfill for non-Bootstrap themes
+        if (typeof $.fn.modal !== 'function') {
+            $.fn.modal = function (action) {
+                if (action === 'show') {
+                    return this.each(function () {
+                        $(this).addClass('show').css('display', 'block');
+                        $('body').addClass('modal-open');
+                        // Backdrop
+                        if ($('.modal-backdrop').length === 0) {
+                            $('body').append('<div class="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:1050;background:rgba(0,0,0,0.5)"></div>');
+                        }
+                    });
+                }
+                if (action === 'hide') {
+                    return this.each(function () {
+                        $(this).removeClass('show').css('display', 'none');
+                        $('.modal-backdrop').remove();
+                        $('body').removeClass('modal-open');
+                    });
+                }
+            };
+        }
+
+        // Alert polyfill
+        if (typeof $.fn.alert !== 'function') {
+            $.fn.alert = function () {
+                return this.each(function () {
+                    var $alert = $(this);
+                    setTimeout(function () {
+                        $alert.fadeOut(function () {
+                            $alert.remove();
+                        });
+                    }, 4000);
+                });
+            };
+            $(document).on('click', '.gc-alert .btn-close', function () {
+                $(this).closest('.gc-alert').remove();
+            });
+        }
+    }
+
     $(document).ready(function () {
+        bootstrapPolyfill();
         bindEvents();
 
         // Store confirmation messages

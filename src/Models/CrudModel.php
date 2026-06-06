@@ -555,6 +555,23 @@ class CrudModel
     }
 
     /**
+     * Permanently delete multiple records (bypass soft delete).
+     *
+     * @param array<int, mixed> $ids
+     * @return bool
+     */
+    public function forceDeleteMultiple(array $ids): bool
+    {
+        if (empty($ids)) {
+            return false;
+        }
+
+        return $this->db->table($this->table)
+            ->whereIn($this->primaryKey, $ids)
+            ->delete();
+    }
+
+    /**
      * Delete multiple records by primary key (soft delete if enabled).
      *
      * @param array<int, mixed> $ids

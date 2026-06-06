@@ -1267,7 +1267,7 @@ class GroceryCrud
             'columnFilters'  => $mergedFilters,
             'currentFilters' => $filters,
             'advancedFilters' => $advancedFilters,
-            'batchActions'   => $this->batchActions,
+            'batchActions'   => $this->filterBatchActions($trashedView),
             'enableFilters'  => $this->enableFilters,
             'enableColumns'  => $this->enableColumns,
             'enableSettings' => $this->enableSettings,
@@ -1642,6 +1642,26 @@ class GroceryCrud
     }
 
     /**
+     * Filter batch actions based on view mode.
+     *
+     * Active view:  only show delete_selected (hide restore_selected)
+     * Trash view:   show both delete_selected and restore_selected
+     *
+     * @param bool $trashedView
+     * @return array<string, string>
+     */
+    private function filterBatchActions(bool $trashedView): array
+    {
+        if ($trashedView) {
+            // Trash view: show all batch actions
+            return $this->batchActions;
+        }
+
+        // Active view: show only delete_selected
+        return array_intersect_key($this->batchActions, ['delete_selected' => true]);
+    }
+
+    /**
      * Handle AJAX action routing.
      */
     private function handleAjaxAction(string $action): ResponseInterface
@@ -1680,9 +1700,13 @@ class GroceryCrud
             return $this->jsonResponse(false, ['message' => 'No records selected.']);
         }
 
+        $permanentDelete = (bool) ($request->getPost('permanent_delete') ?? $request->getGet('permanent_delete') ?? false);
+
         try {
             $result = match ($batchAction) {
-                'delete_selected'  => $this->model->deleteMultiple($ids),
+                'delete_selected' => $permanentDelete
+                    ? $this->model->forceDeleteMultiple($ids)
+                    : $this->model->deleteMultiple($ids),
                 'restore_selected' => $this->model->restoreMultiple($ids),
                 default => false,
             };
