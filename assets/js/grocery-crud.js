@@ -492,26 +492,41 @@
      * and dragging (click on handle) don't conflict.
      */
     function initTableDragger($wrapper) {
-        if (typeof tableDragger !== 'function') return;
+        console.log('[GC_TD] initTableDragger called, tableDragger=',
+            typeof tableDragger, 'wrapper=', $wrapper.length);
+        if (typeof tableDragger !== 'function') {
+            console.warn('[GC_TD] tableDragger not available');
+            return;
+        }
         // Destroy any previous instance on this wrapper
         var prev = $wrapper.data('gcDragger');
         if (prev) { try { prev.destroy(); } catch(e) {} }
         var $table = $wrapper.find('.gc-table');
+        console.log('[GC_TD] table found:', $table.length);
         if (!$table.length) return;
         try {
             // Add drag handle to each data-column header in the first header row
-            $table.find('thead tr:first-child th[data-column]').each(function () {
+            var $handles = $table.find('thead tr:first-child th[data-column]');
+            console.log('[GC_TD] data-column headers:', $handles.length);
+            if ($handles.length < 2) {
+                console.warn('[GC_TD] not enough draggable columns');
+            }
+            $handles.each(function () {
                 if (!$(this).find('.gc-drag-handle').length) {
                     $('<span class="gc-drag-handle">⠿</span> ').prependTo(this);
                 }
             });
+            var handleCount = $table.find('.gc-drag-handle').length;
+            console.log('[GC_TD] handles added:', handleCount);
             var dragger = tableDragger($table[0], {
                 mode: 'column',
                 dragHandler: '.gc-drag-handle',
                 animation: 200
             });
             $wrapper.data('gcDragger', dragger);
+            console.log('[GC_TD] table-dragger initialized');
             dragger.on('drop', function (oldIndex, newIndex, el, mode) {
+                console.log('[GC_TD] drop event', oldIndex, newIndex, mode);
                 // table-dragger already reordered table DOM
                 // Read new column order from table headers
                 var newOrder = [];
