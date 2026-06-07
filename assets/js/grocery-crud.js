@@ -569,6 +569,8 @@
         // Disable button
         $submitBtn.prop('disabled', true).addClass('btn-gc-loading');
 
+        syncRichtextEditors($modal);
+
         var ajaxConfig = {
             url: window.location.href,
             method: 'POST',
@@ -1601,6 +1603,44 @@
 
         // Initialize dependsOn after form is shown
         initDependsOn($modal);
+
+        // Initialize richtext editors
+        initRichtextEditors($modal);
+    }
+
+    function initRichtextEditors($modal) {
+        if (typeof Quill === 'undefined') return;
+
+        $modal.find('.gc-richtext-editor').each(function () {
+            // Skip if already initialized (Quill adds ql-container class)
+            if ($(this).hasClass('ql-container')) return;
+
+            var quill = new Quill(this, {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'header': [1, 2, 3, false] }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'align': [] }],
+                        ['link', 'clean']
+                    ]
+                }
+            });
+        });
+    }
+
+    function syncRichtextEditors($modal) {
+        $modal.find('.gc-richtext-editor').each(function () {
+            var quill = Quill.find(this);
+            if (quill) {
+                var $editor = $(this);
+                var editorId = $editor.attr('id');
+                var fieldId = editorId.replace('_editor', '');
+                $modal.find('#' + fieldId).val(quill.root.innerHTML);
+            }
+        });
     }
 
     // ======== Debounce helper ========

@@ -36,6 +36,7 @@ class Bootstrap5Theme implements ThemeInterface
         return [
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css',
             'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
+            'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css',
         ];
     }
 
@@ -44,6 +45,7 @@ class Bootstrap5Theme implements ThemeInterface
         return [
             'https://code.jquery.com/jquery-3.7.1.min.js',
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
+            'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js',
         ];
     }
 
@@ -703,6 +705,11 @@ class Bootstrap5Theme implements ThemeInterface
                     $html .= '</div>';
                     $html .= '<input type="hidden" name="' . $fieldName . '_existing" value="' . htmlspecialchars(basename((string) $value)) . '">';
                 }
+                break;
+
+            case 'richtext':
+                $html .= '<div class="gc-richtext-editor" id="' . $fieldId . '_editor">' . $value . '</div>';
+                $html .= '<textarea class="d-none" id="' . $fieldId . '" name="' . $fieldName . '">' . htmlspecialchars((string) $value) . '</textarea>';
                 break;
 
             case 'read_only':

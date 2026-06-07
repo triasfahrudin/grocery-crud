@@ -22,6 +22,7 @@ class TailwindTheme implements ThemeInterface
     {
         return [
             'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
+            'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css',
         ];
     }
 
@@ -30,6 +31,7 @@ class TailwindTheme implements ThemeInterface
         return [
             'https://cdn.tailwindcss.com',
             'https://code.jquery.com/jquery-3.7.1.min.js',
+            'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js',
         ];
     }
 
@@ -572,6 +574,10 @@ class TailwindTheme implements ThemeInterface
                     $html .= '</div>';
                     $html .= '<input type="hidden" name="' . $fieldName . '_existing" value="' . htmlspecialchars(basename((string) $value)) . '">';
                 }
+                break;
+            case 'richtext':
+                $html .= '<div class="gc-richtext-editor" id="' . $fieldId . '_editor">' . $value . '</div>';
+                $html .= '<textarea class="hidden" id="' . $fieldId . '" name="' . $fieldName . '">' . htmlspecialchars((string) $value) . '</textarea>';
                 break;
             case 'read_only':
                 $html .= '<input type="text" class="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-gray-50" id="' . $fieldId . '" value="' . htmlspecialchars((string) $value) . '" readonly disabled>';

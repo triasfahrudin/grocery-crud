@@ -10,6 +10,7 @@ enum FieldType: string
     case INTEGER    = 'integer';
     case NUMERIC    = 'numeric';
     case TEXTAREA   = 'textarea';
+    case RICHTEXT   = 'richtext';
     case EMAIL      = 'email';
     case PASSWORD   = 'password';
     case DROPDOWN   = 'dropdown';

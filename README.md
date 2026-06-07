@@ -393,6 +393,7 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | `integer` | Input number integer |
 | `numeric` | Input number decimal |
 | `textarea` | Textarea |
+| `richtext` | WYSIWYG editor (Quill.js) — HTML output |
 | `email` | Input email |
 | `password` | Input password |
 | `dropdown` | Select dropdown |

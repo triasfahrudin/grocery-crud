@@ -31,6 +31,7 @@ class AdminLTE4Theme implements ThemeInterface
             'https://cdn.jsdelivr.net/npm/admin-lte@4.0.0/dist/css/adminlte.min.css',
             'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css',
             'https://cdn.jsdelivr.net/npm/@fontsource/source-sans-pro@5/css/all.min.css',
+            'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css',
         ];
     }
 
@@ -40,6 +41,7 @@ class AdminLTE4Theme implements ThemeInterface
             'https://code.jquery.com/jquery-3.7.1.min.js',
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js',
             'https://cdn.jsdelivr.net/npm/admin-lte@4.0.0/dist/js/adminlte.min.js',
+            'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js',
         ];
     }
 
@@ -623,6 +625,11 @@ class AdminLTE4Theme implements ThemeInterface
                     $html .= '</div>';
                     $html .= '<input type="hidden" name="' . $fieldName . '_existing" value="' . htmlspecialchars(basename((string) $value)) . '">';
                 }
+                break;
+
+            case 'richtext':
+                $html .= '<div class="gc-richtext-editor" id="' . $fieldId . '_editor">' . $value . '</div>';
+                $html .= '<textarea class="d-none" id="' . $fieldId . '" name="' . $fieldName . '">' . htmlspecialchars((string) $value) . '</textarea>';
                 break;
 
             case 'read_only':

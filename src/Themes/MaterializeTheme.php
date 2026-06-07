@@ -23,6 +23,7 @@ class MaterializeTheme implements ThemeInterface
         return [
             'https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css',
             'https://fonts.googleapis.com/icon?family=Material+Icons',
+            'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css',
         ];
     }
 
@@ -31,6 +32,7 @@ class MaterializeTheme implements ThemeInterface
         return [
             'https://code.jquery.com/jquery-3.7.1.min.js',
             'https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js',
+            'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.min.js',
         ];
     }
 
@@ -555,6 +557,10 @@ class MaterializeTheme implements ThemeInterface
                     $html .= '</div>';
                     $html .= '<input type="hidden" name="' . $fieldName . '_existing" value="' . htmlspecialchars(basename((string) $value)) . '">';
                 }
+                break;
+            case 'richtext':
+                $html .= '<div class="gc-richtext-editor" id="' . $fieldId . '_editor">' . $value . '</div>';
+                $html .= '<textarea style="display:none" id="' . $fieldId . '" name="' . $fieldName . '">' . htmlspecialchars((string) $value) . '</textarea>';
                 break;
             case 'read_only':
                 $html .= '<input type="text" id="' . $fieldId . '" value="' . htmlspecialchars((string) $value) . '" readonly disabled>';
