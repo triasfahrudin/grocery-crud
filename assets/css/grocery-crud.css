@@ -849,3 +849,18 @@ td.gc-inline-editor-active::after {
 .modal.show .modal-dialog {
     transform: none;
 }
+
+/* ============================================================
+   Dynamic Form Conditions (Depends On)
+   ============================================================ */
+
+/* Dimmed appearance for disabled dependent fields */
+.gc-depends-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Smooth transition for show/hide */
+[data-depends-on] {
+    transition: opacity 0.2s ease;
+}

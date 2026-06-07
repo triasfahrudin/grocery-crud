@@ -491,6 +491,7 @@ class Bootstrap5Theme implements ThemeInterface
         $fieldTypes  = $data['fieldTypes'] ?? [];
         $fieldValues = $data['fieldValues'] ?? [];
         $fieldOptions = $data['fieldOptions'] ?? [];
+        $dependsOn   = $data['dependsOn'] ?? [];
         $primaryKey  = $data['primaryKey'] ?? 'id';
         $recordId    = $data['recordId'] ?? null;
         $errors      = $data['errors'] ?? [];
@@ -529,7 +530,11 @@ class Bootstrap5Theme implements ThemeInterface
             $options    = $fieldOptions[$field] ?? [];
             $isUpload   = !empty($data['uploadFields'][$field]);
 
-            $html .= '<div class="mb-3' . ($fieldError ? ' has-error' : '') . '">';
+            $depAttrs = '';
+            if (isset($dependsOn[$field])) {
+                $depAttrs = ' data-depends-on=\'' . htmlspecialchars(json_encode($dependsOn[$field])) . '\'';
+            }
+            $html .= '<div class="mb-3' . ($fieldError ? ' has-error' : '') . '"' . $depAttrs . '>';
             $html .= '<label for="gc_field_' . $field . '" class="form-label">';
             $html .= htmlspecialchars($label);
             if ($isRequired) {
@@ -577,6 +582,7 @@ class Bootstrap5Theme implements ThemeInterface
         $repeaterData  = $data['repeaterData'] ?? [];
         $rDef          = $repeaterDefs[$field] ?? null;
         $rValues       = $repeaterData[$field] ?? [];
+        $dependsOn     = $data['dependsOn'] ?? [];
 
         $html = '';
 

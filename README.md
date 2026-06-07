@@ -23,6 +23,7 @@ Library CRUD generator full-featured untuk CodeIgniter 4. Terinspirasi dari Groc
 - **Multi-language** — English & Indonesian bawaan
 - **Custom Actions** — Tombol aksi kustom per baris
 - **Repeater Fields** — Repeatable group of sub-fields (Nova-style)
+- **Dynamic Form Conditions** — Show/hide atau enable/disable field berdasarkan nilai field lain (dependsOn)
 - **Field Type Detection** — Auto-detect tipe field dari database
 - **Field Type Override** — Override tipe field manual (dropdown, enum, color, dll)
 - **Cache Busting** — Version query param otomatis pada CSS/JS assets
@@ -194,7 +195,32 @@ $crud->setSubGrid(
 );
 ```
 
-### 10. Repeater Fields
+### 10. Dynamic Form Conditions (Depends On)
+
+Show/hide atau enable/disable field berdasarkan nilai field lain:
+
+```php
+$crud = new GroceryCrud();
+$crud->setTable('products');
+
+// Sembunyikan discount_price jika has_discount tidak dicentang
+$crud->dependsOn('discount_price', 'has_discount', true);
+
+// Nonaktifkan shipping_address jika same_as_billing dicentang
+$crud->dependsOn('shipping_address', 'same_as_billing', true, 'enable');
+```
+
+Parameter:
+| Parameter | Deskripsi |
+|-----------|-----------|
+| `$field` | Field yang akan di-show/hide atau enable/disable |
+| `$dependsOnField` | Field controller yang memicu perubahan |
+| `$value` | Nilai yang memicu aksi (string, angka, boolean) |
+| `$action` | `'show'` (default) — sembunyikan field saat tidak cocok; `'enable'` — disable field saat tidak cocok |
+
+Cocok untuk berbagai tipe field: dropdown, switch/boolean, checkbox, text input, dll.
+
+### 11. Repeater Fields
 
 ```php
 $crud->setRepeater('specs', 'Product Specs', [
@@ -263,6 +289,12 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | Method | Deskripsi |
 |--------|-----------|
 | `setRepeater(string $field, string $label, array $repeatables, string $preset, array $options)` | Repeatable group of sub-fields |
+
+### Dynamic Form Conditions
+
+| Method | Deskripsi |
+|--------|-----------|
+| `dependsOn(string $field, string $dependsOnField, mixed $value, string $action)` | Show/hide atau enable/disable field berdasarkan nilai field lain |
 
 ### Callbacks
 

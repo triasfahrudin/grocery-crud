@@ -1227,6 +1227,80 @@
         }
     }
 
+    // ======== Dynamic Form Conditions (Depends On) ========
+    /**
+     * Initialize dependsOn dynamic field visibility/enablement.
+     * Fields with data-depends-on attribute will show/hide or enable/disable
+     * based on the value of their controlling field.
+     */
+    function initDependsOn($modal) {
+        $modal.find('[data-depends-on]').each(function () {
+            var $field = $(this);
+            var config = $field.data('dependsOn');
+            if (!config) return;
+
+            var $form = $field.closest('.gc-form');
+            if (!$form.length) return;
+
+            // Find the controlling field — handle various input types
+            var $controller = $form.find('[name="' + config.field + '"]');
+            if (!$controller.length) {
+                // Try with [] suffix (for checkbox arrays)
+                $controller = $form.find('[name="' + config.field + '[]"]');
+            }
+            if (!$controller.length) return;
+
+            function updateDependsOn() {
+                var controllerValue;
+                if ($controller.is(':checkbox') || $controller.is('[type="checkbox"]')) {
+                    controllerValue = $controller.is(':checked') ? '1' : '0';
+                } else {
+                    controllerValue = $controller.val();
+                }
+
+                var match = String(controllerValue) === String(config.value);
+
+                if (config.action === 'enable') {
+                    // Enable/disable inputs without hiding
+                    $field.find('input, select, textarea, button').prop('disabled', !match);
+                    // Visual cue: dim the field when disabled
+                    $field.toggleClass('gc-depends-disabled', !match);
+                } else {
+                    // Default 'show': hide/ show the entire field group
+                    $field.toggle(match);
+                    // Disable inputs when hidden so they don't submit
+                    $field.find('input, select, textarea, button').prop('disabled', !match);
+                }
+            }
+
+            // Listen for changes on the controller
+            $controller.on('change.dependsOn', updateDependsOn);
+
+            // For text inputs, also listen on keyup for immediate feedback
+            if ($controller.is('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], input[type="url"], input[type="password"]')) {
+                $controller.on('keyup.dependsOn', function () {
+                    // Only trigger if value exactly matches or has a substring
+                    updateDependsOn();
+                });
+            }
+
+            // Initial state
+            updateDependsOn();
+        });
+    }
+
+    // Clean up dependsOn listeners when modal is closed
+    $(document).on('hidden.bs.modal', '.gc-modal', function () {
+        $(this).find('[data-depends-on]').each(function () {
+            var config = $(this).data('dependsOn');
+            if (!config) return;
+            var $form = $(this).closest('.gc-form');
+            if ($form.length) {
+                $form.find('[name="' + config.field + '"]').off('.dependsOn');
+            }
+        });
+    });
+
     function bindFormEvents($modal) {
         // Form submission
         $modal.on('submit', '.gc-form', function (e) {
@@ -1244,6 +1318,9 @@
         $modal.on('hidden.bs.modal', function () {
             GcModal.remove();
         });
+
+        // Initialize dependsOn after form is shown
+        initDependsOn($modal);
     }
 
     // ======== Debounce helper ========

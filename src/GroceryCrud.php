@@ -137,6 +137,9 @@ class GroceryCrud
     /** @var array<string, array{relatedTable: string, foreignKey: string, columns: array, columnLabels: array}> */
     private array $subGrids = [];
 
+    /** @var array<string, array{field: string, value: mixed, action: string}> */
+    private array $dependsOn = [];
+
     private bool $enableFilters = true;
     private bool $enableColumns = true;
     private bool $enableSettings = true;
@@ -756,6 +759,36 @@ class GroceryCrud
     public function setFieldType(string $field, string $type, array $options = []): self
     {
         $this->fieldTypeOverrides[$field] = ['type' => $type, 'options' => $options];
+        return $this;
+    }
+
+    /**
+     * Define a dynamic form condition: show/hide or enable/disable a field
+     * based on the value of another field.
+     *
+     * Example:
+     *   $crud->dependsOn('discount_price', 'has_discount', true);
+     *   // discount_price is shown only when has_discount is checked (true)
+     *
+     *   $crud->dependsOn('shipping_address', 'same_as_billing', false, 'enable');
+     *   // shipping_address is disabled when same_as_billing is checked (true)
+     *
+     * @param string $field         The field that depends on another field
+     * @param string $dependsOnField The controlling field name
+     * @param mixed  $value         The value that triggers the action
+     * @param string $action        'show' (hide when not matching) or 'enable' (disable when not matching)
+     */
+    public function dependsOn(
+        string $field,
+        string $dependsOnField,
+        mixed $value,
+        string $action = 'show'
+    ): self {
+        $this->dependsOn[$field] = [
+            'field'  => $dependsOnField,
+            'value'  => $value,
+            'action' => $action,
+        ];
         return $this;
     }
 
@@ -1842,6 +1875,7 @@ class GroceryCrud
             'crudId'         => $this->crudId,
             'repeaterFields' => $this->repeaterFields,
             'repeaterData'   => $repeaterData,
+            'dependsOn'      => $this->dependsOn,
         ];
     }
 
