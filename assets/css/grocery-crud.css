@@ -586,6 +586,94 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
 }
 
 /* ============================================================
+   Inline Editing
+   ============================================================ */
+
+/* Editable cell indicator */
+td[data-inline-edit] {
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.15s ease;
+}
+
+td[data-inline-edit]:hover {
+    background-color: rgba(13, 110, 253, 0.05) !important;
+}
+
+td[data-inline-edit]::after {
+    content: '\270E'; /* pencil icon */
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    opacity: 0;
+    color: #6c757d;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+}
+
+td[data-inline-edit]:hover::after {
+    opacity: 0.5;
+}
+
+/* Active editing state */
+td.gc-inline-editor-active {
+    padding: 2px !important;
+    background-color: #fff !important;
+    position: relative;
+    z-index: 10;
+}
+
+td.gc-inline-editor-active::after {
+    display: none;
+}
+
+/* Inline editor wrapper */
+.gc-inline-editor {
+    width: 100%;
+    min-width: 80px;
+}
+
+.gc-inline-editor .gc-inline-input,
+.gc-inline-editor .gc-inline-select,
+.gc-inline-editor .gc-inline-textarea {
+    width: 100%;
+    font-size: 0.875rem;
+    border: 2px solid #0d6efd;
+    border-radius: 4px;
+    padding: 2px 6px;
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.15);
+    background: #fff;
+}
+
+.gc-inline-editor .gc-inline-input:focus,
+.gc-inline-editor .gc-inline-select:focus,
+.gc-inline-editor .gc-inline-textarea:focus {
+    border-color: #0a58ca;
+    box-shadow: 0 2px 12px rgba(13, 110, 253, 0.25);
+    outline: none;
+}
+
+.gc-inline-editor .gc-inline-select {
+    min-height: 30px;
+    cursor: pointer;
+}
+
+.gc-inline-editor .gc-inline-textarea {
+    resize: vertical;
+    min-height: 50px;
+}
+
+.gc-inline-editor .gc-inline-switch {
+    margin: 0;
+    padding: 4px 8px;
+}
+
+.gc-inline-editor .gc-inline-switch input {
+    cursor: pointer;
+}
+
+/* ============================================================
    Theme-agnostic fallback styles for non-Bootstrap themes
    ============================================================ */
 

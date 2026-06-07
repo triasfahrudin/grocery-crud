@@ -98,6 +98,12 @@ class GroceryCrud
     /** @var ?string Cached current user role */
     private ?string $userRole = null;
 
+    /** @var bool Enable inline editing on table cells */
+    private bool $enableInlineEditing = false;
+
+    /** @var array<int, string> Columns that are editable inline (empty = all columns) */
+    private array $inlineEditColumns = [];
+
     /** @var array<int, string> */
     private array $requiredFields = [];
 
@@ -592,6 +598,102 @@ class GroceryCrud
         return $this;
     }
 
+    // ======== Inline Editing ========
+
+    /**
+     * Enable or disable inline editing on the table.
+     *
+     * When enabled, users can double-click on table cells to edit values directly.
+     *
+     * @param bool $enable
+     * @return self
+     */
+    public function setInlineEditing(bool $enable = true): self
+    {
+        $this->enableInlineEditing = $enable;
+        return $this;
+    }
+
+    /**
+     * Specify which columns are editable inline.
+     *
+     * If called with no arguments or an empty array, all visible columns are editable.
+     * Relation/foreign-key columns and date columns will show appropriate inputs.
+     *
+     * @param array<int, string> $columns
+     * @return self
+     */
+    public function setInlineEditColumns(array $columns): self
+    {
+        $this->inlineEditColumns = $columns;
+        return $this;
+    }
+
+    /**
+     * Determine inline editing field type and options for a column.
+     *
+     * @return array{type: string, options?: array<string, string>}
+     */
+    private function getInlineFieldInfo(string $field): array
+    {
+        $this->ensureInitialized();
+
+        // Field type override takes priority
+        if (isset($this->fieldTypeOverrides[$field])) {
+            $override = $this->fieldTypeOverrides[$field];
+            return [
+                'type'    => $this->mapFieldTypeForInline($override['type']),
+                'options' => $override['options'] ?? [],
+            ];
+        }
+
+        // Relation field (belongs_to) => dropdown with options
+        if ($this->relationManager->hasRelation($field) && $this->relationManager->getRelationType($field) === 'belongs_to') {
+            $relData = $this->relationManager->getRelationData($field);
+            $options = [];
+            foreach ($relData as $item) {
+                $options[(string) $item['id']] = $item['title'];
+            }
+            return ['type' => 'select', 'options' => $options];
+        }
+
+        // ENUM => dropdown with enum options
+        $enumValues = $this->model->getEnumValues($field);
+        if (!empty($enumValues)) {
+            $options = array_combine($enumValues, $enumValues);
+            return ['type' => 'select', 'options' => $options];
+        }
+
+        // Database type detection
+        $dbType = $this->model->getFieldType($field);
+        $detected = FieldType::detect($dbType ?? 'text', []);
+
+        return [
+            'type'    => $this->mapFieldTypeForInline($detected->value),
+            'options' => [],
+        ];
+    }
+
+    /**
+     * Map GroceryCRUD field types to inline input types.
+     */
+    private function mapFieldTypeForInline(string $type): string
+    {
+        return match ($type) {
+            'integer', 'numeric' => 'number',
+            'date'               => 'date',
+            'datetime'           => 'datetime',
+            'time'               => 'time',
+            'email'              => 'email',
+            'url'                => 'url',
+            'phone'              => 'tel',
+            'boolean', 'true_false' => 'boolean',
+            'textarea', 'text areas' => 'textarea',
+            'dropdown', 'enum', 'relation' => 'select',
+            default              => 'text',
+        };
+    }
+
     /**
      * Check if the current user has permission for the given action.
      */
@@ -1043,6 +1145,97 @@ class GroceryCrud
     }
 
     /**
+     * Handle inline save (inline editing).
+     *
+     * Expects POST: id, field, value
+     */
+    private function ajaxInlineSave(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+
+        $id    = $request->getPost('id');
+        $field = $request->getPost('field');
+        $value = $request->getPost('value');
+
+        if (empty($id) || empty($field)) {
+            return $this->jsonResponse(false, ['message' => 'Missing parameters.']);
+        }
+
+        // Check if inline editing is enabled
+        if (!$this->enableInlineEditing) {
+            return $this->jsonResponse(false, ['message' => 'Inline editing is disabled.']);
+        }
+
+        // Check if column is allowed for inline editing
+        if (!empty($this->inlineEditColumns) && !in_array($field, $this->inlineEditColumns, true)) {
+            return $this->jsonResponse(false, ['message' => 'Column is not editable.']);
+        }
+
+        // Validation
+        $errors = $this->validationManager->validate([$field => $value]);
+        if (!empty($errors)) {
+            return $this->jsonResponse(false, [
+                'errors'  => $errors,
+                'message' => $this->getLang('update_fail') ?? 'Validation failed.',
+            ]);
+        }
+
+        try {
+            $data = [$field => $value];
+
+            // Before update callback
+            $data = $this->callbackManager->executeBefore('beforeUpdate', $data);
+
+            // Update
+            $updated = $this->model->update($id, $data);
+
+            if (!$updated) {
+                return $this->jsonResponse(false, [
+                    'message' => $this->getLang('update_fail') ?? 'Failed to update record.',
+                ]);
+            }
+
+            // After update callback
+            $this->callbackManager->executeAfter('afterUpdate', [
+                'table'      => $this->table,
+                'primaryKey' => $this->primaryKey,
+                'id'         => $id,
+                'data'       => [$field => $value],
+            ]);
+
+            // Fetch updated record with relations resolved
+            $record = $this->model->getRow($id);
+
+            // Get display value (with relation labels)
+            $displayValue = $record[$field] ?? $value;
+
+            // Apply column callbacks
+            $columnCallbacks = $this->callbackManager->getColumnCallbacks();
+            if (isset($columnCallbacks[$field])) {
+                $displayValue = $columnCallbacks[$field]($displayValue, $record);
+            }
+
+            // If display value is the same as raw value, check fieldOptions for label mapping
+            if ($displayValue === $value || $displayValue === null) {
+                $fieldTypeOverrides = $this->fieldTypeOverrides[$field] ?? [];
+                if (!empty($fieldTypeOverrides['options'][$value])) {
+                    $displayValue = $fieldTypeOverrides['options'][$value];
+                }
+            }
+
+            return $this->jsonResponse(true, [
+                'message' => $this->getLang('update_success') ?? 'Record updated successfully.',
+                'value'   => $displayValue,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Delete a record.
      */
     public function ajaxDelete(mixed $id): ResponseInterface
@@ -1305,6 +1498,13 @@ class GroceryCrud
         // Apply column callbacks
         $columnCallbacks = $this->callbackManager->getColumnCallbacks();
         foreach ($records as &$row) {
+            // Ensure _raw exists (populated by model's getList)
+            if (!isset($row['_raw'])) {
+                $row['_raw'] = [];
+                foreach ($columns as $col) {
+                    $row['_raw'][$col] = $row[$col] ?? '';
+                }
+            }
             foreach ($columns as $col) {
                 if (isset($columnCallbacks[$col])) {
                     $row[$col] = $columnCallbacks[$col]($row[$col] ?? '', $row);
@@ -1336,34 +1536,59 @@ class GroceryCrud
             }
         }
 
+        // Build inline editing field info
+        $inlineEditFieldTypes = [];
+        $inlineFieldInfo = [];
+        if ($this->enableInlineEditing) {
+            // Determine which columns are inline-editable
+            $editableColumns = !empty($this->inlineEditColumns)
+                ? array_intersect($columns, $this->inlineEditColumns)
+                : $columns;
+
+            foreach ($editableColumns as $col) {
+                $info = $this->getInlineFieldInfo($col);
+                $inlineEditFieldTypes[$col] = $info['type'];
+                if (!empty($info['options'])) {
+                    $inlineFieldInfo[$col] = $info['options'];
+                    // Also ensure fieldOptions has these for display mapping
+                    if (!isset($fieldOptions[$col])) {
+                        $fieldOptions[$col] = $info['options'];
+                    }
+                }
+            }
+        }
+
         return $this->renderer->prepareListData([
-            'columns'        => $columns,
-            'columnLabels'   => $this->columnLabels,
-            'records'        => $records,
-            'totalCount'     => $totalCount,
-            'perPage'        => $perPage,
-            'currentPage'    => $page,
-            'subject'        => $this->subject,
-            'primaryKey'     => $this->primaryKey,
-            'actions'        => $this->actions,
-            'customActions'  => $this->customActions,
-            'searchable'     => $this->searchable,
-            'enableExport'   => $this->enableExport,
-            'exportFormats'  => $this->config->exportFormats,
-            'crudId'         => $this->crudId,
-            'sortField'      => $sortField,
-            'sortDir'        => $sortDir,
-            'columnFilters'  => $mergedFilters,
-            'currentFilters' => $filters,
-            'advancedFilters' => $advancedFilters,
-            'batchActions'   => $this->filterBatchActions($trashedView),
-            'enableFilters'  => $this->enableFilters,
-            'enableColumns'  => $this->enableColumns,
-            'enableSettings' => $this->enableSettings,
-            'softDelete'     => $this->softDelete,
-            'trashedView'    => $trashedView,
-            'subGrids'       => $this->subGrids,
-            'fieldOptions'   => $fieldOptions,
+            'columns'              => $columns,
+            'columnLabels'         => $this->columnLabels,
+            'records'              => $records,
+            'totalCount'           => $totalCount,
+            'perPage'              => $perPage,
+            'currentPage'          => $page,
+            'subject'              => $this->subject,
+            'primaryKey'           => $this->primaryKey,
+            'actions'              => $this->actions,
+            'customActions'        => $this->customActions,
+            'searchable'           => $this->searchable,
+            'enableExport'         => $this->enableExport,
+            'exportFormats'        => $this->config->exportFormats,
+            'crudId'               => $this->crudId,
+            'sortField'            => $sortField,
+            'sortDir'              => $sortDir,
+            'columnFilters'        => $mergedFilters,
+            'currentFilters'       => $filters,
+            'advancedFilters'      => $advancedFilters,
+            'batchActions'         => $this->filterBatchActions($trashedView),
+            'enableFilters'        => $this->enableFilters,
+            'enableColumns'        => $this->enableColumns,
+            'enableSettings'       => $this->enableSettings,
+            'softDelete'           => $this->softDelete,
+            'trashedView'          => $trashedView,
+            'subGrids'             => $this->subGrids,
+            'fieldOptions'         => $fieldOptions,
+            'enableInlineEditing'  => $this->enableInlineEditing && !$trashedView,
+            'inlineEditFieldTypes' => $inlineEditFieldTypes,
+            'inlineFieldInfo'      => $inlineFieldInfo,
         ]);
     }
 
@@ -1757,7 +1982,7 @@ class GroceryCrud
     {
         return match ($action) {
             'add_form', 'add'                        => 'add',
-            'edit_form', 'edit'                      => 'edit',
+            'edit_form', 'edit', 'inline_save'       => 'edit',
             'delete', 'batch_action', 'restore'      => 'delete',
             'export'                                  => 'export',
             'list', 'trash_list', 'sub_grid'          => 'view',
@@ -1788,6 +2013,7 @@ class GroceryCrud
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),
             'sub_grid'      => $this->ajaxSubGrid(),
+            'inline_save'   => $this->ajaxInlineSave(),
             default         => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
     }

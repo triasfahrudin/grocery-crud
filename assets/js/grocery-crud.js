@@ -241,6 +241,7 @@
                     // Populate columns menu and filter selects from table headers
                     var $newWrapper = $parent.find('.grocery-crud-wrapper');
                     populateColumnsAndFilters($newWrapper);
+                    initInlineEditing($newWrapper);
 
                     // Restore hidden columns state (user unchecked some checkboxes before refresh)
                     if (hiddenColumns.length) {
@@ -1203,6 +1204,7 @@
         // Populate columns menu and filter selects for existing wrappers
         $(document).find('.grocery-crud-wrapper').each(function () {
             populateColumnsAndFilters($(this));
+            initInlineEditing($(this));
         });
 
         // Initialize Materialize dropdowns after wrapper render
@@ -1246,6 +1248,264 @@
             }, delay);
         };
     };
+
+    // ======== Inline Editing ========
+    /**
+     * Initialize inline editing on a wrapper.
+     */
+    function initInlineEditing($wrapper) {
+        if (!$wrapper.find('[data-inline-edit]').length) {
+            return;
+        }
+
+        // Close any existing active editor
+        function closeActiveEditor() {
+            var $active = $('.gc-inline-editor-active');
+            if ($active.length) {
+                $active.removeClass('gc-inline-editor-active');
+                var $cell = $active.closest('td');
+                $cell.find('.gc-inline-editor').remove();
+                $cell.css('padding', '');
+            }
+        }
+
+        // Save inline edit via AJAX
+        function saveInlineEdit($cell, value) {
+            var $wrapper = $cell.closest('.grocery-crud-wrapper');
+            var id = $cell.closest('tr').data('parent-id');
+            if (id === undefined) {
+                // Fallback: try to find the PK in the row
+                var pk = $wrapper.data('primaryKey') || 'id';
+                id = $cell.closest('tr').find('[data-column="' + pk + '"]').text().trim();
+            }
+            var field = $cell.data('column');
+
+            if (!id || !field) return;
+
+            // Get original value in case we need to revert
+            var origValue = $cell.data('value') !== undefined ? $cell.data('value') : $cell.text().trim();
+
+            $.ajax({
+                url: window.location.href,
+                method: 'POST',
+                data: {
+                    gc_action: 'inline_save',
+                    id: id,
+                    field: field,
+                    value: value
+                },
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success) {
+                        // Update cell with returned display value
+                        $cell.html(response.value);
+                        $cell.data('value', value);
+                        showAlert(response.message, 'success');
+                    } else {
+                        // Revert to original
+                        var dispValue = $cell.data('value') !== undefined
+                            ? ($cell.data('value') === origValue ? origValue : $cell.data('value'))
+                            : origValue;
+                        $cell.html(dispValue);
+                        showAlert(response.message || 'Save failed.', 'danger');
+                    }
+                },
+                error: function () {
+                    // Revert on error
+                    var dispValue = $cell.data('value') !== undefined
+                        ? ($cell.data('value') === origValue ? origValue : $cell.data('value'))
+                        : origValue;
+                    $cell.html(dispValue);
+                    showAlert('An error occurred while saving.', 'danger');
+                }
+            });
+        }
+
+        // Create inline editor element
+        function createInlineEditor($cell, fieldType, currentValue, fieldOptions) {
+            var $editor;
+
+            switch (fieldType) {
+                case 'select':
+                    $editor = $('<select class="form-select form-select-sm gc-inline-select"></select>');
+                    if (fieldOptions) {
+                        try {
+                            var options = typeof fieldOptions === 'string' ? JSON.parse(fieldOptions) : fieldOptions;
+                            $.each(options, function (key, label) {
+                                var $opt = $('<option></option>').attr('value', key).text(label);
+                                if (String(key) === String(currentValue)) {
+                                    $opt.prop('selected', true);
+                                }
+                                $editor.append($opt);
+                            });
+                        } catch (e) {
+                            // Fallback to text input
+                            $editor = $('<input type="text" class="form-control form-control-sm gc-inline-input">');
+                        }
+                    } else {
+                        $editor = $('<input type="text" class="form-control form-control-sm gc-inline-input">');
+                    }
+                    break;
+
+                case 'boolean':
+                    $editor = $('<div class="form-check form-switch gc-inline-switch d-inline-block"></div>');
+                    var $cb = $('<input type="checkbox" class="form-check-input" role="switch">')
+                        .prop('checked', currentValue === '1' || currentValue === 1 || currentValue === 'true' || currentValue === true);
+                    $editor.append($cb);
+                    break;
+
+                case 'number':
+                    $editor = $('<input type="number" step="any" class="form-control form-control-sm gc-inline-input">');
+                    break;
+
+                case 'date':
+                    $editor = $('<input type="date" class="form-control form-control-sm gc-inline-input">');
+                    break;
+
+                case 'datetime':
+                    $editor = $('<input type="datetime-local" class="form-control form-control-sm gc-inline-input">');
+                    break;
+
+                case 'time':
+                    $editor = $('<input type="time" class="form-control form-control-sm gc-inline-input">');
+                    break;
+
+                case 'email':
+                    $editor = $('<input type="email" class="form-control form-control-sm gc-inline-input">');
+                    break;
+
+                case 'url':
+                    $editor = $('<input type="url" class="form-control form-control-sm gc-inline-input">');
+                    break;
+
+                case 'tel':
+                    $editor = $('<input type="tel" class="form-control form-control-sm gc-inline-input">');
+                    break;
+
+                case 'textarea':
+                    $editor = $('<textarea class="form-control form-control-sm gc-inline-textarea" rows="2"></textarea>');
+                    break;
+
+                default: // text
+                    $editor = $('<input type="text" class="form-control form-control-sm gc-inline-input">');
+                    break;
+            }
+
+            // Set value
+            if ($editor.is('input') || $editor.is('textarea')) {
+                $editor.val(currentValue);
+            }
+
+            return $editor;
+        }
+
+        // Enter edit mode
+        function enterEditMode($cell) {
+            // Don't edit if already editing
+            if ($cell.find('.gc-inline-editor').length) return;
+            // Don't edit the actions column
+            if ($cell.hasClass('text-center')) return;
+
+            closeActiveEditor();
+
+            var fieldType = $cell.data('inline-edit');
+            var currentValue = $cell.data('value') !== undefined ? $cell.data('value') : '';
+            var fieldOptions = $cell.data('field-options');
+
+            // Save current display text for cancel
+            $cell.data('orig-display', $cell.html());
+
+            // Clear cell and create editor
+            var $editor = createInlineEditor($cell, fieldType, currentValue, fieldOptions);
+            var $editorWrap = $('<div class="gc-inline-editor"></div>').append($editor);
+            $cell.addClass('gc-inline-editor-active');
+            $cell.empty().append($editorWrap);
+
+            // Focus and select
+            if ($editor.is('input') && !$editor.is('[type="checkbox"]')) {
+                $editor.focus().select();
+            } else if ($editor.is('select') || $editor.is('textarea')) {
+                $editor.focus();
+            }
+
+            // Handle save
+            function doSave() {
+                var val;
+                if ($editor.is('select')) {
+                    val = $editor.val();
+                } else if ($editor.is('[type="checkbox"]')) {
+                    val = $editor.prop('checked') ? '1' : '0';
+                } else {
+                    val = $editor.val();
+                }
+                saveInlineEdit($cell, val);
+            }
+
+            // Handle cancel
+            function doCancel() {
+                var origDisplay = $cell.data('orig-display') || '';
+                $cell.removeClass('gc-inline-editor-active');
+                $cell.html(origDisplay);
+            }
+
+            // Save on blur (with delay to allow click on select option)
+            var blurTimer = null;
+            $editor.on('blur', function () {
+                blurTimer = setTimeout(function () {
+                    doSave();
+                }, 200);
+            });
+
+            // Cancel blur timer on focus
+            $editor.on('focus', function () {
+                if (blurTimer) {
+                    clearTimeout(blurTimer);
+                    blurTimer = null;
+                }
+            });
+
+            // Save on Enter (not for textarea)
+            $editor.on('keydown', function (e) {
+                if (e.keyCode === 13 && !$editor.is('textarea')) {
+                    e.preventDefault();
+                    if (blurTimer) {
+                        clearTimeout(blurTimer);
+                        blurTimer = null;
+                    }
+                    doSave();
+                }
+                // Cancel on Escape
+                if (e.keyCode === 27) {
+                    e.preventDefault();
+                    if (blurTimer) {
+                        clearTimeout(blurTimer);
+                        blurTimer = null;
+                    }
+                    doCancel();
+                }
+            });
+
+            // For select, save on change
+            if ($editor.is('select')) {
+                $editor.on('change', function () {
+                    doSave();
+                });
+            }
+
+            // For checkbox/switch, save on change
+            if ($editor.is('[type="checkbox"]')) {
+                $editor.on('change', function () {
+                    doSave();
+                });
+            }
+        }
+
+        // Handle double-click on editable cells
+        $wrapper.off('dblclick', '[data-inline-edit]').on('dblclick', '[data-inline-edit]', function (e) {
+            e.preventDefault();
+            enterEditMode($(this));
+        });
+    }
 
     // ======== Init ========
     // ======== Bootstrap polyfill for non-Bootstrap themes ========

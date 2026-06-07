@@ -465,6 +465,11 @@ class CrudModel
         $results = $builder->get()->getResultArray();
         \log_message('error', '[GC_RESULT] count=' . count($results) . ' query=' . $this->db->getLastQuery());
 
+        // Preserve raw column values before any transformations
+        foreach ($results as &$resultRow) {
+            $resultRow['_raw'] = $resultRow;
+        }
+
         // If there are relation fields, fetch related data in batch (eliminate N+1)
         if (!empty($this->relationFields)) {
             foreach ($this->relationFields as $relField => $relConfig) {

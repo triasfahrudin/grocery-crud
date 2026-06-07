@@ -85,6 +85,9 @@ class Bootstrap5Theme implements ThemeInterface
         $subGrids       = $data['subGrids'] ?? [];
         $hasSubGrid     = !empty($subGrids) && !$trashedView;
         $fieldOptions   = $data['fieldOptions'] ?? [];
+        $enableInlineEditing = (bool) ($data['enableInlineEditing'] ?? false);
+        $inlineEditFieldTypes = $data['inlineEditFieldTypes'] ?? [];
+        $inlineFieldInfo      = $data['inlineFieldInfo'] ?? [];
 
         // Override actions for trashed view
         if ($trashedView) {
@@ -330,12 +333,26 @@ class Bootstrap5Theme implements ThemeInterface
                 }
                 foreach ($columns as $col) {
                     $value = $row[$col] ?? '';
+                    // Use raw value (before column callbacks) for inline editing
+                    $rawValue = $row['_raw'][$col] ?? $value;
                     // Transform value using field options (e.g., dropdown labels)
                     $displayValue = $value;
-                    if (!empty($fieldOptions[$col]) && isset($fieldOptions[$col][$value])) {
-                        $displayValue = $fieldOptions[$col][$value];
+                    if (!empty($fieldOptions[$col]) && isset($fieldOptions[$col][$rawValue])) {
+                        $displayValue = $fieldOptions[$col][$rawValue];
                     }
-                    $html .= '<td data-column="' . $col . '">' . $displayValue . '</td>';
+
+                    // Inline editing data attributes
+                    $inlineAttrs = '';
+                    if ($enableInlineEditing && !$trashedView && isset($inlineEditFieldTypes[$col])) {
+                        $fieldType = $inlineEditFieldTypes[$col];
+                        $inlineAttrs .= ' data-inline-edit="' . $fieldType . '"';
+                        $inlineAttrs .= ' data-value="' . htmlspecialchars((string) $rawValue) . '"';
+                        if (!empty($inlineFieldInfo[$col])) {
+                            $inlineAttrs .= ' data-field-options=\'' . htmlspecialchars(json_encode($inlineFieldInfo[$col])) . '\'';
+                        }
+                    }
+
+                    $html .= '<td data-column="' . $col . '"' . $inlineAttrs . '>' . $displayValue . '</td>';
                 }
 
                 if ($showActions || !empty($customActions)) {
