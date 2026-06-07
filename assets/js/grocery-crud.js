@@ -1250,6 +1250,15 @@
             }
             if (!$controller.length) return;
 
+            function normalizeConfigValue(val) {
+                // Normalize boolean config values to '1'/'0' for checkbox comparison
+                // String(true) = 'true' in JS, but checkbox checked = '1'
+                if (typeof val === 'boolean') {
+                    return val ? '1' : '0';
+                }
+                return String(val);
+            }
+
             function updateDependsOn() {
                 var controllerValue;
                 if ($controller.is(':checkbox') || $controller.is('[type="checkbox"]')) {
@@ -1258,7 +1267,7 @@
                     controllerValue = $controller.val();
                 }
 
-                var match = String(controllerValue) === String(config.value);
+                var match = String(controllerValue) === normalizeConfigValue(config.value);
 
                 if (config.action === 'enable') {
                     // Enable/disable inputs without hiding
