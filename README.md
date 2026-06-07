@@ -252,15 +252,12 @@ $crud->setImportable(true);
 4. Preview data baris pertama
 5. Klik **Import Data** untuk bulk insert
 
+**CSV Template:**
+- Klik **Download CSV template** untuk download template dengan semua field
+- Klik **Customize** untuk memilih field mana yang akan dimasukkan ke template
+- Template berisi header dengan label field (dari `displayAs()`) dan satu baris sample data
+
 > **Catatan:** CSV import bekerja tanpa dependensi tambahan. XLSX membutuhkan `composer require phpoffice/phpspreadsheet`.
-
-Contoh file template CSV dapat didownload dari form import atau dari [`assets/samples/contacts-import-template.csv`](assets/samples/contacts-import-template.csv):
-
-```csv
-name,email,phone,company,is_active
-John Doe,john@example.com,08123456789,PT Maju Jaya,1
-Jane Smith,jane@example.com,08234567890,CV Sukses Abadi,1
-```
 
 ## Theme
 
@@ -421,7 +418,7 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 - **Settings** — Simpan/muat/reset konfigurasi kolom ke localStorage
 - **Sort** — Klik header kolom untuk sort asc/desc
 - **Advanced Filters** — Multi-condition filter (contains, equals, starts with, ends with, greater/less than)
-- **Import** — Upload CSV/Excel dengan auto-mapping, preview, dan bulk insert
+- **Import** — Upload CSV/Excel dengan auto-mapping, preview, bulk insert, dan template generator dengan field selection
 - **Export** — Download CSV atau Excel dari tombol toolbar
 - **Cache Busting** — Asset versioning otomatis dengan `?v=timestamp`
 
