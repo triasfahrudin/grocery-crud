@@ -1173,7 +1173,8 @@ class GroceryCrud
         }
 
         // Validate only the field being edited (other fields not submitted)
-        $errors = $this->validationManager->validateField($field, $value);
+        // Pass record ID so is_unique excludes current record
+        $errors = $this->validationManager->validateField($field, $value, $id);
         if (!empty($errors)) {
             return $this->jsonResponse(false, [
                 'errors'  => $errors,

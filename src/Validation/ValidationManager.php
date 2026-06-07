@@ -163,9 +163,13 @@ class ValidationManager
      * Validate a single field's value against its own rules only.
      * Useful for inline editing where other fields are not submitted.
      *
+     * @param string       $field            Field name
+     * @param mixed        $value            Field value
+     * @param string|int|null $primaryKeyValue  Current record PK value (to exclude in is_unique)
+     *
      * @return array<string, string> Errors keyed by field
      */
-    public function validateField(string $field, mixed $value): array
+    public function validateField(string $field, mixed $value, string|int|null $primaryKeyValue = null): array
     {
         $rules = $this->getValidationRules();
 
@@ -173,8 +177,18 @@ class ValidationManager
             return [];
         }
 
+        // If PK value is provided, adapt is_unique to exclude current record
+        $fieldRules = $rules[$field];
+        if ($primaryKeyValue !== null) {
+            $fieldRules['rules'] = preg_replace(
+                '/is_unique\[([^,]+)\]/',
+                'is_unique[$1,' . $this->primaryKey . ',' . $primaryKeyValue . ']',
+                $fieldRules['rules']
+            );
+        }
+
         $this->validation->reset();
-        $this->validation->setRules([$field => $rules[$field]]);
+        $this->validation->setRules([$field => $fieldRules]);
 
         if (!$this->validation->run([$field => $value])) {
             return $this->validation->getErrors();
