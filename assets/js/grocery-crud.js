@@ -609,7 +609,20 @@
             ajaxConfig.processData = false;
             ajaxConfig.contentType = false;
         } else {
-            ajaxConfig.data = $form.serialize() + '&gc_action=' + mode;
+            // $form.serialize() skips disabled inputs AND unchecked checkboxes.
+            // We need to ensure unchecked checkboxes are sent as '0'.
+            var formData = $form.serialize();
+            $form.find('input[type="checkbox"]:not(:checked)').each(function () {
+                var $cb = $(this);
+                var name = $cb.attr('name');
+                // Skip array fields (e.g., tags[]) — they're only meaningful when checked
+                if (name.indexOf('[]') !== -1) return;
+                // Only add if not already serialized (e.g., via a hidden sibling)
+                if (formData.indexOf(name + '=') === -1) {
+                    formData += '&' + name + '=0';
+                }
+            });
+            ajaxConfig.data = formData + '&gc_action=' + mode;
         }
 
         $.ajax(ajaxConfig);
