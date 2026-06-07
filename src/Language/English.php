@@ -65,5 +65,8 @@ class English
         'restore_fail'      => 'Failed to restore record.',
         'trash_list'        => 'Trash',
         'active_list'       => 'Active Records',
+
+        // RBAC / Permissions
+        'permission_denied' => 'You do not have permission to perform this action.',
     ];
 }

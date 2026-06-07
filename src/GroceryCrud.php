@@ -89,6 +89,15 @@ class GroceryCrud
     /** @var array<string, array{type: string, options?: array}> */
     private array $fieldTypeOverrides = [];
 
+    /** @var array<string, array<string>> Role-based permissions: role => [actions] */
+    private array $permissions = [];
+
+    /** @var ?callable Callback to resolve current user's role: fn(): ?string */
+    private $permissionCallback = null;
+
+    /** @var ?string Cached current user role */
+    private ?string $userRole = null;
+
     /** @var array<int, string> */
     private array $requiredFields = [];
 
@@ -543,6 +552,68 @@ class GroceryCrud
     {
         $this->enableExport = $exportable;
         return $this;
+    }
+
+    // ======== Permissions / RBAC ========
+
+    /**
+     * Set allowed actions for a specific role.
+     *
+     * Available actions: 'add', 'edit', 'delete', 'view', 'export'
+     *
+     * Example:
+     *   $crud->setPermission('admin', ['add', 'edit', 'delete', 'view', 'export']);
+     *   $crud->setPermission('editor', ['add', 'edit', 'view', 'export']);
+     *   $crud->setPermission('viewer', ['view', 'export']);
+     *
+     * @param string   $role    Role name (e.g. 'admin', 'editor', 'viewer')
+     * @param string[] $actions Allowed actions for this role
+     */
+    public function setPermission(string $role, array $actions): self
+    {
+        $this->permissions[$role] = $actions;
+        return $this;
+    }
+
+    /**
+     * Set a callback to resolve the current user's role.
+     *
+     * The callback should return a string (role name) or null (unauthenticated).
+     * When null is returned and permissions are defined, all actions are denied.
+     *
+     * Example:
+     *   $crud->setPermissionCallback(fn() => session()->get('role'));
+     *
+     * @param callable $callback fn(): ?string
+     */
+    public function setPermissionCallback(callable $callback): self
+    {
+        $this->permissionCallback = $callback;
+        return $this;
+    }
+
+    /**
+     * Check if the current user has permission for the given action.
+     */
+    private function hasPermission(string $action): bool
+    {
+        // If no permissions defined, allow all
+        if (empty($this->permissions) && $this->permissionCallback === null) {
+            return true;
+        }
+
+        // Resolve user role from callback (lazy, once)
+        if ($this->permissionCallback !== null && $this->userRole === null) {
+            $this->userRole = call_user_func($this->permissionCallback);
+        }
+
+        // If user has a known role, check its permissions
+        if ($this->userRole !== null && isset($this->permissions[$this->userRole])) {
+            return in_array($action, $this->permissions[$this->userRole], true);
+        }
+
+        // Role not found in permissions map or unauthenticated: deny
+        return false;
     }
 
     /**
@@ -1161,6 +1232,24 @@ class GroceryCrud
      */
     private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null, array $filters = [], array $advancedFilters = [], array $columns = [], bool $trashedView = false): array
     {
+        // Filter actions and features based on permissions
+        $allowedActions = ['add', 'edit', 'delete'];
+        foreach ($allowedActions as $action) {
+            if (!$this->hasPermission($action)) {
+                $this->actions = array_filter($this->actions, fn($a) => $a !== $action);
+            }
+        }
+
+        // Filter batch actions based on permissions
+        if (!$this->hasPermission('delete')) {
+            $this->batchActions = array_filter($this->batchActions, fn($label, $id) => !in_array($id, ['delete_selected', 'restore_selected'], true), ARRAY_FILTER_USE_BOTH);
+        }
+
+        // Disable export if not permitted
+        if (!$this->hasPermission('export')) {
+            $this->enableExport = false;
+        }
+
         $perPage = $perPage ?? $this->perPage;
         $offset = ($page - 1) * $perPage;
         if (empty($columns)) {
@@ -1662,10 +1751,31 @@ class GroceryCrud
     }
 
     /**
+     * Map AJAX actions to permission names.
+     */
+    private function getActionPermission(string $action): string
+    {
+        return match ($action) {
+            'add_form', 'add'                        => 'add',
+            'edit_form', 'edit'                      => 'edit',
+            'delete', 'batch_action', 'restore'      => 'delete',
+            'export'                                  => 'export',
+            'list', 'trash_list', 'sub_grid'          => 'view',
+            default                                   => 'view',
+        };
+    }
+
+    /**
      * Handle AJAX action routing.
      */
     private function handleAjaxAction(string $action): ResponseInterface
     {
+        // Check permission for this action
+        $requiredPermission = $this->getActionPermission($action);
+        if (!$this->hasPermission($requiredPermission)) {
+            return $this->jsonResponse(false, ['message' => $this->getLang('permission_denied') ?? 'Permission denied.']);
+        }
+
         return match ($action) {
             'list'          => $this->ajaxList(),
             'add_form'      => $this->ajaxAddForm(),

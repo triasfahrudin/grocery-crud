@@ -64,5 +64,8 @@ class Indonesian
         'restore_fail'      => 'Gagal memulihkan data.',
         'trash_list'        => 'Sampah',
         'active_list'       => 'Data Aktif',
+
+        // RBAC / Permissions
+        'permission_denied' => 'Anda tidak memiliki izin untuk melakukan aksi ini.',
     ];
 }
