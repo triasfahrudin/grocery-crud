@@ -15,6 +15,7 @@ use GroceryCrud\Exceptions\GroceryCrudException;
 use GroceryCrud\Export\CsvExport;
 use GroceryCrud\Export\ExcelExport;
 use GroceryCrud\Export\PdfExport;
+use GroceryCrud\Import\ImportManager;
 use GroceryCrud\Fields\FieldType;
 use GroceryCrud\Models\CrudModel;
 use GroceryCrud\Relations\RelationManager;
@@ -33,6 +34,7 @@ class GroceryCrud
     private CallbackManager $callbackManager;
     private ValidationManager $validationManager;
     private UploadManager $uploadManager;
+    private ?ImportManager $importManager = null;
     private TableRenderer $renderer;
     private ThemeInterface $theme;
 
@@ -79,6 +81,7 @@ class GroceryCrud
     private bool $searchable = true;
     private bool $useDatatables;
     private bool $enableExport;
+    private bool $enableImport;
     private bool $enablePrintView = true;
     private bool $enablePdfExport = true;
     private bool $initialized = false;
@@ -156,6 +159,7 @@ class GroceryCrud
         $this->perPage = $this->config->perPage;
         $this->useDatatables = $this->config->useDatatables;
         $this->enableExport = $this->config->enableExport;
+        $this->enableImport = $this->config->enableImport;
         $this->enablePrintView = $this->config->enablePrintView;
         $this->enablePdfExport = $this->config->enablePdfExport;
         $this->actions = $this->config->defaultActions;
@@ -569,6 +573,15 @@ class GroceryCrud
     }
 
     /**
+     * Enable/disable import.
+     */
+    public function setImportable(bool $importable): self
+    {
+        $this->enableImport = $importable;
+        return $this;
+    }
+
+    /**
      * Enable/disable print view.
      */
     public function setPrintView(bool $enable): self
@@ -591,10 +604,10 @@ class GroceryCrud
     /**
      * Set allowed actions for a specific role.
      *
-     * Available actions: 'add', 'edit', 'delete', 'view', 'export'
+     * Available actions: 'add', 'edit', 'delete', 'view', 'export', 'import'
      *
      * Example:
-     *   $crud->setPermission('admin', ['add', 'edit', 'delete', 'view', 'export']);
+     *   $crud->setPermission('admin', ['add', 'edit', 'delete', 'view', 'export', 'import']);
      *   $crud->setPermission('editor', ['add', 'edit', 'view', 'export']);
      *   $crud->setPermission('viewer', ['view', 'export']);
      *
@@ -1542,6 +1555,178 @@ class GroceryCrud
         return $this->jsonResponse(false, ['message' => 'Unknown export format.']);
     }
 
+    // ======== Import Methods ========
+
+    /**
+     * Get the import form HTML.
+     */
+    public function ajaxImportForm(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $fields = $this->resolveFields('add');
+        $importData = [
+            'fields'        => $fields,
+            'fieldLabels'   => $this->columnLabels,
+            'crudId'        => $this->crudId,
+            'subject'       => $this->subject,
+            'language'      => $this->languageStrings,
+            'primaryKey'    => $this->primaryKey,
+        ];
+
+        return Services::response()
+            ->setContentType('application/json')
+            ->setJSON([
+                'success' => true,
+                'html'    => $this->theme->renderImportForm($importData),
+            ]);
+    }
+
+    /**
+     * Upload and parse import file, return preview + mapping.
+     */
+    public function ajaxImportUpload(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $request = Services::request();
+        $file = $request->getFile('import_file');
+
+        if ($file === null || !$file->isValid() || $file->hasMoved()) {
+            return $this->jsonResponse(false, [
+                'message' => $this->getLang('import_file_required') ?? 'Please select a file to import.',
+            ]);
+        }
+
+        try {
+            $importManager = $this->getImportManager();
+            $result = $importManager->parse([
+                'name'     => $file->getName(),
+                'tmp_name' => $file->getTempName(),
+                'size'     => $file->getSize(),
+                'error'    => $file->getError(),
+            ]);
+
+            // Auto-detect column mapping
+            $fields = $this->resolveFields('add');
+            $mapping = $importManager->detectMapping(
+                $result['headers'],
+                $fields,
+                $this->columnLabels
+            );
+
+            return $this->jsonResponse(true, [
+                'headers'   => $result['headers'],
+                'preview'   => $result['preview'],
+                'totalRows' => $result['totalRows'],
+                'filename'  => $file->getName(),
+                'mapping'   => $mapping,
+                'fields'    => $fields,
+                'fieldLabels' => $this->columnLabels,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Execute import with mapped columns.
+     */
+    public function ajaxImportExecute(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $request = Services::request();
+        $rowsJson = $request->getPost('rows');
+        $mappingJson = $request->getPost('mapping');
+
+        if (empty($rowsJson) || empty($mappingJson)) {
+            return $this->jsonResponse(false, [
+                'message' => $this->getLang('import_no_data') ?? 'No data to import.',
+            ]);
+        }
+
+        $rows = json_decode($rowsJson, true);
+        $mapping = json_decode($mappingJson, true);
+
+        if (!is_array($rows) || !is_array($mapping)) {
+            return $this->jsonResponse(false, [
+                'message' => 'Invalid import data.',
+            ]);
+        }
+
+        // Map rows: header-indexed → field-indexed
+        $mappedRows = [];
+        foreach ($rows as $row) {
+            $mapped = [];
+            foreach ($mapping as $headerIndex => $fieldName) {
+                if ($fieldName !== null && $fieldName !== '' && isset($row[$headerIndex])) {
+                    $mapped[$fieldName] = $row[$headerIndex];
+                }
+            }
+            if (!empty($mapped)) {
+                $mappedRows[] = $mapped;
+            }
+        }
+
+        if (empty($mappedRows)) {
+            return $this->jsonResponse(false, [
+                'message' => $this->getLang('import_no_data') ?? 'No data to import.',
+            ]);
+        }
+
+        $importManager = $this->getImportManager();
+        $result = $importManager->execute($mappedRows, function (array $row) {
+            try {
+                // Check for beforeInsert callback
+                $row = $this->callbackManager->executeBefore('beforeInsert', $row);
+
+                // Remove N-to-N fields (virtual, not actual columns)
+                $row = $this->stripNtoNFields($row);
+
+                $insertId = $this->model->insert($row);
+
+                if ($insertId) {
+                    $this->callbackManager->executeAfter('afterInsert', [
+                        'table'      => $this->table,
+                        'primaryKey' => $this->primaryKey,
+                        'insertId'   => $insertId,
+                        'data'       => $row,
+                    ]);
+                }
+
+                return $insertId;
+            } catch (\Throwable $e) {
+                return false;
+            }
+        });
+
+        $total = count($mappedRows);
+        $message = $result['imported'] > 0
+            ? str_replace(['{imported}', '{total}'], [(string) $result['imported'], (string) $total], $this->getLang('import_success') ?? 'Successfully imported {imported} of {total} records.')
+            : ($this->getLang('import_error') ?? 'Import failed.');
+
+        return $this->jsonResponse(true, [
+            'imported' => $result['imported'],
+            'total'    => $total,
+            'errors'   => $result['errors'],
+            'message'  => $message,
+        ]);
+    }
+
+    /**
+     * Get (or create) the ImportManager.
+     */
+    private function getImportManager(): ImportManager
+    {
+        if ($this->importManager === null) {
+            $this->importManager = new ImportManager($this->config);
+        }
+        return $this->importManager;
+    }
+
     // ======== Internal Methods ========
 
     /**
@@ -1575,6 +1760,11 @@ class GroceryCrud
         // Disable export if not permitted
         if (!$this->hasPermission('export')) {
             $this->enableExport = false;
+        }
+
+        // Disable import if not permitted
+        if (!$this->hasPermission('import')) {
+            $this->enableImport = false;
         }
 
         $perPage = $perPage ?? $this->perPage;
@@ -1705,6 +1895,7 @@ class GroceryCrud
             'customActions'        => $this->customActions,
             'searchable'           => $this->searchable,
             'enableExport'         => $this->enableExport,
+            'enableImport'         => $this->enableImport,
             'exportFormats'        => $this->buildExportFormats(),
             'crudId'               => $this->crudId,
             'sortField'            => $sortField,
@@ -2120,6 +2311,7 @@ class GroceryCrud
             'edit_form', 'edit', 'inline_save'       => 'edit',
             'delete', 'batch_action', 'restore'      => 'delete',
             'export', 'print_view'                => 'export',
+            'import_form', 'import_upload', 'import_execute' => 'import',
             'list', 'trash_list', 'sub_grid'          => 'view',
             default                                   => 'view',
         };
@@ -2145,6 +2337,9 @@ class GroceryCrud
             'delete'        => $this->ajaxDelete($this->getRequestId()),
             'export'        => $this->ajaxExport($this->getExportFormat()),
             'print_view'    => $this->ajaxPrintView(),
+            'import_form'   => $this->ajaxImportForm(),
+            'import_upload' => $this->ajaxImportUpload(),
+            'import_execute'=> $this->ajaxImportExecute(),
             'batch_action'  => $this->ajaxBatchAction(),
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),

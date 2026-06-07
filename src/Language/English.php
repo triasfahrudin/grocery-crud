@@ -70,5 +70,22 @@ class English
 
         // RBAC / Permissions
         'permission_denied' => 'You do not have permission to perform this action.',
+
+        // Import
+        'import'                => 'Import',
+        'import_csv_excel'      => 'Import from CSV / Excel',
+        'import_upload'         => 'Upload File',
+        'import_upload_hint'    => 'Select a CSV or Excel (.xlsx) file to import.',
+        'import_column_mapping' => 'Column Mapping',
+        'import_preview'        => 'Preview',
+        'import_total_rows'     => 'Total rows in file',
+        'import_map_to'         => 'Map to',
+        'import_not_mapped'     => 'Not mapped',
+        'import_execute'        => 'Import Data',
+        'import_success'        => 'Successfully imported {imported} of {total} records.',
+        'import_error'          => 'Import failed. {errors} errors occurred.',
+        'import_no_data'        => 'No data to import.',
+        'import_file_required'  => 'Please select a file to import.',
+        'import_confirm'        => 'Are you sure you want to import {total} records?',
     ];
 }

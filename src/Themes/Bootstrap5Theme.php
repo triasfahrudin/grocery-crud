@@ -73,6 +73,7 @@ class Bootstrap5Theme implements ThemeInterface
         $sortDir      = $data['sortDir'] ?? 'ASC';
         $exportFormats = $data['exportFormats'] ?? [];
         $enableExport = (bool) ($data['enableExport'] ?? false);
+        $enableImport = (bool) ($data['enableImport'] ?? false);
         $columnFilters = $data['columnFilters'] ?? [];
         $currentFilters = $data['currentFilters'] ?? [];
         $batchActions  = $data['batchActions'] ?? [];
@@ -124,6 +125,13 @@ class Bootstrap5Theme implements ThemeInterface
         $html .= '<div class="card-header bg-white d-flex justify-content-between align-items-center py-3">';
         $html .= '<h5 class="mb-0 fw-bold"><i class="bi bi-table me-2"></i>' . $subject . '</h5>';
         $html .= '<div class="d-flex gap-2">';
+
+        // Import button
+        if ($enableImport) {
+            $html .= '<button type="button" class="btn btn-outline-secondary btn-sm btn-gc-import" title="' . ($lang['import'] ?? 'Import') . '">';
+            $html .= '<i class="bi bi-upload me-1"></i>' . ($lang['import'] ?? 'Import');
+            $html .= '</button>';
+        }
 
         // Export buttons
         if ($enableExport && !empty($exportFormats)) {
@@ -477,6 +485,11 @@ class Bootstrap5Theme implements ThemeInterface
     public function renderEditForm(array $data): string
     {
         return $this->renderForm('edit', $data);
+    }
+
+    public function renderImportForm(array $data): string
+    {
+        return $this->renderImportFormHtml($data);
     }
 
     /**
@@ -845,6 +858,94 @@ class Bootstrap5Theme implements ThemeInterface
 
         $html .= '</tbody></table>';
         $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
+     * Render the import form HTML.
+     *
+     * @param array<string, mixed> $data
+     * @return string
+     */
+    private function renderImportFormHtml(array $data): string
+    {
+        $lang   = $this->languageStrings;
+        $fields = $data['fields'] ?? [];
+        $fieldLabels = $data['fieldLabels'] ?? [];
+        $subject = $data['subject'] ?? 'Records';
+        $crudId  = $data['crudId'] ?? 'crud_' . uniqid();
+
+        $lblImport      = $lang['import'] ?? 'Import';
+        $lblCancel      = $lang['cancel'] ?? 'Cancel';
+        $lblUpload      = $lang['import_upload'] ?? 'Upload File';
+        $lblUploadHint  = $lang['import_upload_hint'] ?? 'Select a CSV or Excel (.xlsx) file to import.';
+        $lblMapping     = $lang['import_column_mapping'] ?? 'Column Mapping';
+        $lblPreview     = $lang['import_preview'] ?? 'Preview';
+        $lblTotalRows   = $lang['import_total_rows'] ?? 'Total rows in file';
+        $lblMapTo       = $lang['import_map_to'] ?? 'Map to';
+        $lblNotMapped   = $lang['import_not_mapped'] ?? 'Not mapped';
+        $lblExecute     = $lang['import_execute'] ?? 'Import Data';
+
+        $html = '<div class="gc-import-wrapper" id="' . $crudId . '_import">';
+        $html .= '<div class="card shadow-sm">';
+        $html .= '<div class="card-header bg-white d-flex justify-content-between align-items-center py-3">';
+        $html .= '<h5 class="mb-0 fw-bold"><i class="bi bi-upload me-2"></i>' . $lblImport . ': ' . htmlspecialchars($subject) . '</h5>';
+        $html .= '<button type="button" class="btn-close gc-form-close" aria-label="' . $lblCancel . '"></button>';
+        $html .= '</div>';
+        $html .= '<div class="card-body">';
+
+        // === Step 1: Upload ===
+        $html .= '<div class="gc-import-step" data-step="upload">';
+        $html .= '<div class="mb-3">';
+        $html .= '<label class="form-label fw-semibold">' . $lblUpload . '</label>';
+        $html .= '<div class="gc-import-dropzone border rounded p-4 text-center" style="cursor:pointer;border-style:dashed!important;">';
+        $html .= '<i class="bi bi-cloud-upload" style="font-size:2rem;color:#6c757d;"></i>';
+        $html .= '<p class="text-muted mb-2 mt-2">' . $lblUploadHint . '</p>';
+        $html .= '<input type="file" class="gc-import-file-input d-none" accept=".csv,.xlsx">';
+        $html .= '<button type="button" class="btn btn-outline-primary btn-sm gc-import-browse-btn">' . $lblUpload . '</button>';
+        $html .= '</div>';
+        $html .= '<div class="gc-import-filename text-muted small mt-1 d-none"></div>';
+        $html .= '</div>';
+        $html .= '<div class="gc-import-uploading d-none text-center py-3">';
+        $html .= '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Uploading...</span></div>';
+        $html .= '<p class="mt-2 text-muted">' . ($lang['processing'] ?? 'Processing...') . '</p>';
+        $html .= '</div>';
+        $html .= '</div>';
+
+        // === Step 2: Mapping + Preview ===
+        $html .= '<div class="gc-import-step gc-import-mapping-step d-none" data-step="mapping">';
+
+        // Column mapping
+        $html .= '<div class="mb-3">';
+        $html .= '<label class="form-label fw-semibold">' . $lblMapping . '</label>';
+        $html .= '<div class="table-responsive"><table class="table table-sm table-bordered gc-import-mapping-table">';
+        $html .= '<thead class="table-light"><tr>';
+        $html .= '<th>' . ($lang['import_file_col'] ?? 'File Column') . '</th>';
+        $html .= '<th>' . $lblMapTo . '</th>';
+        $html .= '<th>' . ($lang['import_sample'] ?? 'Sample Data') . '</th>';
+        $html .= '</tr></thead><tbody></tbody>';
+        $html .= '</table></div>';
+        $html .= '</div>';
+
+        // Preview
+        $html .= '<div class="mb-3">';
+        $html .= '<label class="form-label fw-semibold">' . $lblPreview . '</label>';
+        $html .= '<div class="gc-import-preview-info mb-1"></div>';
+        $html .= '<div class="table-responsive"><table class="table table-sm table-bordered gc-import-preview-table">';
+        $html .= '<thead class="table-light"><tr></tr></thead>';
+        $html .= '<tbody></tbody>';
+        $html .= '</table></div>';
+        $html .= '</div>';
+
+        $html .= '</div>';
+
+        $html .= '<div class="d-flex gap-2 border-top pt-3">';
+        $html .= '<button type="button" class="btn btn-primary gc-import-execute-btn d-none"><i class="bi bi-check-lg me-1"></i>' . $lblExecute . '</button>';
+        $html .= '<button type="button" class="btn btn-secondary gc-form-close"><i class="bi bi-x-lg me-1"></i>' . $lblCancel . '</button>';
+        $html .= '</div>';
+
+        $html .= '</div></div></div></div>';
 
         return $html;
     }

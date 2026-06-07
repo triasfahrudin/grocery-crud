@@ -69,5 +69,22 @@ class Indonesian
 
         // RBAC / Permissions
         'permission_denied' => 'Anda tidak memiliki izin untuk melakukan aksi ini.',
+
+        // Import
+        'import'                => 'Impor',
+        'import_csv_excel'      => 'Impor dari CSV / Excel',
+        'import_upload'         => 'Upload File',
+        'import_upload_hint'    => 'Pilih file CSV atau Excel (.xlsx) untuk diimpor.',
+        'import_column_mapping' => 'Pemetaan Kolom',
+        'import_preview'        => 'Pratinjau',
+        'import_total_rows'     => 'Total baris dalam file',
+        'import_map_to'         => 'Petakan ke',
+        'import_not_mapped'     => 'Tidak dipetakan',
+        'import_execute'        => 'Impor Data',
+        'import_success'        => 'Berhasil mengimpor {imported} dari {total} data.',
+        'import_error'          => 'Impor gagal. Terjadi {errors} kesalahan.',
+        'import_no_data'        => 'Tidak ada data untuk diimpor.',
+        'import_file_required'  => 'Silakan pilih file untuk diimpor.',
+        'import_confirm'        => 'Apakah Anda yakin ingin mengimpor {total} data?',
     ];
 }

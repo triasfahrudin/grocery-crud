@@ -107,4 +107,18 @@ class Config extends BaseConfig
      * Max records to export.
      */
     public int $maxExportRecords = 10000;
+
+    /**
+     * Whether to enable import functionality.
+     */
+    public bool $enableImport = true;
+
+    /**
+     * Import configuration.
+     */
+    public array $importConfig = [
+        'maxSize'       => 2048, // KB
+        'allowedTypes'  => 'csv,xlsx',
+        'uploadPath'    => 'uploads/import/',
+    ];
 }

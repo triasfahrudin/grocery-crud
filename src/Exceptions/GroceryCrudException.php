@@ -47,4 +47,19 @@ class GroceryCrudException extends RuntimeException
     {
         return new self("Field '{$field}' does not exist in table '{$table}'.");
     }
+
+    public static function uploadError(): self
+    {
+        return new self('File upload error.');
+    }
+
+    public static function invalidFileType(): self
+    {
+        return new self('Invalid file type. Only CSV and Excel (.xlsx) files are allowed.');
+    }
+
+    public static function fileTooLarge(): self
+    {
+        return new self('File size exceeds the limit.');
+    }
 }

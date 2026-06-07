@@ -57,4 +57,12 @@ interface ThemeInterface
      * @return string HTML output
      */
     public function renderSubGrid(array $config, array $records): string;
+
+    /**
+     * Render the import form (file upload + column mapping).
+     *
+     * @param array<string, mixed> $data
+     * @return string
+     */
+    public function renderImportForm(array $data): string;
 }

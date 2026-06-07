@@ -779,8 +779,245 @@
         }
     }
 
+    // ======== Import Workflow ========
+    function loadImportForm($btn) {
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'GET',
+            data: { gc_action: 'import_form' },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    var $modal = GcModal.show(response.html);
+                    bindImportEvents($modal);
+                } else {
+                    showAlert(response.message || 'Failed to load import form.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
+    function bindImportEvents($modal) {
+        // Close button
+        $modal.on('click', '.gc-form-close', function (e) {
+            e.preventDefault();
+            GcModal.hide();
+        });
+
+        // Close on backdrop click
+        $modal.on('hidden.bs.modal', function () {
+            GcModal.remove();
+        });
+
+        // Browse button -> trigger file input
+        $modal.on('click', '.gc-import-browse-btn', function () {
+            $modal.find('.gc-import-file-input').click();
+        });
+
+        // Click on dropzone -> trigger file input
+        $modal.on('click', '.gc-import-dropzone', function () {
+            $modal.find('.gc-import-file-input').click();
+        });
+
+        // File selected -> upload
+        $modal.on('change', '.gc-import-file-input', function () {
+            var file = this.files[0];
+            if (!file) return;
+
+            // Show filename
+            $modal.find('.gc-import-filename').text(file.name).removeClass('d-none');
+
+            // Upload
+            uploadImportFile($modal, file);
+        });
+
+        // Execute import
+        $modal.on('click', '.gc-import-execute-btn', function () {
+            executeImport($modal);
+        });
+    }
+
+    function uploadImportFile($modal, file) {
+        var formData = new FormData();
+        formData.append('import_file', file);
+        formData.append('gc_action', 'import_upload');
+
+        // Show uploading state
+        $modal.find('.gc-import-dropzone').addClass('d-none');
+        $modal.find('.gc-import-filename').addClass('d-none');
+        $modal.find('.gc-import-uploading').removeClass('d-none');
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function (response) {
+                $modal.find('.gc-import-uploading').addClass('d-none');
+                $modal.find('.gc-import-dropzone').removeClass('d-none');
+
+                if (response.success) {
+                    showMappingUI($modal, response);
+                } else {
+                    showAlert(response.message || 'Failed to parse file.', 'danger');
+                }
+            },
+            error: function () {
+                $modal.find('.gc-import-uploading').addClass('d-none');
+                $modal.find('.gc-import-dropzone').removeClass('d-none');
+                showAlert('An error occurred while uploading.', 'danger');
+            }
+        });
+    }
+
+    function showMappingUI($modal, data) {
+        var headers = data.headers || [];
+        var preview = data.preview || [];
+        var mapping = data.mapping || [];
+        var fields = data.fields || [];
+        var fieldLabels = data.fieldLabels || {};
+        var totalRows = data.totalRows || 0;
+
+        // Build mapping table
+        var $mappingBody = $modal.find('.gc-import-mapping-table tbody');
+        $mappingBody.empty();
+
+        headers.forEach(function (header, index) {
+            var mappedField = mapping[index] || '';
+            var sampleData = preview.length > 0 ? (preview[0][header] || '') : '';
+            var $row = $('<tr></tr>');
+            $row.append('<td><strong>' + $('<span>').text(header).html() + '</strong></td>');
+
+            var $select = $('<select class="form-select form-select-sm"></select>');
+            $select.append('<option value="">-- ' + $('<span>').text(data.lang_not_mapped || 'Not mapped').html() + ' --</option>');
+
+            fields.forEach(function (field) {
+                var label = fieldLabels[field] || field;
+                var $opt = $('<option></option>').attr('value', field).text(label);
+                if (field === mappedField) {
+                    $opt.prop('selected', true);
+                }
+                $select.append($opt);
+            });
+
+            var $td = $('<td></td>').append($select);
+            $row.append($td);
+            $row.append('<td><code class="small">' + $('<span>').text(sampleData).html() + '</code></td>');
+            $mappingBody.append($row);
+        });
+
+        // Build preview table
+        var $previewHead = $modal.find('.gc-import-preview-table thead tr');
+        var $previewBody = $modal.find('.gc-import-preview-table tbody');
+        $previewHead.empty();
+        $previewBody.empty();
+
+        headers.forEach(function (header) {
+            $previewHead.append('<th>' + $('<span>').text(header).html() + '</th>');
+        });
+
+        preview.forEach(function (row) {
+            var $row = $('<tr></tr>');
+            headers.forEach(function (header) {
+                $row.append('<td class="small">' + $('<span>').text(row[header] || '').html() + '</td>');
+            });
+            $previewBody.append($row);
+        });
+
+        // Show total rows
+        $modal.find('.gc-import-preview-info').text(data.total_rows_label || 'Total rows in file') + ': ' + totalRows;
+        $modal.find('.gc-import-preview-info').html(
+            '<span class="text-muted">' + (data.total_rows_label || 'Total rows in file') + ': <strong>' + totalRows + '</strong></span>'
+        );
+
+        // Show execute button
+        $modal.find('.gc-import-execute-btn').removeClass('d-none');
+
+        // Show mapping step
+        $modal.find('.gc-import-step[data-step="mapping"]').removeClass('d-none');
+
+        // Store file data for later
+        $modal.data('importData', {
+            totalRows: totalRows,
+            preview: preview,
+            headers: headers,
+            mapping: mapping
+        });
+    }
+
+    function executeImport($modal) {
+        var importData = $modal.data('importData');
+        if (!importData) return;
+
+        // Read current mapping from UI
+        var mapping = [];
+        $modal.find('.gc-import-mapping-table tbody tr').each(function () {
+            var $select = $(this).find('select');
+            mapping.push($select.val() || null);
+        });
+
+        var totalRows = importData.totalRows || 0;
+        var msg = (importData.confirm_label || 'Are you sure you want to import {total} records?').replace('{total}', totalRows);
+        if (!confirm(msg)) return;
+
+        // Get preview data as rows (header-indexed arrays)
+        var rows = importData.preview.map(function (row) {
+            return importData.headers.map(function (header) {
+                return row[header] || '';
+            });
+        });
+
+        // Disable button
+        var $btn = $modal.find('.gc-import-execute-btn');
+        $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Importing...');
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'import_execute',
+                rows: JSON.stringify(rows),
+                mapping: JSON.stringify(mapping)
+            },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    GcModal.hide();
+                    var message = response.message || 'Import completed.';
+                    if (response.errors && response.errors.length > 0) {
+                        message += ' (' + response.errors.length + ' errors)';
+                    }
+                    showAlert(message, response.imported > 0 ? 'success' : 'danger');
+                    refreshList($('.grocery-crud-wrapper'));
+                } else {
+                    showAlert(response.message || 'Import failed.', 'danger');
+                    $btn.prop('disabled', false).text('Import Data');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred during import.', 'danger');
+                $btn.prop('disabled', false).text('Import Data');
+            }
+        });
+    }
+
     // ======== Event Binding ========
     function bindEvents() {
+        // Import button
+        $(document).off('click', '.btn-gc-import').on('click', '.btn-gc-import', function (e) {
+            e.preventDefault();
+            loadImportForm($(this));
+        });
+
         // Add button
         $(document).off('click', '.btn-gc-add').on('click', '.btn-gc-add', function (e) {
             e.preventDefault();

@@ -69,6 +69,7 @@ class AdminLTE4Theme implements ThemeInterface
         $sortDir      = $data['sortDir'] ?? 'ASC';
         $exportFormats = $data['exportFormats'] ?? [];
         $enableExport = (bool) ($data['enableExport'] ?? false);
+        $enableImport = (bool) ($data['enableImport'] ?? false);
 
         $columnFilters = $data['columnFilters'] ?? [];
         $currentFilters = $data['currentFilters'] ?? [];
@@ -108,6 +109,13 @@ class AdminLTE4Theme implements ThemeInterface
         $html .= '<div class="card-header d-flex justify-content-between align-items-center">';
         $html .= '<h3 class="card-title"><i class="bi bi-table me-2"></i>' . $subject . '</h3>';
         $html .= '<div class="card-tools d-flex gap-2">';
+
+        // Import button
+        if ($enableImport) {
+            $html .= '<button type="button" class="btn btn-tool btn-gc-import" title="' . ($lang['import'] ?? 'Import') . '">';
+            $html .= '<i class="bi bi-upload"></i>';
+            $html .= '</button>';
+        }
 
         // Export buttons
         if ($enableExport && !empty($exportFormats)) {
@@ -784,5 +792,13 @@ class AdminLTE4Theme implements ThemeInterface
         $html .= '</div>';
 
         return $html;
+    }
+
+    public function renderImportForm(array $data): string
+    {
+        // Reuse Bootstrap5's import form rendering for layout consistency
+        $b5 = new Bootstrap5Theme();
+        $b5->setLanguageStrings($this->languageStrings);
+        return $b5->renderImportForm($data);
     }
 }
