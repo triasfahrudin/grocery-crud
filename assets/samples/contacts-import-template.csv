@@ -1,0 +1,4 @@
+name,email,phone,company,is_active
+John Doe,john@example.com,08123456789,PT Maju Jaya,1
+Jane Smith,jane@example.com,08234567890,CV Sukses Abadi,1
+Bob Johnson,bob@example.com,,PT Teknologi Maju,0
