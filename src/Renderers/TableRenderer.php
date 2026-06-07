@@ -54,6 +54,7 @@ class TableRenderer
             'searchable'           => $crudData['searchable'] ?? false,
             'useDatatables'        => $crudData['useDatatables'] ?? $this->config->useDatatables,
             'enableExport'         => $crudData['enableExport'] ?? $this->config->enableExport,
+            'enableImport'         => $crudData['enableImport'] ?? $this->config->enableImport,
             'exportFormats'        => $crudData['exportFormats'] ?? $this->config->exportFormats,
             'pager'                => [
                 'from' => $totalCount > 0 ? $from : 0,
