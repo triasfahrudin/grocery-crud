@@ -494,8 +494,10 @@
     function initTableDragger($wrapper) {
         console.log('[GC_TD] initTableDragger called, tableDragger=',
             typeof tableDragger, 'wrapper=', $wrapper.length);
-        if (typeof tableDragger !== 'function') {
-            console.warn('[GC_TD] tableDragger not available');
+        // table-dragger via CDN is UMD: actual function is .default
+        var draggerFn = (tableDragger && tableDragger.default) || tableDragger;
+        if (typeof draggerFn !== 'function') {
+            console.warn('[GC_TD] tableDragger not available, obj=', tableDragger);
             return;
         }
         // Destroy any previous instance on this wrapper
@@ -518,7 +520,7 @@
             });
             var handleCount = $table.find('.gc-drag-handle').length;
             console.log('[GC_TD] handles added:', handleCount);
-            var dragger = tableDragger($table[0], {
+            var dragger = draggerFn($table[0], {
                 mode: 'column',
                 dragHandler: '.gc-drag-handle',
                 animation: 200
