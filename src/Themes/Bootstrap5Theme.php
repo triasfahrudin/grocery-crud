@@ -102,6 +102,8 @@ class Bootstrap5Theme implements ThemeInterface
         $lblExport      = $lang['export'] ?? 'Export';
         $lblExportCsv   = $lang['export_csv'] ?? 'Export CSV';
         $lblExportExcel = $lang['export_excel'] ?? 'Export Excel';
+        $lblExportPdf   = $lang['export_pdf'] ?? 'Export PDF';
+        $lblPrintView   = $lang['print_view'] ?? 'Print View';
         $lblAddRecord   = $lang['add_record'] ?? 'Add Record';
         $lblSearch      = $lang['search'] ?? 'Search';
         $lblActions     = $lang['actions'] ?? 'Actions';
@@ -131,7 +133,13 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '</button>';
             $html .= '<ul class="dropdown-menu dropdown-menu-right">';
             foreach ($exportFormats as $format) {
-                $label = $format === 'csv' ? $lblExportCsv : $lblExportExcel;
+                $label = match ($format) {
+                    'csv'       => $lblExportCsv,
+                    'excel'     => $lblExportExcel,
+                    'pdf'       => $lblExportPdf,
+                    'print'     => $lblPrintView,
+                    default     => ucfirst($format),
+                };
                 $html .= '<li><a class="dropdown-item" href="#" data-export="' . $format . '">' . $label . '</a></li>';
             }
             $html .= '</ul></div>';

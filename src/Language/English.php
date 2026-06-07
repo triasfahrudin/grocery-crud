@@ -47,6 +47,8 @@ class English
         'export'            => 'Export',
         'export_csv'        => 'Export to CSV',
         'export_excel'      => 'Export to Excel',
+        'export_pdf'        => 'Export to PDF',
+        'print_view'        => 'Print View',
         'filter'            => 'Filter',
         'all'               => 'All',
         'print'             => 'Print',

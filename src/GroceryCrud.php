@@ -14,6 +14,7 @@ use GroceryCrud\Config\Config as GCConfig;
 use GroceryCrud\Exceptions\GroceryCrudException;
 use GroceryCrud\Export\CsvExport;
 use GroceryCrud\Export\ExcelExport;
+use GroceryCrud\Export\PdfExport;
 use GroceryCrud\Fields\FieldType;
 use GroceryCrud\Models\CrudModel;
 use GroceryCrud\Relations\RelationManager;
@@ -78,6 +79,8 @@ class GroceryCrud
     private bool $searchable = true;
     private bool $useDatatables;
     private bool $enableExport;
+    private bool $enablePrintView = true;
+    private bool $enablePdfExport = true;
     private bool $initialized = false;
 
     /** @var array<string, array<string, mixed>> */
@@ -150,6 +153,8 @@ class GroceryCrud
         $this->perPage = $this->config->perPage;
         $this->useDatatables = $this->config->useDatatables;
         $this->enableExport = $this->config->enableExport;
+        $this->enablePrintView = $this->config->enablePrintView;
+        $this->enablePdfExport = $this->config->enablePdfExport;
         $this->actions = $this->config->defaultActions;
         $this->crudId = 'crud_' . uniqid();
 
@@ -557,6 +562,24 @@ class GroceryCrud
     public function setExportable(bool $exportable): self
     {
         $this->enableExport = $exportable;
+        return $this;
+    }
+
+    /**
+     * Enable/disable print view.
+     */
+    public function setPrintView(bool $enable): self
+    {
+        $this->enablePrintView = $enable;
+        return $this;
+    }
+
+    /**
+     * Enable/disable PDF export.
+     */
+    public function setPdfExport(bool $enable): self
+    {
+        $this->enablePdfExport = $enable;
         return $this;
     }
 
@@ -1370,6 +1393,37 @@ class GroceryCrud
     }
 
     /**
+     * Print View - returns clean printable HTML page.
+     */
+    public function ajaxPrintView(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $columns = $this->resolveColumns();
+
+        $records = $this->model->getList(
+            $columns,
+            0, // no limit
+            0,
+            $this->orderBy,
+            $this->where
+        );
+
+        $totalCount = $this->model->getTotalCount($this->where);
+
+        $subject = $this->subject;
+
+        ob_start();
+        $exportFormat = 'print';
+        include __DIR__ . '/Views/print_view.php';
+        $html = ob_get_clean();
+
+        return Services::response()
+            ->setContentType('text/html; charset=utf-8')
+            ->setBody($html);
+    }
+
+    /**
      * Export data.
      */
     public function ajaxExport(string $format): ResponseInterface
@@ -1398,15 +1452,31 @@ class GroceryCrud
                 ->setBody($content);
         }
 
-        // Excel
-        $exporter = new ExcelExport();
-        $content = $exporter->export($records, $this->columnLabels, $columns);
-        $filename = $exporter->getFilename($this->table);
+        if ($format === 'excel') {
+            $exporter = new ExcelExport();
+            $content = $exporter->export($records, $this->columnLabels, $columns);
+            $filename = $exporter->getFilename($this->table);
 
-        return Services::response()
-            ->setContentType($exporter->getContentType())
-            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
-            ->setBody($content);
+            return Services::response()
+                ->setContentType($exporter->getContentType())
+                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                ->setBody($content);
+        }
+
+        // PDF
+        if ($format === 'pdf') {
+            $exporter = new PdfExport();
+            $content = $exporter->export($records, $this->columnLabels, $columns, $this->subject);
+            $filename = $exporter->getFilename($this->table);
+
+            return Services::response()
+                ->setContentType($exporter->getContentType())
+                ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+                ->setBody($content);
+        }
+
+        // Unknown format
+        return $this->jsonResponse(false, ['message' => 'Unknown export format.']);
     }
 
     // ======== Internal Methods ========
@@ -1572,7 +1642,7 @@ class GroceryCrud
             'customActions'        => $this->customActions,
             'searchable'           => $this->searchable,
             'enableExport'         => $this->enableExport,
-            'exportFormats'        => $this->config->exportFormats,
+            'exportFormats'        => $this->buildExportFormats(),
             'crudId'               => $this->crudId,
             'sortField'            => $sortField,
             'sortDir'              => $sortDir,
@@ -1985,7 +2055,7 @@ class GroceryCrud
             'add_form', 'add'                        => 'add',
             'edit_form', 'edit', 'inline_save'       => 'edit',
             'delete', 'batch_action', 'restore'      => 'delete',
-            'export'                                  => 'export',
+            'export', 'print_view'                => 'export',
             'list', 'trash_list', 'sub_grid'          => 'view',
             default                                   => 'view',
         };
@@ -2010,6 +2080,7 @@ class GroceryCrud
             'edit'          => $this->ajaxEdit($this->getRequestId()),
             'delete'        => $this->ajaxDelete($this->getRequestId()),
             'export'        => $this->ajaxExport($this->getExportFormat()),
+            'print_view'    => $this->ajaxPrintView(),
             'batch_action'  => $this->ajaxBatchAction(),
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),
@@ -2085,6 +2156,26 @@ class GroceryCrud
     {
         $request = Services::request();
         return $request->getPost('format') ?? $request->getGet('format') ?? 'csv';
+    }
+
+    /**
+     * Build the list of available export formats.
+     *
+     * @return array<int, string>
+     */
+    private function buildExportFormats(): array
+    {
+        $formats = $this->config->exportFormats;
+
+        if ($this->enablePrintView && !in_array('print', $formats, true)) {
+            $formats[] = 'print';
+        }
+
+        if ($this->enablePdfExport && !in_array('pdf', $formats, true)) {
+            $formats[] = 'pdf';
+        }
+
+        return $formats;
     }
 
     /**

@@ -84,9 +84,19 @@ class Config extends BaseConfig
     public bool $enableExport = true;
 
     /**
+     * Whether to enable print view function.
+     */
+    public bool $enablePrintView = true;
+
+    /**
+     * Whether to enable PDF export (requires dompdf/dompdf).
+     */
+    public bool $enablePdfExport = true;
+
+    /**
      * Export formats.
      */
-    public array $exportFormats = ['csv', 'excel'];
+    public array $exportFormats = ['csv', 'excel', 'pdf', 'print'];
 
     /**
      * Pagination style: 'simple' or 'full' (with page numbers)

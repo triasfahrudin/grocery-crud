@@ -748,12 +748,22 @@
     }
 
     function handleExport($btn, format) {
-        showLoading();
-        window.location.href = window.location.pathname
-            + '?gc_action=export&format=' + format;
-        setTimeout(function () {
-            hideLoading();
-        }, 2000);
+        if (format === 'print') {
+            // Print view: open in new window
+            window.open(
+                window.location.pathname + '?gc_action=print_view',
+                '_blank',
+                'width=1200,height=800,scrollbars=yes'
+            );
+        } else {
+            // CSV, Excel, PDF: download normally
+            showLoading();
+            window.location.href = window.location.pathname
+                + '?gc_action=export&format=' + format;
+            setTimeout(function () {
+                hideLoading();
+            }, 2000);
+        }
     }
 
     // ======== Event Binding ========

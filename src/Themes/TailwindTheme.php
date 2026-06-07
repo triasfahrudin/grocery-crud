@@ -82,6 +82,8 @@ class TailwindTheme implements ThemeInterface
         $lblExport      = $lang['export'] ?? 'Export';
         $lblExportCsv   = $lang['export_csv'] ?? 'Export CSV';
         $lblExportExcel = $lang['export_excel'] ?? 'Export Excel';
+        $lblExportPdf   = $lang['export_pdf'] ?? 'Export PDF';
+        $lblPrintView   = $lang['print_view'] ?? 'Print View';
         $lblAddRecord   = $lang['add_record'] ?? 'Add Record';
         $lblSearch      = $lang['search'] ?? 'Search';
         $lblActions     = $lang['actions'] ?? 'Actions';
@@ -109,7 +111,13 @@ class TailwindTheme implements ThemeInterface
             $html .= '</button>';
             $html .= '<ul class="dropdown-menu absolute right-0 mt-1 bg-white border rounded shadow-lg py-1 z-50 hidden">';
             foreach ($exportFormats as $format) {
-                $label = $format === 'csv' ? $lblExportCsv : $lblExportExcel;
+                $label = match ($format) {
+                    'csv'       => $lblExportCsv,
+                    'excel'     => $lblExportExcel,
+                    'pdf'       => $lblExportPdf,
+                    'print'     => $lblPrintView,
+                    default     => ucfirst($format),
+                };
                 $html .= '<li><a class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" href="#" data-export="' . $format . '">' . $label . '</a></li>';
             }
             $html .= '</ul></div>';

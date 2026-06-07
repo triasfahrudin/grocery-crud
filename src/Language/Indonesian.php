@@ -47,6 +47,8 @@ class Indonesian
         'export'            => 'Ekspor',
         'export_csv'        => 'Ekspor ke CSV',
         'export_excel'      => 'Ekspor ke Excel',
+        'export_pdf'        => 'Ekspor ke PDF',
+        'print_view'        => 'Tampilan Cetak',
         'filter'            => 'Filter',
         'all'               => 'Semua',
         'print'             => 'Cetak',

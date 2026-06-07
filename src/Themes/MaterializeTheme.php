@@ -83,6 +83,8 @@ class MaterializeTheme implements ThemeInterface
         $lblExport      = $lang['export'] ?? 'Export';
         $lblExportCsv   = $lang['export_csv'] ?? 'Export CSV';
         $lblExportExcel = $lang['export_excel'] ?? 'Export Excel';
+        $lblExportPdf   = $lang['export_pdf'] ?? 'Export PDF';
+        $lblPrintView   = $lang['print_view'] ?? 'Print View';
         $lblAddRecord   = $lang['add_record'] ?? 'Add Record';
         $lblSearch      = $lang['search'] ?? 'Search';
         $lblActions     = $lang['actions'] ?? 'Actions';
@@ -108,7 +110,13 @@ class MaterializeTheme implements ThemeInterface
             $html .= '<a class="dropdown-trigger btn-small waves-effect waves-light grey lighten-3 black-text" href="#" data-target="' . $crudId . '_export"><i class="material-icons left">file_download</i>' . $lblExport . '</a>';
             $html .= '<ul id="' . $crudId . '_export" class="dropdown-content">';
             foreach ($exportFormats as $format) {
-                $label = $format === 'csv' ? $lblExportCsv : $lblExportExcel;
+                $label = match ($format) {
+                    'csv'       => $lblExportCsv,
+                    'excel'     => $lblExportExcel,
+                    'pdf'       => $lblExportPdf,
+                    'print'     => $lblPrintView,
+                    default     => ucfirst($format),
+                };
                 $html .= '<li><a href="#" data-export="' . $format . '">' . $label . '</a></li>';
             }
             $html .= '</ul>';
