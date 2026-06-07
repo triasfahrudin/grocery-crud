@@ -12,6 +12,7 @@ Library CRUD generator full-featured untuk CodeIgniter 4. Terinspirasi dari Groc
 - **Callbacks** — beforeInsert, afterInsert, beforeUpdate, afterUpdate, beforeDelete, afterDelete, callbackColumn, callbackField, callbackAddField, callbackEditField
 - **Validation** — Validasi CI4 terintegrasi (required, unique, custom rules)
 - **Upload** — File & image upload dengan thumbnail preview + image viewer (click to zoom)
+- **Import** — CSV & Excel import dengan auto-column mapping, preview, dan bulk insert
 - **Export** — CSV & Excel export
 - **Search** — Pencarian real-time dengan debounce
 - **Column Filters** — Filter per-kolom (text, dropdown, relation dropdown)
@@ -229,6 +230,38 @@ $crud->setRepeater('specs', 'Product Specs', [
 ], 'json');
 ```
 
+### 12. Import CSV/Excel
+
+Upload file CSV atau Excel (.xlsx), auto-map kolom ke field form, preview data, lalu import:
+
+```php
+$crud = new GroceryCrud();
+$crud->setTable('contacts');
+
+// Enable import (default: true)
+$crud->setImportable(true);
+
+// Atau disable import untuk CRUD tertentu
+// $crud->setImportable(false);
+```
+
+**Alur Import:**
+1. Klik tombol **Import** di toolbar
+2. Upload file CSV atau Excel (.xlsx)
+3. Auto-detect column mapping (dicocokkan berdasarkan kemiripan nama dengan field form)
+4. Preview data baris pertama
+5. Klik **Import Data** untuk bulk insert
+
+> **Catatan:** CSV import bekerja tanpa dependensi tambahan. XLSX membutuhkan `composer require phpoffice/phpspreadsheet`.
+
+Contoh file template CSV dapat didownload dari form import atau dari [`assets/samples/contacts-import-template.csv`](assets/samples/contacts-import-template.csv):
+
+```csv
+name,email,phone,company,is_active
+John Doe,john@example.com,08123456789,PT Maju Jaya,1
+Jane Smith,jane@example.com,08234567890,CV Sukses Abadi,1
+```
+
 ## Theme
 
 ```php
@@ -254,6 +287,7 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | `setPerPage(int $perPage)` | Item per halaman (default: 25) |
 | `setSearchable(bool $searchable)` | Aktifkan/nonaktifkan search |
 | `setExportable(bool $exportable)` | Aktifkan/nonaktifkan export |
+| `setImportable(bool $importable)` | Aktifkan/nonaktifkan import CSV/Excel |
 | `setSoftDelete(bool $enabled)` | Aktifkan soft delete |
 | `withTrashed()` | Tampilkan record yang sudah di-soft-delete |
 | `orderBy(string $field, string $direction)` | Default order |
@@ -387,6 +421,7 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 - **Settings** — Simpan/muat/reset konfigurasi kolom ke localStorage
 - **Sort** — Klik header kolom untuk sort asc/desc
 - **Advanced Filters** — Multi-condition filter (contains, equals, starts with, ends with, greater/less than)
+- **Import** — Upload CSV/Excel dengan auto-mapping, preview, dan bulk insert
 - **Export** — Download CSV atau Excel dari tombol toolbar
 - **Cache Busting** — Asset versioning otomatis dengan `?v=timestamp`
 
