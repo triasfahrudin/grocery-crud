@@ -860,7 +860,7 @@
                 return;
             }
             var baseUrl = window.location.href.split('?')[0];
-            var params = $.param({ gc_action: 'import_template', fields: fields }, true);
+            var params = $.param({ gc_action: 'import_template', fields: fields });
             window.open(baseUrl + '?' + params, '_blank');
         });
     }
