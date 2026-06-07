@@ -220,8 +220,6 @@ Parameter:
 
 Cocok untuk berbagai tipe field: dropdown, switch/boolean, checkbox, text input, dll.
 
-> **💡 Demo:** Lihat contoh controller lengkap di [`demo/DemoDependsOn.php`](demo/DemoDependsOn.php) dengan SQL schema di [`demo/demo_depends_on.sql`](demo/demo_depends_on.sql) dan petunjuk setup di [`demo/README.md`](demo/README.md).
-
 ### 11. Repeater Fields
 
 ```php
