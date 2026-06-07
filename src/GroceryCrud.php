@@ -1572,6 +1572,7 @@ class GroceryCrud
             'subject'       => $this->subject,
             'language'      => $this->languageStrings,
             'primaryKey'    => $this->primaryKey,
+            'templateUrl'   => $this->getImportTemplateUrl(),
         ];
 
         return Services::response()
@@ -1580,6 +1581,32 @@ class GroceryCrud
                 'success' => true,
                 'html'    => $this->theme->renderImportForm($importData),
             ]);
+    }
+
+    /**
+     * Build the URL for downloading a CSV import template.
+     */
+
+    private function getImportTemplateUrl(): string
+    {
+        $request = Services::request();
+        $uri = (string) $request->getUri();
+
+        // Parse existing query params
+        $parsed = parse_url($uri);
+        $query = [];
+        if (isset($parsed['query'])) {
+            parse_str($parsed['query'], $query);
+        }
+        $query['gc_action'] = 'import_template';
+
+        $base = $parsed['scheme'] . '://' . $parsed['host'];
+        if (isset($parsed['port'])) {
+            $base .= ':' . $parsed['port'];
+        }
+        $base .= $parsed['path'] ?? '/';
+
+        return $base . '?' . http_build_query($query);
     }
 
     /**
@@ -1714,6 +1741,88 @@ class GroceryCrud
             'errors'   => $result['errors'],
             'message'  => $message,
         ]);
+    }
+
+    /**
+     * Generate and download a CSV template based on the active CRUD fields.
+     */
+
+    public function ajaxImportTemplate(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $fields = $this->resolveFields('add');
+        $labels = $this->columnLabels;
+
+        // Build CSV in memory
+        $output = fopen('php://temp', 'r+');
+
+        // Header: use field labels if available, otherwise field name
+        $header = [];
+        foreach ($fields as $field) {
+            $header[] = $labels[$field] ?? $field;
+        }
+        fputcsv($output, $header);
+
+        // Sample row with placeholders
+        $sample = [];
+        foreach ($fields as $field) {
+            $sample[] = $this->getSampleValue($field);
+        }
+        fputcsv($output, $sample);
+
+        rewind($output);
+        $csv = stream_get_contents($output);
+        fclose($output);
+
+        $filename = $this->table . '_import_template.csv';
+
+        return Services::response()
+            ->setHeader('Content-Type', 'text/csv; charset=utf-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
+            ->setBody($csv);
+    }
+
+    /**
+     * Generate a sample value for a field based on its name/type.
+     */
+
+    private function getSampleValue(string $field): string
+    {
+        $lower = strtolower($field);
+
+        if (str_contains($lower, 'name') || str_contains($lower, 'nama')) {
+            return 'John Doe';
+        }
+        if (str_contains($lower, 'email')) {
+            return 'user@example.com';
+        }
+        if (str_contains($lower, 'phone') || str_contains($lower, 'telp') || str_contains($lower, 'hp') || str_contains($lower, 'telepon')) {
+            return '08123456789';
+        }
+        if (str_contains($lower, 'address') || str_contains($lower, 'alamat')) {
+            return 'Jl. Merdeka No. 1';
+        }
+        if (str_contains($lower, 'price') || str_contains($lower, 'harga')) {
+            return '50000';
+        }
+        if (str_contains($lower, 'active') || str_contains($lower, 'aktif') || $field === 'is_active') {
+            return '1';
+        }
+        if (str_contains($lower, 'desc') || str_contains($lower, 'keterangan')) {
+            return 'Sample description text';
+        }
+        if (str_contains($lower, 'id') && !str_contains($lower, 'uuid')) {
+            return '';
+        }
+        if (str_contains($lower, 'date') || str_contains($lower, 'tanggal') || str_contains($lower, 'tgl')) {
+            return date('Y-m-d');
+        }
+        if (str_contains($lower, 'qty') || str_contains($lower, 'stock') || str_contains($lower, 'stok') || str_contains($lower, 'jumlah') || str_contains($lower, 'count')) {
+            return '10';
+        }
+
+        return 'Sample ' . $field;
     }
 
     /**
@@ -2311,7 +2420,7 @@ class GroceryCrud
             'edit_form', 'edit', 'inline_save'       => 'edit',
             'delete', 'batch_action', 'restore'      => 'delete',
             'export', 'print_view'                => 'export',
-            'import_form', 'import_upload', 'import_execute' => 'import',
+            'import_form', 'import_upload', 'import_execute', 'import_template' => 'import',
             'list', 'trash_list', 'sub_grid'          => 'view',
             default                                   => 'view',
         };
@@ -2340,6 +2449,7 @@ class GroceryCrud
             'import_form'   => $this->ajaxImportForm(),
             'import_upload' => $this->ajaxImportUpload(),
             'import_execute'=> $this->ajaxImportExecute(),
+            'import_template' => $this->ajaxImportTemplate(),
             'batch_action'  => $this->ajaxBatchAction(),
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),

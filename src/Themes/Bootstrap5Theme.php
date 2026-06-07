@@ -875,6 +875,7 @@ class Bootstrap5Theme implements ThemeInterface
         $fieldLabels = $data['fieldLabels'] ?? [];
         $subject = $data['subject'] ?? 'Records';
         $crudId  = $data['crudId'] ?? 'crud_' . uniqid();
+        $templateUrl = $data['templateUrl'] ?? '';
 
         $lblImport      = $lang['import'] ?? 'Import';
         $lblCancel      = $lang['cancel'] ?? 'Cancel';
@@ -907,7 +908,7 @@ class Bootstrap5Theme implements ThemeInterface
         $html .= '</div>';
         $html .= '<div class="gc-import-filename text-muted small mt-1 d-none"></div>';
         $html .= '<div class="mt-2 small">';
-        $html .= '<a href="/assets/grocery-crud/samples/contacts-import-template.csv" target="_blank" class="text-decoration-none">';
+        $html .= '<a href="' . htmlspecialchars($templateUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" class="text-decoration-none">';
         $html .= '<i class="bi bi-download me-1"></i>' . ($lang['import_download_template'] ?? 'Download CSV template') . '</a>';
         $html .= '</div>';
         $html .= '</div>';
