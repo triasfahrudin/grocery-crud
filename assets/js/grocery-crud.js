@@ -780,7 +780,11 @@
     }
 
     // ======== Import Workflow ========
+    var _importing = false;
+
     function loadImportForm($btn) {
+        if (_importing) return;
+        _importing = true;
         showLoading();
         $.ajax({
             url: window.location.href,
@@ -800,6 +804,7 @@
             },
             complete: function () {
                 hideLoading();
+                _importing = false;
             }
         });
     }
@@ -1856,47 +1861,48 @@
     // ======== Init ========
     // ======== Bootstrap polyfill for non-Bootstrap themes ========
     function bootstrapPolyfill() {
-        if (typeof bootstrap !== 'undefined' && typeof bootstrap.Dropdown === 'function') {
-            return; // Bootstrap is loaded, no polyfill needed
-        }
+        var bootstrapLoaded = typeof bootstrap !== 'undefined' && typeof bootstrap.Dropdown === 'function';
 
-        // Dropdown polyfill — handle Bootstrap-style dropdowns for non-Bootstrap themes.
-        // Materialize uses its own dropdown system (.dropdown-trigger), so it is excluded.
-        if (typeof M === 'undefined') {
-            $(document).on('click.dropdown', '[data-bs-toggle="dropdown"]', function (e) {
-                e.preventDefault();
-                e.stopPropagation();
-                var $btn = $(this);
-                var $wrapper = $btn.closest('.dropdown, .relative');
-                var $menu = $wrapper.find('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu');
-                if ($menu.length === 0) {
-                    $menu = $btn.next('.dropdown-menu, .dropdown-content, ul');
-                }
-
-                // Close all other dropdowns
-                $('[data-bs-toggle="dropdown"]').not($btn).each(function () {
-                    var $otherWrapper = $(this).closest('.dropdown, .relative');
-                    var $otherMenu = $otherWrapper.find('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu');
-                    if ($otherMenu.length === 0) {
-                        $otherMenu = $(this).next('.dropdown-menu, .dropdown-content, ul');
+        if (!bootstrapLoaded) {
+            // Dropdown polyfill — handle Bootstrap-style dropdowns for non-Bootstrap themes.
+            // Materialize uses its own dropdown system (.dropdown-trigger), so it is excluded.
+            if (typeof M === 'undefined') {
+                $(document).on('click.dropdown', '[data-bs-toggle="dropdown"]', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var $btn = $(this);
+                    var $wrapper = $btn.closest('.dropdown, .relative');
+                    var $menu = $wrapper.find('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu');
+                    if ($menu.length === 0) {
+                        $menu = $btn.next('.dropdown-menu, .dropdown-content, ul');
                     }
-                    $otherMenu.hide();
+
+                    // Close all other dropdowns
+                    $('[data-bs-toggle="dropdown"]').not($btn).each(function () {
+                        var $otherWrapper = $(this).closest('.dropdown, .relative');
+                        var $otherMenu = $otherWrapper.find('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu');
+                        if ($otherMenu.length === 0) {
+                            $otherMenu = $(this).next('.dropdown-menu, .dropdown-content, ul');
+                        }
+                        $otherMenu.hide();
+                    });
+
+                    $menu.toggle();
                 });
 
-                $menu.toggle();
-            });
-
-            // Close dropdowns on outside click
-            $(document).on('click.dropdown', function (e) {
-                if (!$(e.target).closest('[data-bs-toggle="dropdown"]').length
-                    && !$(e.target).closest('.dropdown-menu, .dropdown-content').length) {
-                    $('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu').hide();
-                }
-            });
+                // Close dropdowns on outside click
+                $(document).on('click.dropdown', function (e) {
+                    if (!$(e.target).closest('[data-bs-toggle="dropdown"]').length
+                        && !$(e.target).closest('.dropdown-menu, .dropdown-content').length) {
+                        $('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu').hide();
+                    }
+                });
+            }
         }
 
-        // Modal polyfill — always override (Materialize etc. define $.fn.modal too)
-        $.fn.modal = function (action) {
+        // Modal polyfill — always define (Bootstrap 5 is jQuery-free, doesn't define $.fn.modal)
+        if (typeof $.fn.modal !== 'function') {
+            $.fn.modal = function (action) {
                 if (action === 'show') {
                     return this.each(function () {
                         $(this).addClass('show').css('display', 'block');
@@ -1915,6 +1921,7 @@
                     });
                 }
             };
+        }
 
         // Alert polyfill
         if (typeof $.fn.alert !== 'function') {
