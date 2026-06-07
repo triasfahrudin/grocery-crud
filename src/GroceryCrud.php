@@ -1172,8 +1172,8 @@ class GroceryCrud
             return $this->jsonResponse(false, ['message' => 'Column is not editable.']);
         }
 
-        // Validation
-        $errors = $this->validationManager->validate([$field => $value]);
+        // Validate only the field being edited (other fields not submitted)
+        $errors = $this->validationManager->validateField($field, $value);
         if (!empty($errors)) {
             return $this->jsonResponse(false, [
                 'errors'  => $errors,

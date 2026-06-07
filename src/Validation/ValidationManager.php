@@ -158,4 +158,28 @@ class ValidationManager
     {
         return isset($this->fieldRules[$field]);
     }
+
+    /**
+     * Validate a single field's value against its own rules only.
+     * Useful for inline editing where other fields are not submitted.
+     *
+     * @return array<string, string> Errors keyed by field
+     */
+    public function validateField(string $field, mixed $value): array
+    {
+        $rules = $this->getValidationRules();
+
+        if (!isset($rules[$field])) {
+            return [];
+        }
+
+        $this->validation->reset();
+        $this->validation->setRules([$field => $rules[$field]]);
+
+        if (!$this->validation->run([$field => $value])) {
+            return $this->validation->getErrors();
+        }
+
+        return [];
+    }
 }
