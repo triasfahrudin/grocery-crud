@@ -906,6 +906,10 @@ class Bootstrap5Theme implements ThemeInterface
         $html .= '<button type="button" class="btn btn-outline-primary btn-sm gc-import-browse-btn">' . $lblUpload . '</button>';
         $html .= '</div>';
         $html .= '<div class="gc-import-filename text-muted small mt-1 d-none"></div>';
+        $html .= '<div class="mt-2 small">';
+        $html .= '<a href="/assets/grocery-crud/samples/contacts-import-template.csv" target="_blank" class="text-decoration-none">';
+        $html .= '<i class="bi bi-download me-1"></i>' . ($lang['import_download_template'] ?? 'Download CSV template') . '</a>';
+        $html .= '</div>';
         $html .= '</div>';
         $html .= '<div class="gc-import-uploading d-none text-center py-3">';
         $html .= '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Uploading...</span></div>';
