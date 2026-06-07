@@ -793,19 +793,15 @@ class GroceryCrud
     }
 
     /**
-     * Remove validation rules for fields that are disabled via dependsOn (action='enable')
-     * when the controller field value does not match.
+     * Remove validation rules for fields that are hidden/disabled via dependsOn
+     * when the controller field value does not match the expected trigger value.
      *
      * This prevents false validation errors for fields that were intentionally
-     * disabled in the browser and therefore not submitted.
+     * hidden or disabled in the browser and therefore not submitted.
      */
     private function filterDependsOnValidationRules(array $data): void
     {
         foreach ($this->dependsOn as $targetField => $config) {
-            if ($config['action'] !== 'enable') {
-                continue;
-            }
-
             $controllerValue = $data[$config['field']] ?? null;
 
             // Normalize: boolean true/false -> '1'/'0' to match checkbox values
