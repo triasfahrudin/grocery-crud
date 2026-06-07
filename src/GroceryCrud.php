@@ -793,6 +793,34 @@ class GroceryCrud
     }
 
     /**
+     * Remove validation rules for fields that are disabled via dependsOn (action='enable')
+     * when the controller field value does not match.
+     *
+     * This prevents false validation errors for fields that were intentionally
+     * disabled in the browser and therefore not submitted.
+     */
+    private function filterDependsOnValidationRules(array $data): void
+    {
+        foreach ($this->dependsOn as $targetField => $config) {
+            if ($config['action'] !== 'enable') {
+                continue;
+            }
+
+            $controllerValue = $data[$config['field']] ?? null;
+
+            // Normalize: boolean true/false -> '1'/'0' to match checkbox values
+            $expectedValue = $config['value'];
+            if (is_bool($expectedValue)) {
+                $expectedValue = $expectedValue ? '1' : '0';
+            }
+
+            if ((string) $controllerValue !== (string) $expectedValue) {
+                $this->validationManager->removeRules($targetField);
+            }
+        }
+    }
+
+    /**
      * Add a column filter which renders a filter control in the table header.
      *
      * Supported types: 'text', 'dropdown'
@@ -1028,6 +1056,9 @@ class GroceryCrud
         // Remove action key
         unset($data['gc_action']);
 
+        // Skip validation for fields disabled via dependsOn (action='enable')
+        $this->filterDependsOnValidationRules($data);
+
         // Validation
         $errors = $this->validationManager->validate($data);
         if (!empty($errors)) {
@@ -1126,6 +1157,9 @@ class GroceryCrud
                 $this->validationManager->uniqueExcept($uniqueField, $id, $this->columnLabels[$uniqueField] ?? null);
             }
         }
+
+        // Skip validation for fields disabled via dependsOn (action='enable')
+        $this->filterDependsOnValidationRules($data);
 
         $errors = $this->validationManager->validate($data);
         if (!empty($errors)) {
