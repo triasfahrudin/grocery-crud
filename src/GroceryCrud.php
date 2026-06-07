@@ -575,7 +575,7 @@ class GroceryCrud
     /**
      * Enable/disable import.
      */
-    public function setImportable(bool $importable): self
+    public function setImportable(bool $importable = true): self
     {
         $this->enableImport = $importable;
         return $this;
