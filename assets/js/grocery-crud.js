@@ -826,8 +826,9 @@
             $modal.find('.gc-import-file-input').click();
         });
 
-        // Click on dropzone -> trigger file input
-        $modal.on('click', '.gc-import-dropzone', function () {
+        // Click on dropzone -> trigger file input (skip if click originated from the file input itself)
+        $modal.on('click', '.gc-import-dropzone', function (e) {
+            if ($(e.target).closest('.gc-import-file-input, .gc-import-browse-btn').length) return;
             $modal.find('.gc-import-file-input').click();
         });
 

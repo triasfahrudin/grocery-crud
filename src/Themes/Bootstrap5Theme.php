@@ -899,10 +899,10 @@ class Bootstrap5Theme implements ThemeInterface
         $html .= '<div class="gc-import-step" data-step="upload">';
         $html .= '<div class="mb-3">';
         $html .= '<label class="form-label fw-semibold">' . $lblUpload . '</label>';
-        $html .= '<div class="gc-import-dropzone border rounded p-4 text-center" style="cursor:pointer;border-style:dashed!important;">';
+        $html .= '<div class="gc-import-dropzone border rounded p-4 text-center" style="cursor:pointer;border-style:dashed!important;position:relative;">';
+        $html .= '<input type="file" class="gc-import-file-input" accept=".csv,.xlsx" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;">';
         $html .= '<i class="bi bi-cloud-upload" style="font-size:2rem;color:#6c757d;"></i>';
         $html .= '<p class="text-muted mb-2 mt-2">' . $lblUploadHint . '</p>';
-        $html .= '<input type="file" class="gc-import-file-input d-none" accept=".csv,.xlsx">';
         $html .= '<button type="button" class="btn btn-outline-primary btn-sm gc-import-browse-btn">' . $lblUpload . '</button>';
         $html .= '</div>';
         $html .= '<div class="gc-import-filename text-muted small mt-1 d-none"></div>';
