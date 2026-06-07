@@ -9,6 +9,7 @@ use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Validation\Validation;
 use Config\Database;
 use Config\Services;
+use GroceryCrud\ActivityLog\ActivityLogManager;
 use GroceryCrud\Callbacks\CallbackManager;
 use GroceryCrud\Config\Config as GCConfig;
 use GroceryCrud\Exceptions\GroceryCrudException;
@@ -151,6 +152,9 @@ class GroceryCrud
 
     /** @var bool Enable REST API mode (returns JSON, no HTML) */
     private bool $apiMode = false;
+
+    /** @var ?ActivityLogManager Activity Log / Audit Trail manager */
+    private ?ActivityLogManager $activityLog = null;
 
     public function __construct(?GCConfig $config = null, ?BaseConnection $db = null)
     {
@@ -991,6 +995,86 @@ class GroceryCrud
         return $this;
     }
 
+    // ======== Activity Log / Audit Trail ========
+
+    /**
+     * Enable Activity Log (Audit Trail).
+     *
+     * Mencatat otomatis semua operasi CRUD (insert, update, delete, restore,
+     * batch) ke tabel activity_logs, termasuk data sebelum & sesudah.
+     *
+     * @param callable|null $userResolver Callback untuk resolve user current.
+     *        Harus return array ['id' => ..., 'name' => ...].
+     *        Contoh: function () { return ['id' => user_id(), 'name' => user_name()]; }
+     * @return self
+     */
+    public function enableActivityLog(?callable $userResolver = null): self
+    {
+        $this->activityLog = new ActivityLogManager($this->db);
+
+        if ($userResolver !== null) {
+            $this->activityLog->setUserResolver($userResolver);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Set custom table name for activity logs.
+     * Default: 'activity_logs'
+     *
+     * @param string $tableName
+     * @return self
+     */
+    public function setActivityLogTable(string $tableName): self
+    {
+        if ($this->activityLog !== null) {
+            $this->activityLog->setTableName($tableName);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get the ActivityLogManager instance.
+     *
+     * @return ActivityLogManager|null
+     */
+    public function getActivityLog(): ?ActivityLogManager
+    {
+        return $this->activityLog;
+    }
+
+    /**
+     * Set field labels for human-readable diff in activity logs.
+     *
+     * @param array<string, string> $labels ['field_name' => 'Label']
+     * @return self
+     */
+    public function setActivityLogFieldLabels(array $labels): self
+    {
+        if ($this->activityLog !== null) {
+            $this->activityLog->setFieldLabels($labels);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Set fields to exclude from activity log data (e.g. passwords).
+     *
+     * @param array<int, string> $fields
+     * @return self
+     */
+    public function setActivityLogExcludeFields(array $fields): self
+    {
+        if ($this->activityLog !== null) {
+            $this->activityLog->setExcludeFields($fields);
+        }
+
+        return $this;
+    }
+
     // ======== Render Methods ========
 
     /**
@@ -1168,6 +1252,9 @@ class GroceryCrud
                 'data'          => $request->getPost(),
             ]);
 
+            // Activity Log
+            $this->logActivityInsert($insertId, $data);
+
             return $this->jsonResponse(true, [
                 'message'  => $this->getLang('insert_success') ?? 'Record inserted successfully.',
                 'insertId' => $insertId,
@@ -1232,6 +1319,9 @@ class GroceryCrud
             // Before update callback
             $data = $this->callbackManager->executeBefore('beforeUpdate', $data);
 
+            // Fetch old data for activity log before updating
+            $oldData = $this->activityLog !== null ? $this->model->getRawRow($id) : null;
+
             // Handle uploads
             $data = $this->handleUploads($data, $id);
             if ($data === false) {
@@ -1282,6 +1372,9 @@ class GroceryCrud
                 'id'         => $id,
                 'data'       => $request->getPost(),
             ]);
+
+            // Activity Log: log update with old + new data
+            $this->logActivityUpdate($id, $oldData ?? [], $data);
 
             return $this->jsonResponse(true, [
                 'message' => $this->getLang('update_success') ?? 'Record updated successfully.',
@@ -1337,6 +1430,9 @@ class GroceryCrud
             // Before update callback
             $data = $this->callbackManager->executeBefore('beforeUpdate', $data);
 
+            // Fetch old data for activity log before updating
+            $oldData = $this->activityLog !== null ? $this->model->getRawRow($id) : null;
+
             // Update
             $updated = $this->model->update($id, $data);
 
@@ -1353,6 +1449,9 @@ class GroceryCrud
                 'id'         => $id,
                 'data'       => [$field => $value],
             ]);
+
+            // Activity Log: log inline update with old + new data
+            $this->logActivityUpdate($id, $oldData ?? [], $data);
 
             // Fetch updated record with relations resolved
             $record = $this->model->getRow($id);
@@ -1393,6 +1492,9 @@ class GroceryCrud
         $this->ensureInitialized();
 
         try {
+            // Fetch old data for activity log before deleting
+            $oldData = $this->activityLog !== null ? $this->model->getRawRow($id) : null;
+
             // Before delete callback
             $this->callbackManager->executeBefore('beforeDelete', [
                 'table'      => $this->table,
@@ -1417,6 +1519,9 @@ class GroceryCrud
                 'primaryKey' => $this->primaryKey,
                 'id'         => $id,
             ]);
+
+            // Activity Log
+            $this->logActivityDelete($id, $oldData);
 
             return $this->jsonResponse(true, [
                 'message' => $this->getLang('delete_success') ?? 'Record deleted successfully.',
@@ -1443,6 +1548,9 @@ class GroceryCrud
                     'message' => $this->getLang('restore_fail') ?? 'Failed to restore record.',
                 ]);
             }
+
+            // Activity Log
+            $this->logActivityRestore($id);
 
             return $this->jsonResponse(true, [
                 'message' => $this->getLang('restore_success') ?? 'Record restored successfully.',
@@ -3155,6 +3263,18 @@ class GroceryCrud
             };
 
             if ($result) {
+                // Activity Log for batch actions
+                if ($this->activityLog !== null) {
+                    $actionType = match ($batchAction) {
+                        'delete_selected' => 'batch_delete',
+                        'restore_selected' => 'batch_restore',
+                        default => null,
+                    };
+                    if ($actionType !== null) {
+                        $this->logActivityBatch($actionType, $ids);
+                    }
+                }
+
                 return $this->jsonResponse(true, [
                     'message' => $this->getLang('batch_success') ?? 'Batch action completed.',
                 ]);
@@ -3219,6 +3339,94 @@ class GroceryCrud
     private function getLang(string $key): string
     {
         return $this->languageStrings[$key] ?? $key;
+    }
+
+    // ======== Activity Log Internal Helpers ========
+
+    /**
+     * Log an insert activity.
+     */
+    private function logActivityInsert(mixed $insertId, array $data): void
+    {
+        if ($this->activityLog === null) {
+            return;
+        }
+
+        $this->activityLog->logInsert(
+            $this->table,
+            $insertId,
+            $data
+        );
+    }
+
+    /**
+     * Log an update activity with old and new data.
+     */
+    private function logActivityUpdate(mixed $id, array $oldData, array $newData): void
+    {
+        if ($this->activityLog === null) {
+            return;
+        }
+
+        $this->activityLog->logUpdate(
+            $this->table,
+            $id,
+            $oldData,
+            $newData
+        );
+    }
+
+    /**
+     * Log a delete activity.
+     */
+    private function logActivityDelete(mixed $id, ?array $oldData): void
+    {
+        if ($this->activityLog === null) {
+            return;
+        }
+
+        $this->activityLog->logDelete(
+            $this->table,
+            $id,
+            $oldData
+        );
+    }
+
+    /**
+     * Log a restore activity.
+     */
+    private function logActivityRestore(mixed $id): void
+    {
+        if ($this->activityLog === null) {
+            return;
+        }
+
+        $this->activityLog->logRestore(
+            $this->table,
+            $id
+        );
+    }
+
+    /**
+     * Log a batch activity (delete/restore multiple).
+     *
+     * @param string $actionType 'batch_delete' or 'batch_restore'
+     * @param array<int, mixed> $ids
+     */
+    private function logActivityBatch(string $actionType, array $ids): void
+    {
+        if ($this->activityLog === null) {
+            return;
+        }
+
+        // Log each ID individually for better traceability
+        foreach ($ids as $id) {
+            if ($actionType === 'batch_delete') {
+                $this->activityLog->logDelete($this->table, $id);
+            } elseif ($actionType === 'batch_restore') {
+                $this->activityLog->logRestore($this->table, $id);
+            }
+        }
     }
 
     /**

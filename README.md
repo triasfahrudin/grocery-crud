@@ -27,6 +27,7 @@ Library CRUD generator full-featured untuk CodeIgniter 4. Terinspirasi dari Groc
 - **Dynamic Form Conditions** — Show/hide atau enable/disable field berdasarkan nilai field lain (dependsOn)
 - **Field Type Detection** — Auto-detect tipe field dari database
 - **Field Type Override** — Override tipe field manual (dropdown, enum, color, dll)
+- **Activity Log / Audit Trail** — Catat otomatis siapa membuat/mengubah/menghapus data + data sebelum-sesudah
 - **Cache Busting** — Version query param otomatis pada CSS/JS assets
 
 ## Instalasi
@@ -413,6 +414,106 @@ HTTP status codes:
 - **CORS**: Untuk akses dari domain berbeda, tambahkan CORS headers di controller atau middleware.
 - **`_raw` field**: Setiap record menyertakan `_raw` dengan data mentah dari database, berguna untuk SPA yang perlu akses field tersembunyi.
 - **Soft Delete**: Method `DELETE` melakukan soft delete jika `setSoftDelete()` aktif. Gunakan `gc_action=restore` untuk mengembalikan.
+
+## Activity Log / Audit Trail
+
+Fitur **Activity Log** mencatat otomatis semua operasi CRUD (insert, update, delete, restore, batch) ke tabel database. Setiap log menyimpan:
+- **Siapa** yang melakukan (user_id, user_name)
+- **Aksi** apa yang dilakukan (insert, update, delete, restore, import)
+- **Data sebelum & sesudah** perubahan (dalam format JSON)
+- **Kapan** (timestamp) dan **dari mana** (IP address, user agent)
+
+### Persiapan
+
+Jalankan SQL migration untuk membuat tabel `activity_logs`:
+
+```sql
+-- Lihat file: src/ActivityLog/activity_logs.sql
+SOURCE vendor/triasfahrudin/grocery-crud/src/ActivityLog/activity_logs.sql;
+```
+
+Atau import langsung file SQL dari package.
+
+### Penggunaan
+
+```php
+$crud = new GroceryCrud();
+$crud->setTable('products');
+
+// Basic: tanpa user tracking (user_id akan null)
+$crud->enableActivityLog();
+
+// Dengan user resolver: cocok untuk session-based auth
+$crud->enableActivityLog(function () {
+    $session = session();
+    return [
+        'id'   => $session->get('user_id'),
+        'name' => $session->get('user_name'),
+    ];
+});
+
+// Atau dengan auth service (Shield, Myth Auth, dll)
+$crud->enableActivityLog(function () {
+    $user = auth()->user();
+    return [
+        'id'   => $user->id,
+        'name' => $user->username,
+    ];
+});
+
+return $crud->render();
+```
+
+### Konfigurasi Tambahan
+
+```php
+// Custom table name (default: 'activity_logs')
+$crud->setActivityLogTable('app_audit_logs');
+
+// Set field labels untuk human-readable diff
+$crud->setActivityLogFieldLabels([
+    'name'  => 'Nama Produk',
+    'price' => 'Harga',
+    'stock' => 'Stok',
+]);
+
+// Exclude field sensitif dari log (default: password, password_hash)
+$crud->setActivityLogExcludeFields(['password', 'token', 'secret']);
+```
+
+### Melihat Log
+
+Akses langsung ke tabel `activity_logs` di database, atau gunakan `ActivityLogManager`:
+
+```php
+$activityLog = $crud->getActivityLog();
+
+// Get paginated logs
+$result = $activityLog->getLogs(
+    filters: ['table_name' => 'products'],
+    page: 1,
+    perPage: 50
+);
+
+// Generate human-readable diff
+$changes = $activityLog->diff($oldData, $newData);
+foreach ($changes as $change) {
+    echo "{$change['label']}: '{$change['old']}' → '{$change['new']}'\n";
+}
+
+// Purge logs older than 90 days
+$activityLog->purgeOlderThan(date('Y-m-d', strtotime('-90 days')));
+```
+
+### Method API
+
+| Method | Deskripsi |
+|--------|-----------|
+| `enableActivityLog(?callable $userResolver)` | Aktifkan audit trail |
+| `setActivityLogTable(string $tableName)` | Set custom table name |
+| `setActivityLogFieldLabels(array $labels)` | Set label field untuk diff |
+| `setActivityLogExcludeFields(array $fields)` | Exclude field sensitif dari log |
+| `getActivityLog(): ?ActivityLogManager` | Dapatkan instance manager |
 
 ## Theme
 

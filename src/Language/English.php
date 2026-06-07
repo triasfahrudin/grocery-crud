@@ -87,5 +87,25 @@ class English
         'import_no_data'        => 'No data to import.',
         'import_file_required'  => 'Please select a file to import.',
         'import_confirm'        => 'Are you sure you want to import {total} records?',
+
+        // Activity Log / Audit Trail
+        'activity_log'          => 'Activity Log',
+        'activity_logs'         => 'Activity Logs',
+        'activity_log_empty'    => 'No activities recorded yet.',
+        'activity_log_action_insert' => 'Created',
+        'activity_log_action_update' => 'Updated',
+        'activity_log_action_delete' => 'Deleted',
+        'activity_log_action_restore' => 'Restored',
+        'activity_log_action_import' => 'Imported',
+        'activity_log_table'    => 'Table',
+        'activity_log_record'   => 'Record',
+        'activity_log_user'     => 'User',
+        'activity_log_action'   => 'Action',
+        'activity_log_date'     => 'Date',
+        'activity_log_ip'       => 'IP Address',
+        'activity_log_old_value' => 'Old Value',
+        'activity_log_new_value' => 'New Value',
+        'activity_log_no_changes' => 'No changes',
+        'activity_log_detail'   => 'Detail',
     ];
 }

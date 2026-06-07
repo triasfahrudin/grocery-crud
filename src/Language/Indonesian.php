@@ -86,5 +86,25 @@ class Indonesian
         'import_no_data'        => 'Tidak ada data untuk diimpor.',
         'import_file_required'  => 'Silakan pilih file untuk diimpor.',
         'import_confirm'        => 'Apakah Anda yakin ingin mengimpor {total} data?',
+
+        // Activity Log / Audit Trail
+        'activity_log'          => 'Log Aktivitas',
+        'activity_logs'         => 'Log Aktivitas',
+        'activity_log_empty'    => 'Belum ada aktivitas tercatat.',
+        'activity_log_action_insert' => 'Ditambahkan',
+        'activity_log_action_update' => 'Diubah',
+        'activity_log_action_delete' => 'Dihapus',
+        'activity_log_action_restore' => 'Dipulihkan',
+        'activity_log_action_import' => 'Diimpor',
+        'activity_log_table'    => 'Tabel',
+        'activity_log_record'   => 'Data',
+        'activity_log_user'     => 'Pengguna',
+        'activity_log_action'   => 'Aksi',
+        'activity_log_date'     => 'Tanggal',
+        'activity_log_ip'       => 'Alamat IP',
+        'activity_log_old_value' => 'Nilai Lama',
+        'activity_log_new_value' => 'Nilai Baru',
+        'activity_log_no_changes' => 'Tidak ada perubahan',
+        'activity_log_detail'   => 'Detail',
     ];
 }
