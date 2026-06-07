@@ -259,6 +259,161 @@ $crud->setImportable(true);
 
 > **Catatan:** CSV import bekerja tanpa dependensi tambahan. XLSX membutuhkan `composer require phpoffice/phpspreadsheet`.
 
+## REST API Mode
+
+Gunakan `setApiMode()` untuk mengubah CRUD menjadi **headless REST API** yang mengembalikan JSON murni (tanpa HTML) — cocok untuk SPA, mobile app, atau integrasi eksternal.
+
+### Quick Start
+
+```php
+<?php
+
+namespace App\Controllers;
+
+use CodeIgniter\HTTP\ResponseInterface;
+use GroceryCrud\GroceryCrud;
+
+class ApiContacts extends BaseController
+{
+    public function index($id = null): ResponseInterface
+    {
+        $crud = new GroceryCrud();
+        $crud->setApiMode();
+        $crud->setTable('contacts', 'Contact');
+        $crud->setColumns('name', 'email', 'phone');
+        $crud->setFields('name', 'email', 'phone');
+
+        // Pass URL segment sebagai query param
+        if ($id !== null) {
+            $_GET['id'] = $id;
+        }
+
+        return $crud->render();
+    }
+}
+```
+
+### Routing
+
+Register routes untuk semua HTTP method:
+
+```php
+$routes->add('api/contacts',        'ApiContacts::index');
+$routes->add('api/contacts/(:any)', 'ApiContacts::index/$1');
+```
+
+### Endpoints
+
+| HTTP Method | URL | Action | Deskripsi |
+|---|---|---|---|
+| `GET` | `/api/contacts` | **list** | Daftar records (paginated) |
+| `GET` | `/api/contacts?id=123` | **read** | Single record |
+| `POST` | `/api/contacts` | **add** | Buat record baru |
+| `PUT` / `PATCH` | `/api/contacts?id=123` | **edit** | Update record |
+| `DELETE` | `/api/contacts?id=123` | **delete** | Hapus record |
+| `GET` | `/api/contacts/form` | **form_data** | Field definitions untuk SPA form |
+| `POST` | `/api/contacts?gc_action=batch_action&action_name=delete` | **batch_action** | Batch action |
+| `GET` | `/api/contacts?trashed=1` | **trash_list** | Trash view (soft delete) |
+| `DELETE` | `/api/contacts?id=123&gc_action=restore` | **restore** | Restore soft-deleted record |
+| `POST` | `/api/contacts?gc_action=import_upload` | **import_upload** | Upload file import |
+| `POST` | `/api/contacts?gc_action=import_execute` | **import_execute** | Eksekusi import |
+| `GET` | `/api/contacts?export=1` | **export** | Export CSV/Excel |
+
+### Response Format
+
+**List:**
+```json
+{
+    "data": [
+        {
+            "id": 1,
+            "name": "John Doe",
+            "email": "john@example.com",
+            "phone": "08123456789",
+            "_raw": { ... }
+        }
+    ],
+    "total": 42,
+    "page": 1,
+    "perPage": 25,
+    "totalPages": 2
+}
+```
+
+**Single Record (read/add/edit/delete):**
+```json
+{
+    "data": {
+        "id": 1,
+        "name": "John Doe",
+        "email": "john@example.com"
+    },
+    "message": "Record inserted successfully."
+}
+```
+
+**Form Data (form_data):**
+```json
+{
+    "data": {
+        "primaryKey": "id",
+        "subject": "Contact",
+        "fields": [
+            {
+                "name": "name",
+                "label": "Full Name",
+                "type": "text",
+                "required": true,
+                "value": "John Doe"
+            }
+        ]
+    }
+}
+```
+
+### Error Response
+
+```json
+{
+    "message": "Validation failed.",
+    "errors": {
+        "email": "The Email Address field must contain a unique value."
+    }
+}
+```
+
+HTTP status codes:
+| Code | Deskripsi |
+|------|-----------|
+| 200 | Success |
+| 201 | Created (add) |
+| 400 | Bad request (missing ID, invalid params) |
+| 403 | Permission denied |
+| 404 | Record not found |
+| 422 | Validation error |
+| 500 | Internal server error |
+
+### Query Parameters
+
+| Parameter | Deskripsi | Default |
+|---|---|---|
+| `page` | Halaman | `1` |
+| `perPage` | Item per halaman | `25` |
+| `search` | Keyword pencarian global | — |
+| `sort_field` | Field untuk sorting | — |
+| `sort_dir` | Arah sorting (`asc` / `desc`) | — |
+| `filters` | JSON filter object | `{}` |
+| `trashed` | Tampilkan trash view (`1`) | — |
+| `export` | Export format (`1`, `csv`, `xlsx`) | — |
+| `gc_action` | Force action override | — |
+
+### Catatan
+
+- **Auth**: API tetap menggunakan filter/auth yang sama dengan web UI. Pastikan endpoint API dilindungi sesuai kebutuhan.
+- **CORS**: Untuk akses dari domain berbeda, tambahkan CORS headers di controller atau middleware.
+- **`_raw` field**: Setiap record menyertakan `_raw` dengan data mentah dari database, berguna untuk SPA yang perlu akses field tersembunyi.
+- **Soft Delete**: Method `DELETE` melakukan soft delete jika `setSoftDelete()` aktif. Gunakan `gc_action=restore` untuk mengembalikan.
+
 ## Theme
 
 ```php
@@ -285,6 +440,7 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | `setSearchable(bool $searchable)` | Aktifkan/nonaktifkan search |
 | `setExportable(bool $exportable)` | Aktifkan/nonaktifkan export |
 | `setImportable(bool $importable)` | Aktifkan/nonaktifkan import CSV/Excel |
+| `setApiMode(bool $apiMode = true)` | Mode headless REST API (JSON, tanpa HTML) |
 | `setSoftDelete(bool $enabled)` | Aktifkan soft delete |
 | `withTrashed()` | Tampilkan record yang sudah di-soft-delete |
 | `orderBy(string $field, string $direction)` | Default order |

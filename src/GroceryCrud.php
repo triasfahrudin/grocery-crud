@@ -149,6 +149,9 @@ class GroceryCrud
 
     private string $crudId;
 
+    /** @var bool Enable REST API mode (returns JSON, no HTML) */
+    private bool $apiMode = false;
+
     public function __construct(?GCConfig $config = null, ?BaseConnection $db = null)
     {
         $this->config = $config ?? new GCConfig();
@@ -964,11 +967,38 @@ class GroceryCrud
         return $this;
     }
 
+    // ======== REST API Mode ========
+
+    /**
+     * Enable REST API mode.
+     *
+     * When enabled, `render()` returns clean JSON responses instead of HTML.
+     * Actions are auto-detected from HTTP method:
+     *   GET    → list (paginated)
+     *   POST   → create (insert)
+     *   PUT    → update (edit)
+     *   DELETE → delete
+     *
+     * You can also pass `gc_action` query param to override.
+     * Record ID is resolved from `id` or primary key in GET/POST params.
+     *
+     * @param bool $apiMode
+     * @return self
+     */
+    public function setApiMode(bool $apiMode = true): self
+    {
+        $this->apiMode = $apiMode;
+        return $this;
+    }
+
     // ======== Render Methods ========
 
     /**
      * Render the full CRUD interface (list + actions).
      * In AJAX context, returns JSON; otherwise returns HTML.
+     *
+     * In API mode, returns clean JSON with REST-style responses,
+     * auto-detecting action from HTTP method.
      *
      * @return ResponseInterface|string
      */
@@ -981,7 +1011,27 @@ class GroceryCrud
         $action = $request->getPost('gc_action') ?? $request->getGet('gc_action');
 
         if ($action !== null) {
+            if ($this->apiMode) {
+                return $this->handleApiAction($action);
+            }
             return $this->handleAjaxAction($action);
+        }
+
+        // API mode: auto-detect action from HTTP method
+        if ($this->apiMode) {
+            $method = strtoupper($request->getMethod());
+            $hasId = $request->getGet($this->primaryKey) !== null
+                  || $request->getGet('id') !== null;
+
+            $action = match ($method) {
+                'GET'       => $hasId ? 'read' : 'list',
+                'POST'      => 'add',
+                'PUT',
+                'PATCH'     => 'edit',
+                'DELETE'    => 'delete',
+                default     => 'list',
+            };
+            return $this->handleApiAction($action);
         }
 
         // If trashed view, show trashed records on initial load
@@ -2468,6 +2518,614 @@ class GroceryCrud
     }
 
     /**
+     * Handle API action routing (REST API mode).
+     *
+     * Maps actions to dedicated API handlers that return standardized JSON
+     * with proper HTTP status codes, no HTML.
+     */
+    private function handleApiAction(string $action): ResponseInterface
+    {
+        // Check permission for this action
+        $requiredPermission = $this->getActionPermission($action);
+        if (!$this->hasPermission($requiredPermission)) {
+            return $this->apiError(
+                $this->getLang('permission_denied') ?? 'Permission denied.',
+                403
+            );
+        }
+
+        return match ($action) {
+            'list'          => $this->apiList(),
+            'read'          => $this->apiRead($this->getRequestId()),
+            'add'           => $this->apiCreate(),
+            'add_form'      => $this->apiFormData('add'),
+            'edit'          => $this->apiUpdate($this->getRequestId()),
+            'edit_form'     => $this->apiFormData('edit', $this->getRequestId()),
+            'delete'        => $this->apiDelete($this->getRequestId()),
+            'restore'       => $this->apiRestore($this->getRequestId()),
+            'trash_list'    => $this->apiTrashList(),
+            'export'        => $this->ajaxExport($this->getExportFormat()),
+            'import_upload' => $this->apiImportUpload(),
+            'import_execute'=> $this->apiImportExecute(),
+            'import_template' => $this->ajaxImportTemplate(),
+            'batch_action'  => $this->apiBatchAction(),
+            'inline_save'   => $this->ajaxInlineSave(),
+            default         => $this->apiError('Invalid API action.', 404),
+        };
+    }
+
+    // ======== REST API Handlers ========
+
+    /**
+     * API: List records with pagination.
+     *
+     * GET /api/table?page=1&perPage=10&search=...
+     */
+    private function apiList(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+
+        $page = (int) ($request->getGet('page') ?? $request->getPost('page') ?? 1);
+        $search = $request->getGet('search') ?? $request->getPost('search') ?? null;
+        $perPage = (int) ($request->getGet('perPage') ?? $request->getPost('perPage') ?? $this->perPage);
+        $sortField = $request->getGet('sort_field') ?? $request->getPost('sort_field') ?? null;
+        $sortDir = $request->getGet('sort_dir') ?? $request->getPost('sort_dir') ?? null;
+        $filtersJson = $request->getGet('filters') ?? $request->getPost('filters') ?? '{}';
+        $filters = json_decode($filtersJson, true) ?? [];
+        $advancedFilters = json_decode($request->getGet('advanced_filters') ?? '[]', true) ?: [];
+
+        $listData = $this->buildListData(
+            max(1, $page), $search, $perPage, $sortField, $sortDir,
+            $filters, $advancedFilters, $this->resolveColumns()
+        );
+
+        return $this->apiResponse(
+            $listData['records'],
+            '',
+            200,
+            [
+                'total'      => (int) ($listData['totalCount'] ?? 0),
+                'page'       => max(1, $page),
+                'perPage'    => $perPage,
+                'totalPages' => (int) ceil(($listData['totalCount'] ?? 0) / max(1, $perPage)),
+            ]
+        );
+    }
+
+    /**
+     * API: Read a single record.
+     *
+     * GET /api/table?id=123
+     */
+    private function apiRead(mixed $id): ResponseInterface
+    {
+        if (empty($id)) {
+            return $this->apiError('Record ID is required.', 400);
+        }
+
+        $this->ensureInitialized();
+
+        $columns = $this->resolveColumns();
+        $record = $this->model->getRow($id);
+
+        if ($record === null || $record === false) {
+            return $this->apiError('Record not found.', 404);
+        }
+
+        // Apply column callbacks
+        $columnCallbacks = $this->callbackManager->getColumnCallbacks();
+        foreach ($columnCallbacks as $field => $callback) {
+            if (isset($record[$field])) {
+                $record[$field] = $callback($record[$field], $record);
+            }
+        }
+
+        // Filter to requested columns if specified
+        if (!empty($columns)) {
+            $record = array_intersect_key($record, array_flip($columns));
+        }
+
+        return $this->apiResponse($record);
+    }
+
+    /**
+     * API: Create a new record.
+     *
+     * POST /api/table with JSON body or form data
+     */
+    private function apiCreate(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+        $data = $request->getPost() ?? $request->getJSON(true) ?? [];
+
+        // Remove action key
+        unset($data['gc_action']);
+
+        // Skip validation for fields disabled via dependsOn (action='enable')
+        $this->filterDependsOnValidationRules($data);
+
+        // Validation
+        $errors = $this->validationManager->validate($data);
+        if (!empty($errors)) {
+            return $this->apiError(
+                $this->getLang('insert_fail') ?? 'Validation failed.',
+                422,
+                $errors
+            );
+        }
+
+        try {
+            // Before insert callback
+            $data = $this->callbackManager->executeBefore('beforeInsert', $data);
+
+            // Handle uploads
+            $data = $this->handleUploads($data);
+            if ($data === false) {
+                return $this->apiError($this->getLang('upload_error') ?? 'Upload failed.', 400);
+            }
+
+            // Process repeater fields
+            $this->processRepeaterDataBeforeSave($data);
+
+            // Remove N-to-N fields
+            $data = $this->stripNtoNFields($data);
+
+            // Insert
+            $insertId = $this->model->insert($data);
+
+            if ($insertId === false || $insertId === 0) {
+                return $this->apiError(
+                    $this->getLang('insert_fail') ?? 'Failed to insert record.',
+                    500
+                );
+            }
+
+            // Handle repeater hasMany data
+            $this->processRepeaterDataAfterSave($insertId);
+
+            // Handle NtoN relations
+            $this->handleNtoNInsert($insertId, $data);
+
+            // After insert callback
+            $this->callbackManager->executeAfter('afterInsert', [
+                'table'         => $this->table,
+                'primaryKey'    => $this->primaryKey,
+                'insertId'      => $insertId,
+                'data'          => $data,
+            ]);
+
+            return $this->apiResponse(
+                [$this->primaryKey => $insertId],
+                $this->getLang('insert_success') ?? 'Record inserted successfully.',
+                201
+            );
+        } catch (\Throwable $e) {
+            return $this->apiError($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * API: Update a record.
+     *
+     * PUT /api/table?id=123 with JSON body or form data
+     */
+    private function apiUpdate(mixed $id): ResponseInterface
+    {
+        if (empty($id)) {
+            return $this->apiError('Record ID is required.', 400);
+        }
+
+        $this->ensureInitialized();
+        $request = Services::request();
+        $data = $request->getPost() ?? $request->getJSON(true) ?? [];
+
+        unset($data['gc_action'], $data[$this->primaryKey]);
+
+        // Validation (unique ignore current record)
+        foreach ($this->uniqueFields as $uniqueField) {
+            if (isset($data[$uniqueField])) {
+                $this->validationManager->uniqueExcept($uniqueField, $id, $this->columnLabels[$uniqueField] ?? null);
+            }
+        }
+
+        $errors = $this->validationManager->validate($data);
+        if (!empty($errors)) {
+            return $this->apiError(
+                $this->getLang('update_fail') ?? 'Validation failed.',
+                422,
+                $errors
+            );
+        }
+
+        try {
+            // Before update callback
+            $data = $this->callbackManager->executeBefore('beforeUpdate', $data);
+
+            // Handle uploads
+            $data = $this->handleUploads($data, $id);
+            if ($data === false) {
+                return $this->apiError($this->getLang('upload_error') ?? 'Upload failed.', 400);
+            }
+
+            // Preserve existing files
+            foreach ($this->uploadFieldConfigs as $field => $config) {
+                if (!isset($data[$field]) && $request->getPost($field . '_existing')) {
+                    $data[$field] = $request->getPost($field . '_existing');
+                }
+            }
+
+            // Strip _existing keys
+            foreach (array_keys($data) as $key) {
+                if (str_ends_with($key, '_existing')) {
+                    unset($data[$key]);
+                }
+            }
+
+            // Process repeater fields
+            $this->processRepeaterDataBeforeSave($data);
+
+            // Remove N-to-N fields
+            $data = $this->stripNtoNFields($data);
+
+            // Update
+            $updated = $this->model->update($id, $data);
+
+            // Handle repeater hasMany data
+            $this->processRepeaterDataAfterSave($id);
+
+            if (!$updated) {
+                return $this->apiError(
+                    $this->getLang('update_fail') ?? 'Failed to update record.',
+                    500
+                );
+            }
+
+            // Handle NtoN relations
+            $this->handleNtoNUpdate($id, $data);
+
+            // After update callback
+            $this->callbackManager->executeAfter('afterUpdate', [
+                'table'         => $this->table,
+                'primaryKey'    => $this->primaryKey,
+                'id'            => $id,
+                'data'          => $data,
+            ]);
+
+            return $this->apiResponse(
+                [$this->primaryKey => $id],
+                $this->getLang('update_success') ?? 'Record updated successfully.'
+            );
+        } catch (\Throwable $e) {
+            return $this->apiError($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * API: Delete a record.
+     *
+     * DELETE /api/table?id=123
+     */
+    private function apiDelete(mixed $id): ResponseInterface
+    {
+        if (empty($id)) {
+            return $this->apiError('Record ID is required.', 400);
+        }
+
+        $this->ensureInitialized();
+
+        try {
+            // Before delete callback
+            $this->callbackManager->executeBefore('beforeDelete', [
+                'table'         => $this->table,
+                'primaryKey'    => $this->primaryKey,
+                'id'            => $id,
+            ]);
+
+            // Delete related NtoN records
+            $this->handleNtoNDelete($id);
+
+            $deleted = $this->model->delete($id);
+
+            if (!$deleted) {
+                return $this->apiError(
+                    $this->getLang('delete_fail') ?? 'Failed to delete record.',
+                    500
+                );
+            }
+
+            // After delete callback
+            $this->callbackManager->executeAfter('afterDelete', [
+                'table'         => $this->table,
+                'primaryKey'    => $this->primaryKey,
+                'id'            => $id,
+            ]);
+
+            return $this->apiResponse(
+                null,
+                $this->getLang('delete_success') ?? 'Record deleted successfully.'
+            );
+        } catch (\Throwable $e) {
+            return $this->apiError($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * API: Restore a soft-deleted record.
+     */
+    private function apiRestore(mixed $id): ResponseInterface
+    {
+        if (empty($id)) {
+            return $this->apiError('Record ID is required.', 400);
+        }
+
+        $this->ensureInitialized();
+
+        try {
+            $restored = $this->model->restore($id);
+
+            if (!$restored) {
+                return $this->apiError(
+                    $this->getLang('restore_fail') ?? 'Failed to restore record.',
+                    500
+                );
+            }
+
+            return $this->apiResponse(
+                null,
+                $this->getLang('restore_success') ?? 'Record restored successfully.'
+            );
+        } catch (\Throwable $e) {
+            return $this->apiError($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * API: List trashed (soft-deleted) records.
+     */
+    private function apiTrashList(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $request = Services::request();
+        $page = (int) ($request->getGet('page') ?? $request->getPost('page') ?? 1);
+        $search = $request->getGet('search') ?? $request->getPost('search') ?? null;
+        $perPage = (int) ($request->getGet('perPage') ?? $request->getPost('perPage') ?? $this->perPage);
+        $sortField = $request->getGet('sort_field') ?? $request->getPost('sort_field') ?? null;
+        $sortDir = $request->getGet('sort_dir') ?? $request->getPost('sort_dir') ?? null;
+
+        $this->model->onlyTrashed();
+
+        $listData = $this->buildListData(
+            max(1, $page), $search, $perPage, $sortField, $sortDir,
+            [], [], [], true
+        );
+
+        return $this->apiResponse(
+            $listData['records'],
+            '',
+            200,
+            [
+                'total'      => (int) ($listData['totalCount'] ?? 0),
+                'page'       => max(1, $page),
+                'perPage'    => $perPage,
+                'totalPages' => (int) ceil(($listData['totalCount'] ?? 0) / max(1, $perPage)),
+            ]
+        );
+    }
+
+    /**
+     * API: Return form field definitions (no HTML).
+     *
+     * Useful for SPA frontends to dynamically build forms.
+     *
+     * GET /api/table?gc_action=add_form
+     * GET /api/table?id=123&gc_action=edit_form
+     */
+    private function apiFormData(string $mode, mixed $id = null): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($mode === 'edit' && empty($id)) {
+            return $this->apiError('Record ID is required.', 400);
+        }
+
+        $data = $this->buildFormData($mode, $id);
+
+        if ($data === null) {
+            return $this->apiError('Record not found.', 404);
+        }
+
+        // Format field definitions for SPA consumption
+        $fields = [];
+        foreach ($data['fields'] as $field) {
+            $fields[] = [
+                'name'      => $field,
+                'label'     => $data['fieldLabels'][$field] ?? $field,
+                'type'      => $data['fieldTypes'][$field] ?? 'text',
+                'value'     => $data['fieldValues'][$field] ?? '',
+                'options'   => $data['fieldOptions'][$field] ?? null,
+                'required'  => in_array($field, $this->requiredFields, true),
+                'readOnly'  => in_array($field, $this->readOnlyFields, true),
+                'unique'    => in_array($field, $this->uniqueFields, true),
+            ];
+        }
+
+        return $this->apiResponse([
+            'fields'    => $fields,
+            'primaryKey'=> $data['primaryKey'],
+            'subject'   => $this->subject,
+        ]);
+    }
+
+    /**
+     * API: Upload and parse import file.
+     */
+    private function apiImportUpload(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $request = Services::request();
+        $file = $request->getFile('import_file');
+
+        if ($file === null || !$file->isValid() || $file->hasMoved()) {
+            return $this->apiError(
+                $this->getLang('import_file_required') ?? 'Please select a file to import.',
+                400
+            );
+        }
+
+        try {
+            $importManager = $this->getImportManager();
+            $result = $importManager->parse([
+                'name'     => $file->getName(),
+                'tmp_name' => $file->getTempName(),
+                'size'     => $file->getSize(),
+                'error'    => $file->getError(),
+            ]);
+
+            $fields = $this->resolveFields('add');
+            $mapping = $importManager->detectMapping(
+                $result['headers'],
+                $fields,
+                $this->columnLabels
+            );
+
+            return $this->apiResponse([
+                'headers'     => $result['headers'],
+                'preview'     => $result['preview'],
+                'totalRows'   => $result['totalRows'],
+                'filename'    => $file->getName(),
+                'mapping'     => $mapping,
+                'fields'      => $fields,
+                'fieldLabels' => $this->columnLabels,
+            ]);
+        } catch (\Throwable $e) {
+            return $this->apiError($e->getMessage(), 400);
+        }
+    }
+
+    /**
+     * API: Execute import with mapped columns.
+     */
+    private function apiImportExecute(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+
+        $headers = $request->getPost('headers') ?? [];
+        $rows = $request->getPost('rows') ?? [];
+        $mapping = $request->getPost('mapping') ?? [];
+        $fields = $this->resolveFields('add');
+
+        // Map rows using column mapping
+        $mappedRows = [];
+        foreach ($rows as $row) {
+            $mapped = [];
+            foreach ($mapping as $csvIndex => $field) {
+                if (in_array($field, $fields, true)) {
+                    $mapped[$field] = $row[$csvIndex] ?? '';
+                }
+            }
+            if (!empty($mapped)) {
+                $mappedRows[] = $mapped;
+            }
+        }
+
+        if (empty($mappedRows)) {
+            return $this->apiError(
+                $this->getLang('import_no_data') ?? 'No data to import.',
+                400
+            );
+        }
+
+        $importManager = $this->getImportManager();
+        $result = $importManager->execute($mappedRows, function (array $row) {
+            try {
+                $row = $this->callbackManager->executeBefore('beforeInsert', $row);
+                $row = $this->stripNtoNFields($row);
+                $insertId = $this->model->insert($row);
+
+                if ($insertId) {
+                    $this->callbackManager->executeAfter('afterInsert', [
+                        'table'      => $this->table,
+                        'primaryKey' => $this->primaryKey,
+                        'insertId'   => $insertId,
+                        'data'       => $row,
+                    ]);
+                }
+
+                return $insertId;
+            } catch (\Throwable $e) {
+                return false;
+            }
+        });
+
+        $total = count($mappedRows);
+
+        return $this->apiResponse(
+            [
+                'imported' => $result['imported'],
+                'total'    => $total,
+                'errors'   => $result['errors'],
+            ],
+            $result['imported'] > 0
+                ? str_replace(
+                    ['{imported}', '{total}'],
+                    [(string) $result['imported'], (string) $total],
+                    $this->getLang('import_success') ?? 'Successfully imported {imported} of {total} records.'
+                )
+                : ($this->getLang('import_error') ?? 'Import failed.')
+        );
+    }
+
+    /**
+     * API: Execute batch action.
+     */
+    private function apiBatchAction(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+        $batchAction = $request->getPost('batch_action') ?? $request->getGet('batch_action');
+        $ids = $request->getPost('ids') ?? $request->getGet('ids') ?? [];
+
+        if (empty($batchAction) || !isset($this->batchActions[$batchAction])) {
+            return $this->apiError('Invalid batch action.', 400);
+        }
+
+        if (!is_array($ids) || empty($ids)) {
+            return $this->apiError('No records selected.', 400);
+        }
+
+        $permanentDelete = (bool) ($request->getPost('permanent_delete') ?? $request->getGet('permanent_delete') ?? false);
+
+        try {
+            $result = match ($batchAction) {
+                'delete_selected' => $permanentDelete
+                    ? $this->model->forceDeleteMultiple($ids)
+                    : $this->model->deleteMultiple($ids),
+                'restore_selected' => $this->model->restoreMultiple($ids),
+                default => false,
+            };
+
+            if ($result) {
+                return $this->apiResponse(
+                    null,
+                    $this->getLang('batch_success') ?? 'Batch action completed.'
+                );
+            }
+
+            return $this->apiError(
+                $this->getLang('batch_fail') ?? 'Batch action failed.',
+                500
+            );
+        } catch (\Throwable $e) {
+            return $this->apiError($e->getMessage(), 500);
+        }
+    }
+
+    /**
      * Handle batch actions (e.g. delete selected).
      */
     private function ajaxBatchAction(): ResponseInterface
@@ -2572,6 +3230,62 @@ class GroceryCrud
         return $response
             ->setContentType('application/json')
             ->setJSON(array_merge(['success' => $success], $data));
+    }
+
+    // ======== REST API Response Helpers ========
+
+    /**
+     * Create a standardized success response for REST API mode.
+     *
+     * @param mixed       $data       Response payload (null, array, or object)
+     * @param string      $message    Optional success message
+     * @param int         $statusCode HTTP status code (200, 201, etc.)
+     * @param array       $extra      Extra top-level keys (e.g., pagination)
+     * @return ResponseInterface
+     */
+    private function apiResponse(mixed $data = null, string $message = '', int $statusCode = 200, array $extra = []): ResponseInterface
+    {
+        $body = array_merge([
+            'data'    => $data,
+            'message' => $message,
+        ], $extra);
+
+        // Remove message key if empty
+        if (empty($message)) {
+            unset($body['message']);
+        }
+
+        // Remove data key if null
+        if ($data === null) {
+            unset($body['data']);
+        }
+
+        return Services::response()
+            ->setStatusCode($statusCode)
+            ->setContentType('application/json')
+            ->setJSON($body);
+    }
+
+    /**
+     * Create a standardized error response for REST API mode.
+     *
+     * @param string $message    Error description
+     * @param int    $statusCode HTTP status code (400, 403, 404, 422, 500)
+     * @param array  $errors     Optional field-level validation errors
+     * @return ResponseInterface
+     */
+    private function apiError(string $message, int $statusCode = 400, array $errors = []): ResponseInterface
+    {
+        $body = ['message' => $message];
+
+        if (!empty($errors)) {
+            $body['errors'] = $errors;
+        }
+
+        return Services::response()
+            ->setStatusCode($statusCode)
+            ->setContentType('application/json')
+            ->setJSON($body);
     }
 
     // ======== Repeater Field Helpers ========
