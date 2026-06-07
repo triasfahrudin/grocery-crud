@@ -848,6 +848,21 @@
         $modal.on('click', '.gc-import-execute-btn', function () {
             executeImport($modal);
         });
+
+        // Download template with selected fields
+        $modal.on('click', '.gc-template-download-selected', function () {
+            var fields = [];
+            $modal.find('.gc-template-field-cb:checked').each(function () {
+                fields.push($(this).val());
+            });
+            if (fields.length === 0) {
+                showAlert('Please select at least one field.', 'warning');
+                return;
+            }
+            var baseUrl = window.location.href.split('?')[0];
+            var params = $.param({ gc_action: 'import_template', fields: fields }, true);
+            window.open(baseUrl + '?' + params, '_blank');
+        });
     }
 
     function uploadImportFile($modal, file) {

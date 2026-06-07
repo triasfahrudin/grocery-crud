@@ -1751,8 +1751,16 @@ class GroceryCrud
     {
         $this->ensureInitialized();
 
+        $request = Services::request();
+        $selectedFields = $request->getGet('fields');
+
         $fields = $this->resolveFields('add');
         $labels = $this->columnLabels;
+
+        // If specific fields requested, filter to only those
+        if (!empty($selectedFields) && is_array($selectedFields)) {
+            $fields = array_intersect($fields, $selectedFields);
+        }
 
         // Build CSV in memory
         $output = fopen('php://temp', 'r+');

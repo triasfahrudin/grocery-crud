@@ -876,6 +876,8 @@ class Bootstrap5Theme implements ThemeInterface
         $subject = $data['subject'] ?? 'Records';
         $crudId  = $data['crudId'] ?? 'crud_' . uniqid();
         $templateUrl = $data['templateUrl'] ?? '';
+        $templateFields = $data['fields'] ?? [];
+        $templateFieldLabels = $data['fieldLabels'] ?? [];
 
         $lblImport      = $lang['import'] ?? 'Import';
         $lblCancel      = $lang['cancel'] ?? 'Cancel';
@@ -908,8 +910,26 @@ class Bootstrap5Theme implements ThemeInterface
         $html .= '</div>';
         $html .= '<div class="gc-import-filename text-muted small mt-1 d-none"></div>';
         $html .= '<div class="mt-2 small">';
-        $html .= '<a href="' . htmlspecialchars($templateUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" class="text-decoration-none">';
+        $html .= '<a href="' . htmlspecialchars($templateUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" class="text-decoration-none me-3 gc-template-download-all">';
         $html .= '<i class="bi bi-download me-1"></i>' . ($lang['import_download_template'] ?? 'Download CSV template') . '</a>';
+
+        // Customize template — pick which fields to include
+        $html .= '<a href="#" class="text-decoration-none gc-toggle-template-fields" data-bs-toggle="collapse" data-bs-target=".gc-template-fields">';
+        $html .= '<i class="bi bi-gear me-1"></i>' . ($lang['import_customize_template'] ?? 'Customize') . '</a>';
+        $html .= '<div class="gc-template-fields collapse mt-2 p-3 border rounded bg-light">';
+        $html .= '<div class="fw-semibold mb-2 small">' . ($lang['import_select_fields'] ?? 'Select fields to include:') . '</div>';
+        $html .= '<div class="d-flex flex-wrap gap-3">';
+        foreach ($templateFields as $field) {
+            $label = $templateFieldLabels[$field] ?? $field;
+            $html .= '<div class="form-check form-check-inline">';
+            $html .= '<input type="checkbox" class="form-check-input gc-template-field-cb" id="tpl_' . $field . '" value="' . htmlspecialchars($field, ENT_QUOTES, 'UTF-8') . '" checked>';
+            $html .= '<label class="form-check-label" for="tpl_' . $field . '">' . htmlspecialchars((string) $label, ENT_QUOTES, 'UTF-8') . '</label>';
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+        $html .= '<button type="button" class="btn btn-sm btn-outline-primary mt-2 gc-template-download-selected">';
+        $html .= '<i class="bi bi-download me-1"></i>' . ($lang['import_download_selected'] ?? 'Download Selected') . '</button>';
+        $html .= '</div>';
         $html .= '</div>';
         $html .= '</div>';
         $html .= '<div class="gc-import-uploading d-none text-center py-3">';
