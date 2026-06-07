@@ -400,6 +400,13 @@ class TailwindTheme implements ThemeInterface
         return $this->renderForm('edit', $data);
     }
 
+    public function renderImportForm(array $data): string
+    {
+        // Delegate to Bootstrap5Theme's import form for consistent UI
+        $bootstrap5 = new Bootstrap5Theme();
+        return $bootstrap5->renderImportForm($data);
+    }
+
     private function renderForm(string $mode, array $data): string
     {
         $lang = $this->languageStrings;
