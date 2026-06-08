@@ -106,5 +106,11 @@ class Indonesian
         'activity_log_new_value' => 'Nilai Baru',
         'activity_log_no_changes' => 'Tidak ada perubahan',
         'activity_log_detail'   => 'Detail',
+
+        // Export Selected Columns
+        'export_select_columns'     => 'Pilih Kolom untuk Diekspor',
+        'export_selected'           => 'Ekspor yang Dipilih',
+        'select_columns_hint'       => 'Pilih kolom yang akan dimasukkan ke dalam ekspor.',
+        'export_no_column_selected' => 'Silakan pilih setidaknya satu kolom.',
     ];
 }

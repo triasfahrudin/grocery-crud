@@ -771,14 +771,105 @@
                 'width=1200,height=800,scrollbars=yes'
             );
         } else {
-            // CSV, Excel, PDF: download normally
+            // CSV, Excel, PDF: show column selector modal
+            showExportColumnSelector($btn, format);
+        }
+    }
+
+    function showExportColumnSelector($btn, format) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        var $table = $wrapper.find('.gc-table');
+        if (!$table.length) return;
+
+        // Collect columns from table headers
+        var columns = [];
+        $table.find('thead th[data-column]').each(function () {
+            var $th = $(this);
+            var col = $th.data('column');
+            var label = $th.data('label') || col;
+            var isVisible = !$th.hasClass('d-none');
+            columns.push({ name: col, label: label, visible: isVisible });
+        });
+
+        if (columns.length === 0) return;
+
+        // Format label
+        var fmtLabels = { csv: 'CSV', excel: 'Excel', pdf: 'PDF' };
+        var fmtLabel = fmtLabels[format] || format.toUpperCase();
+
+        // Build modal HTML
+        var html = '<div class="p-3">';
+        html += '<h5 class="mb-3 fw-bold"><i class="bi bi-download me-2"></i>Select Columns to Export</h5>';
+        html += '<p class="text-muted small mb-3">Choose which columns to include in the ' + fmtLabel + ' export.</p>';
+        html += '<div class="mb-3">';
+
+        // Select All / Deselect All
+        html += '<div class="mb-2">';
+        html += '<button type="button" class="btn btn-sm btn-outline-secondary me-2 gc-export-selall">Select All</button>';
+        html += '<button type="button" class="btn btn-sm btn-outline-secondary gc-export-deselall">Deselect All</button>';
+        html += '</div>';
+
+        // Column checkboxes
+        html += '<div class="gc-export-columns-list" style="max-height:400px;overflow-y:auto;">';
+        for (var i = 0; i < columns.length; i++) {
+            var col = columns[i];
+            html += '<div class="form-check form-check-inline gc-export-col-item" style="min-width:180px;padding:4px 0;">';
+            html += '<input class="form-check-input gc-export-col-cb" type="checkbox" id="expcol_' + i + '" value="' + col.name + '"' + (col.visible ? ' checked' : '') + '>';
+            html += '<label class="form-check-label" for="expcol_' + i + '">' + col.label + '</label>';
+            html += '</div>';
+        }
+        html += '</div></div>';
+
+        // Footer buttons
+        html += '<div class="d-flex justify-content-end gap-2 border-top pt-3">';
+        html += '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>';
+        html += '<button type="button" class="btn btn-primary gc-export-submit-btn" data-format="' + format + '"><i class="bi bi-download me-1"></i>Export ' + fmtLabel + '</button>';
+        html += '</div></div>';
+
+        var $modal = GcModal.show(html);
+
+        // Select All
+        $modal.find('.gc-export-selall').on('click', function () {
+            $modal.find('.gc-export-col-cb').prop('checked', true);
+        });
+
+        // Deselect All
+        $modal.find('.gc-export-deselall').on('click', function () {
+            $modal.find('.gc-export-col-cb').prop('checked', false);
+        });
+
+        // Submit export
+        $modal.find('.gc-export-submit-btn').on('click', function () {
+            var selectedFormat = $(this).data('format');
+            var selectedColumns = [];
+            $modal.find('.gc-export-col-cb:checked').each(function () {
+                selectedColumns.push($(this).val());
+            });
+
+            if (selectedColumns.length === 0) {
+                showAlert('Please select at least one column.', 'warning');
+                return;
+            }
+
+            GcModal.remove();
             showLoading();
-            window.location.href = window.location.pathname
-                + '?gc_action=export&format=' + format;
+
+            // Build POST form to trigger file download
+            var $form = $('<form method="post" style="display:none"></form>');
+            $form.attr('action', window.location.href.split('?')[0]);
+            $form.append('<input type="hidden" name="gc_action" value="export">');
+            $form.append('<input type="hidden" name="format" value="' + selectedFormat + '">');
+            for (var j = 0; j < selectedColumns.length; j++) {
+                $form.append('<input type="hidden" name="columns[]" value="' + selectedColumns[j] + '">');
+            }
+            $('body').append($form);
+            $form.submit();
+
             setTimeout(function () {
                 hideLoading();
-            }, 2000);
-        }
+                $form.remove();
+            }, 3000);
+        });
     }
 
     // ======== Import Workflow ========

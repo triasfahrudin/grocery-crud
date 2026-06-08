@@ -1683,6 +1683,16 @@ class GroceryCrud
 
         $columns = $this->resolveColumns();
 
+        // Filter columns if specific columns requested for export (POST)
+        $request = Services::request();
+        $exportColumns = $request->getPost('columns');
+        if (!empty($exportColumns) && is_array($exportColumns)) {
+            $filtered = array_intersect($columns, $exportColumns);
+            if (!empty($filtered)) {
+                $columns = array_values($filtered);
+            }
+        }
+
         $records = $this->model->getList(
             $columns,
             0, // no limit

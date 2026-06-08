@@ -107,5 +107,11 @@ class English
         'activity_log_new_value' => 'New Value',
         'activity_log_no_changes' => 'No changes',
         'activity_log_detail'   => 'Detail',
+
+        // Export Selected Columns
+        'export_select_columns'     => 'Select Columns to Export',
+        'export_selected'           => 'Export Selected',
+        'select_columns_hint'       => 'Choose which columns to include in the export.',
+        'export_no_column_selected' => 'Please select at least one column.',
     ];
 }
