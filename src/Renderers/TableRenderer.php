@@ -101,11 +101,19 @@ class TableRenderer
     {
         $cssLinks = '';
         foreach ($theme->getCssFiles() as $css) {
+            // Skip Bootstrap CSS — we already include it globally for navbar
+            if (str_contains($css, 'bootstrap')) {
+                continue;
+            }
             $cssLinks .= '<link rel="stylesheet" href="' . $css . '">' . "\n";
         }
 
         $jsLinks = '';
         foreach ($theme->getJsFiles() as $js) {
+            // Skip Bootstrap JS — we include a fresh version globally
+            if (str_contains($js, 'bootstrap')) {
+                continue;
+            }
             $jsLinks .= '<script src="' . $js . '"></script>' . "\n";
         }
 
@@ -120,6 +128,8 @@ class TableRenderer
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{$themeName} - Grocery CRUD</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     {$cssLinks}
     <link rel="stylesheet" href="/assets/grocery-crud/css/grocery-crud.css?v={$cssV}">
 </head>
@@ -129,6 +139,7 @@ class TableRenderer
         {$content}
     </div>
     {$jsLinks}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/table-dragger@2.0.5/dist/table-dragger.min.js"></script>
     <script src="/assets/grocery-crud/js/grocery-crud.js?v={$jsV}"></script>
 </body>
