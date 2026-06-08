@@ -422,7 +422,12 @@ class Bootstrap5Theme implements ThemeInterface
                         $url = str_replace('{id}', $rowId, $action['url'] ?? '#');
                         $actionLabel = $action['label'] ?? '';
                         $actionIcon = $action['icon'] ?? '';
-                        $html .= '<a href="' . $url . '" class="btn btn-outline-secondary" title="' . htmlspecialchars($actionLabel) . '">';
+                        $actionCss = $action['cssClass'] ?? '';
+                        $actionClasses = 'btn btn-outline-secondary gc-custom-action';
+                        if ($actionCss !== '') {
+                            $actionClasses .= ' ' . htmlspecialchars($actionCss);
+                        }
+                        $html .= '<a href="' . $url . '" class="' . $actionClasses . '" title="' . htmlspecialchars($actionLabel) . '" data-id="' . $rowId . '">';
                         if ($actionIcon !== '') {
                             $html .= '<i class="' . htmlspecialchars($actionIcon) . '"></i>';
                         } else {

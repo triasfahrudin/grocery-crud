@@ -146,9 +146,15 @@
 }
 
 /* Reduce modal backdrop opacity (AdminLTE 4 default is too dark) */
+body > .modal-backdrop,
 .gc-modal ~ .modal-backdrop,
 .gc-image-viewer ~ .modal-backdrop {
-    --bs-backdrop-opacity: 0.3;
+    --bs-backdrop-opacity: 0.28;
+    background: rgba(0, 0, 0, 0.28) !important;
+    opacity: 1 !important;
+}
+body > .modal-backdrop.show {
+    opacity: 1 !important;
 }
 
 /* Ensure modal content has white background */
@@ -748,6 +754,45 @@ td.gc-inline-editor-active::after {
     opacity: 1 !important;
     transform: none !important;
     pointer-events: auto !important;
+}
+
+/* Export columns modal: prevent checkbox items from overflowing */
+.gc-export-columns-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.35rem 1rem;
+    max-height: min(55vh, 420px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 0.5rem 0.25rem;
+}
+.gc-export-columns-list .gc-export-col-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    min-width: 0;
+    padding: 0.25rem 0.5rem !important;
+    margin: 0;
+}
+.gc-export-columns-list .gc-export-col-cb {
+    width: 1em;
+    height: 1em;
+    flex: 0 0 auto;
+    margin: 0.2em 0 0 0;
+    float: none;
+    opacity: 1 !important;
+    position: static !important;
+    pointer-events: auto !important;
+    transform: none !important;
+    appearance: auto;
+    -webkit-appearance: auto;
+}
+.gc-export-columns-list .form-check-label {
+    min-width: 0;
+    line-height: 1.35;
+    word-break: break-word;
+    white-space: normal;
+    cursor: pointer;
 }
 
 /* Anchor the toolbar's dropdowns so position:absolute dropdowns appear below the buttons */

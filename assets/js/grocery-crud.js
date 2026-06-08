@@ -816,11 +816,11 @@
         html += '</div>';
 
         // Column checkboxes
-        html += '<div class="gc-export-columns-list" style="max-height:400px;overflow-y:auto;">';
+        html += '<div class="gc-export-columns-list">';
         for (var i = 0; i < columns.length; i++) {
             var col = columns[i];
-            html += '<div class="form-check form-check-inline gc-export-col-item" style="min-width:180px;padding:4px 0;">';
-            html += '<input class="form-check-input gc-export-col-cb" type="checkbox" id="expcol_' + i + '" value="' + col.name + '"' + (col.visible ? ' checked' : '') + '>';
+            html += '<div class="form-check gc-export-col-item">';
+            html += '<input class="form-check-input browser-default gc-export-col-cb" type="checkbox" id="expcol_' + i + '" value="' + col.name + '"' + (col.visible ? ' checked' : '') + '>';
             html += '<label class="form-check-label" for="expcol_' + i + '">' + col.label + '</label>';
             html += '</div>';
         }
@@ -2259,7 +2259,7 @@
                         $('body').addClass('modal-open');
                         // Backdrop
                         if ($('.modal-backdrop').length === 0) {
-                            $('body').append('<div class="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:1050;background:rgba(0,0,0,0.5)"></div>');
+                            $('body').append('<div class="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:1050;background:rgba(0,0,0,0.28)"></div>');
                         }
                     });
                 }
@@ -2619,6 +2619,28 @@
             if (deleteMsg) {
                 $wrapper.data('confirm-delete', deleteMsg);
             }
+        });
+
+        // ======== Preview Action (btn-preview) ========
+        $(document).on('click', '.btn-preview', function (e) {
+            e.preventDefault();
+            var $wrapper = $(this).closest('.grocery-crud-wrapper');
+            var recordId = $(this).data('id');
+            var $row = $wrapper.find('tr[data-parent-id="' + recordId + '"]');
+            if (!$row.length) return;
+
+            var html = '<div class="p-3">';
+            html += '<h5 class="mb-3 fw-bold"><i class="bi bi-eye me-2"></i>Record Preview</h5>';
+            html += '<table class="table table-bordered table-sm">';
+            $row.find('td[data-column]').each(function () {
+                var col = $(this).data('column');
+                var label = $wrapper.find('th[data-column="' + col + '"]').data('label') || col;
+                var val = $(this).html();
+                html += '<tr><th style="width:30%;background:#f8f9fa;">' + label + '</th><td>' + val + '</td></tr>';
+            });
+            html += '</table></div>';
+
+            GcModal.show(html);
         });
     });
 

@@ -73,6 +73,10 @@ class TableRenderer
             'enableInlineEditing'  => $crudData['enableInlineEditing'] ?? false,
             'inlineEditFieldTypes' => $crudData['inlineEditFieldTypes'] ?? [],
             'inlineFieldInfo'      => $crudData['inlineFieldInfo'] ?? [],
+            'relationPopovers'     => $crudData['relationPopovers'] ?? [],
+            'enableActivityLogViewer' => $crudData['enableActivityLogViewer'] ?? false,
+            'calendarField'       => $crudData['calendarField'] ?? null,
+            'calendarTitleField'  => $crudData['calendarTitleField'] ?? null,
         ];
     }
 
