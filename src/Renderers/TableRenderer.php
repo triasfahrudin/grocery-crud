@@ -125,7 +125,9 @@ class TableRenderer
 <style>
 /* Navbar overrides: protect Bootstrap navbar from non-Bootstrap themes (Materialize, etc.) */
 body nav.navbar { height: auto !important; line-height: normal !important; }
-body nav.navbar .navbar-brand { color: #fff !important; text-decoration: none !important; }
+body nav.navbar .navbar-brand { color: #fff !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; }
+body nav.navbar .navbar-brand i.bi { background: rgba(255,255,255,0.15) !important; color: #fff !important; padding: 8px !important; border-radius: 50% !important; font-size: 1.3em !important; line-height: 1 !important; }
+body nav.navbar .navbar-brand small { opacity: .8 !important; }
 body nav.navbar .btn { text-transform: none !important; letter-spacing: normal !important; height: auto !important; line-height: 1.5 !important; }
 body nav.navbar .badge { font-weight: 700 !important; line-height: 1 !important; }
 body nav.navbar .vr { opacity: .25 !important; }
