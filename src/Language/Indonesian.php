@@ -119,5 +119,9 @@ class Indonesian
         // Calendar View
         'calendar_view'             => 'Tampilan Kalender',
         'table_view'                => 'Tampilan Tabel',
+
+        // Record Locking
+        'record_locked_by'          => 'Data ini sedang diedit oleh %s.',
+        'lock_expired'              => 'Kunci data telah kedaluwarsa. Silakan coba lagi.',
     ];
 }

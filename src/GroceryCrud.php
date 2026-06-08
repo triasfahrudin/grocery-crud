@@ -17,6 +17,7 @@ use GroceryCrud\Export\CsvExport;
 use GroceryCrud\Export\ExcelExport;
 use GroceryCrud\Export\PdfExport;
 use GroceryCrud\Import\ImportManager;
+use GroceryCrud\Lock\RecordLockManager;
 use GroceryCrud\Fields\FieldType;
 use GroceryCrud\Models\CrudModel;
 use GroceryCrud\Relations\RelationManager;
@@ -174,6 +175,15 @@ class GroceryCrud
     /** @var ?ActivityLogManager Activity Log / Audit Trail manager */
     private ?ActivityLogManager $activityLog = null;
 
+    /** @var ?RecordLockManager Record-level locking manager */
+    private ?RecordLockManager $recordLockManager = null;
+
+    /** @var ?callable Callback to resolve current user info for locking: fn(): array{id: string, name: string} */
+    private $lockUserCallback = null;
+
+    /** @var int Minutes before a record lock auto-expires */
+    private int $lockMinutes = 5;
+
     /** @var string Optional HTML to inject at the top of the page (inside <body>) */
     private string $headerHtml = '';
 
@@ -226,6 +236,64 @@ class GroceryCrud
         $this->calendarTitleField = $titleField;
 
         return $this;
+    }
+
+    /**
+     * Enable record-level locking to prevent concurrent edits by multiple users.
+     *
+     * When enabled, opening an edit form acquires a lock on that record.
+     * Other users will see a warning if they try to edit the same record.
+     * Locks are released on save/cancel and auto-expire after $lockMinutes.
+     *
+     * Requires setLockUserCallback() to identify the current user.
+     *
+     * @param int $lockMinutes Lock expiry time in minutes (default: 5)
+     * @return $this
+     */
+    public function enableRecordLocking(int $lockMinutes = 5): self
+    {
+        $this->lockMinutes = max(1, $lockMinutes);
+        $this->recordLockManager = new RecordLockManager(null, $this->lockMinutes);
+
+        return $this;
+    }
+
+    /**
+     * Set a callback to resolve the current user's identity for record locking.
+     *
+     * The callback must return an array with 'id' and 'name' keys.
+     * Example:
+     *   $crud->setLockUserCallback(function() {
+     *       return ['id' => (string) auth()->id(), 'name' => auth()->user()->name];
+     *   });
+     *
+     * @param callable $callback fn(): array{id: string, name: string}
+     * @return $this
+     */
+    public function setLockUserCallback(callable $callback): self
+    {
+        $this->lockUserCallback = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Get current user info for record locking.
+     *
+     * @return array{id: string, name: string}
+     */
+    private function getLockUserInfo(): array
+    {
+        if ($this->lockUserCallback !== null) {
+            $info = call_user_func($this->lockUserCallback);
+            if (is_array($info) && isset($info['id'], $info['name'])) {
+                return ['id' => (string) $info['id'], 'name' => (string) $info['name']];
+            }
+        }
+
+        // Fallback: use session ID
+        $sessionId = session_id() ?: md5($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        return ['id' => $sessionId, 'name' => 'Anonymous (' . substr($sessionId, 0, 8) . ')'];
     }
 
     public function __construct(?GCConfig $config = null, ?BaseConnection $db = null)
@@ -1426,6 +1494,26 @@ class GroceryCrud
     public function ajaxEditForm(mixed $id): ResponseInterface
     {
         $this->ensureInitialized();
+
+        // Record locking check
+        if ($this->recordLockManager !== null) {
+            $userInfo = $this->getLockUserInfo();
+            $lockOk = $this->recordLockManager->acquireLock(
+                $this->table, $id, $userInfo['id'], $userInfo['name']
+            );
+
+            if (!$lockOk) {
+                $lock = $this->recordLockManager->getLock($this->table, $id);
+                return $this->jsonResponse(false, [
+                    'message' => sprintf(
+                        $this->getLang('record_locked_by') ?? 'This record is currently being edited by %s.',
+                        $lock['user_name'] ?? 'another user'
+                    ),
+                    'lockInfo' => $lock,
+                ]);
+            }
+        }
+
         $data = $this->buildFormData('edit', $id);
 
         if ($data === null) {
@@ -1446,6 +1534,21 @@ class GroceryCrud
     public function ajaxEdit(mixed $id): ResponseInterface
     {
         $this->ensureInitialized();
+
+        // Record locking check: verify current user owns the lock
+        if ($this->recordLockManager !== null) {
+            $userInfo = $this->getLockUserInfo();
+            $lock = $this->recordLockManager->getLock($this->table, $id);
+            if ($lock !== null && $lock['user_id'] !== $userInfo['id']) {
+                return $this->jsonResponse(false, [
+                    'message' => sprintf(
+                        $this->getLang('record_locked_by') ?? 'This record is currently being edited by %s.',
+                        $lock['user_name'] ?? 'another user'
+                    ),
+                ]);
+            }
+        }
+
         $request = Services::request();
         $data = $request->getPost();
 
@@ -1529,6 +1632,11 @@ class GroceryCrud
 
             // Activity Log: log update with old + new data
             $this->logActivityUpdate($id, $oldData ?? [], $data);
+
+            // Release record lock
+            if ($this->recordLockManager !== null) {
+                $this->recordLockManager->releaseLock($this->table, $id);
+            }
 
             return $this->jsonResponse(true, [
                 'message' => $this->getLang('update_success') ?? 'Record updated successfully.',
@@ -1676,6 +1784,11 @@ class GroceryCrud
 
             // Activity Log
             $this->logActivityDelete($id, $oldData);
+
+            // Release record lock if held
+            if ($this->recordLockManager !== null) {
+                $this->recordLockManager->releaseLock($this->table, $id);
+            }
 
             return $this->jsonResponse(true, [
                 'message' => $this->getLang('delete_success') ?? 'Record deleted successfully.',
@@ -2918,6 +3031,7 @@ class GroceryCrud
             'activity_log_data'   => $this->ajaxActivityLogData(),
             'activity_log_detail' => $this->ajaxActivityLogDetail(),
             'calendar_data'       => $this->ajaxCalendarData(),
+            'release_lock'        => $this->ajaxReleaseLock(),
             default               => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
     }
@@ -3867,6 +3981,31 @@ class GroceryCrud
      * GET /?gc_action=calendar_data
      * Returns JSON with events array compatible with FullCalendar.
      */
+    /**
+     * Release a record lock (called when user cancels/closes edit form).
+     *
+     * Expects POST: id
+     */
+    private function ajaxReleaseLock(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->recordLockManager === null) {
+            return $this->jsonResponse(true, []);
+        }
+
+        $request = Services::request();
+        $id = $request->getPost('id');
+
+        if (empty($id)) {
+            return $this->jsonResponse(false, ['message' => 'Missing record ID.']);
+        }
+
+        $this->recordLockManager->releaseLock($this->table, $id);
+
+        return $this->jsonResponse(true, []);
+    }
+
     private function ajaxCalendarData(): ResponseInterface
     {
         $this->ensureInitialized();

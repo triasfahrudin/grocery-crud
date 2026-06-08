@@ -120,5 +120,9 @@ class English
         // Calendar View
         'calendar_view'             => 'Calendar View',
         'table_view'                => 'Table View',
+
+        // Record Locking
+        'record_locked_by'          => 'This record is currently being edited by %s.',
+        'lock_expired'              => 'The record lock has expired. Please try again.',
     ];
 }

@@ -6,6 +6,10 @@
     'use strict';
 
     // ======== Alert Handler ========
+
+    /** @var {string|null} Record ID currently locked for editing (for release on close) */
+    var _lockedRecordId = null;
+
     function showAlert(message, type) {
         type = type || 'success';
         var icon = type === 'success' ? 'bi-check-circle-fill'
@@ -337,6 +341,7 @@
             success: function (response) {
                 if (response.success) {
                     var $modal = GcModal.show(response.html);
+                    _lockedRecordId = id; // Track for lock release on close
                     bindFormEvents($modal);
                 } else {
                     showAlert(response.message || 'Failed to load form.', 'danger');
@@ -577,6 +582,7 @@
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
+                    _lockedRecordId = null; // Lock already released server-side
                     GcModal.hide();
                     showAlert(response.message, 'success');
                     // Refresh the list
@@ -1867,8 +1873,15 @@
             GcModal.hide();
         });
 
-        // Close on backdrop click
+        // Close on backdrop click — also release record lock
         $modal.on('hidden.bs.modal', function () {
+            if (_lockedRecordId) {
+                $.post(window.location.href, {
+                    gc_action: 'release_lock',
+                    id: _lockedRecordId
+                });
+                _lockedRecordId = null;
+            }
             GcModal.remove();
         });
 
