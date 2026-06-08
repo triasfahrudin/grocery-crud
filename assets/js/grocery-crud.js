@@ -1502,29 +1502,51 @@
             });
         }
 
-        // Custom dropdown toggle: find target by data-target, toggle visibility
-        $(document).off('click.gc-dropdown', '.grocery-crud-wrapper a[data-target]').on('click.gc-dropdown', '.grocery-crud-wrapper a[data-target]', function (e) {
+        // Initialize all GC dropdowns as hidden (e.g. Materialize CSS doesn't hide .dropdown-content)
+        $('.grocery-crud-wrapper .dropdown-content').hide();
+
+        // Direct click handler for each dropdown trigger (binds directly to elements, avoids delegation issues)
+        $('.grocery-crud-wrapper a.dropdown-trigger[data-target]').off('click.gc-dd').on('click.gc-dd', function (e) {
             e.preventDefault();
             e.stopPropagation();
             var $btn = $(this);
             var targetId = $btn.data('target');
             var $target = $('#' + targetId);
-
             if (!$target.length) return;
+
+            // Debounce: ignore if this dropdown was just interacted with (prevents double-fire)
+            var now = Date.now();
+            var lastToggle = $target.data('gc-last-toggle') || 0;
+            if (now - lastToggle < 100) {
+                $target.data('gc-last-toggle', now);
+                return;
+            }
+            $target.data('gc-last-toggle', now);
+
+            // If this target is already open, close it
+            if ($target.is(':visible')) {
+                $target.hide();
+                return;
+            }
 
             // Close all other dropdowns in this wrapper
             var $wrapper = $btn.closest('.grocery-crud-wrapper');
             $wrapper.find('.dropdown-content').not($target).hide();
 
-            // Toggle the target dropdown
-            var isVisible = $target.is(':visible');
-            $target.toggle(!isVisible);
+            // Show the target with positioning
+            var el = $target[0];
+            el.style.display = 'block';
+            el.style.position = 'absolute';
+            el.style.top = '100%';
+            el.style.right = '0';
+            el.style.zIndex = 1000;
+            el.style.marginTop = '4px';
         });
 
-        // Close dropdowns on outside click
-        $(document).off('click.gc-dropdown-close').on('click.gc-dropdown-close', function (e) {
-            if (!$(e.target).closest('.grocery-crud-wrapper a[data-target]').length
-                && !$(e.target).closest('.dropdown-content').length) {
+        // Close dropdowns on outside click (delegation is safe for document-level)
+        $(document).off('click.gc-dd-close').on('click.gc-dd-close', function (e) {
+            if (!$(e.target).closest('.grocery-crud-wrapper a.dropdown-trigger[data-target]').length
+                && !$(e.target).closest('.grocery-crud-wrapper .dropdown-content:visible').length) {
                 $('.grocery-crud-wrapper .dropdown-content').hide();
             }
         });
