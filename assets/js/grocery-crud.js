@@ -1729,7 +1729,64 @@
         });
     }
 
-    // Clean up dependsOn listeners when modal is closed
+    // ======== Dependent (Cascading) Dropdowns ========
+    function initDependentDropdowns($modal) {
+        $modal.find('.gc-dependent-select').each(function () {
+            var $childSelect = $(this);
+            var field = $childSelect.data('dependentField');
+            var dependsOnField = $childSelect.data('dependsOnField');
+
+            if (!field || !dependsOnField) return;
+
+            var $form = $childSelect.closest('.gc-form');
+            if (!$form.length) return;
+
+            var $parentSelect = $form.find('[name="' + dependsOnField + '"]');
+            if (!$parentSelect.length) return;
+
+            function loadDependentOptions(parentValue) {
+                if (!parentValue || parentValue === '') {
+                    $childSelect.find('option:not(:first)').remove();
+                    return;
+                }
+
+                var currentVal = $childSelect.val();
+
+                $.ajax({
+                    url: window.location.href,
+                    method: 'POST',
+                    data: {
+                        gc_action: 'dependent_options',
+                        field: field,
+                        parent_value: parentValue
+                    },
+                    dataType: 'json',
+                    success: function (response) {
+                        if (response.success && response.options) {
+                            $childSelect.find('option:not(:first)').remove();
+                            $.each(response.options, function (i, opt) {
+                                var selected = (String(opt.id) === String(currentVal)) ? ' selected' : '';
+                                $childSelect.append('<option value="' + opt.id + '"' + selected + '>' + opt.title + '</option>');
+                            });
+                        }
+                    }
+                });
+            }
+
+            // Listen for changes on parent
+            $parentSelect.on('change.dependentDropdown', function () {
+                loadDependentOptions($(this).val());
+            });
+
+            // Initial load (edit mode: populate based on current parent value)
+            var initialParentValue = $parentSelect.val();
+            if (initialParentValue) {
+                loadDependentOptions(initialParentValue);
+            }
+        });
+    }
+
+    // Clean up dependsOn + dependentDropdown listeners when modal is closed
     $(document).on('hidden.bs.modal', '.gc-modal', function () {
         $(this).find('[data-depends-on]').each(function () {
             var config = $(this).data('dependsOn');
@@ -1737,6 +1794,14 @@
             var $form = $(this).closest('.gc-form');
             if ($form.length) {
                 $form.find('[name="' + config.field + '"]').off('.dependsOn');
+            }
+        });
+        $(this).find('.gc-dependent-select').each(function () {
+            var dependsOnField = $(this).data('dependsOnField');
+            if (!dependsOnField) return;
+            var $form = $(this).closest('.gc-form');
+            if ($form.length) {
+                $form.find('[name="' + dependsOnField + '"]').off('.dependentDropdown');
             }
         });
     });
@@ -1761,6 +1826,9 @@
 
         // Initialize dependsOn after form is shown
         initDependsOn($modal);
+
+        // Initialize dependent (cascading) dropdowns
+        initDependentDropdowns($modal);
 
         // Initialize richtext editors
         initRichtextEditors($modal);

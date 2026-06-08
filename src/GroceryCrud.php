@@ -144,6 +144,9 @@ class GroceryCrud
     /** @var array<string, array{field: string, value: mixed, action: string}> */
     private array $dependsOn = [];
 
+    /** @var array<string, array{dependsOnField: string, relatedTable: string, foreignKey: string, titleField: string, keyField: string, where: ?string, orderBy: ?string}> */
+    private array $dependentRelations = [];
+
     private bool $enableFilters = true;
     private bool $enableColumns = true;
     private bool $enableSettings = true;
@@ -825,6 +828,47 @@ class GroceryCrud
             'field'  => $dependsOnField,
             'value'  => $value,
             'action' => $action,
+        ];
+        return $this;
+    }
+
+    /**
+     * Define a dependent (cascading) dropdown relationship.
+     *
+     * When the parent dropdown changes, the child dropdown options are
+     * automatically refreshed via AJAX.
+     *
+     * Example:
+     *   $crud->setDependentRelation('sub_category_id', 'category_id', 'sub_categories', 'category_id', 'name');
+     *   // sub_category_id options are filtered by category_id value
+     *
+     * @param string $field         The child field name (e.g., 'sub_category_id')
+     * @param string $dependsOnField The parent field name (e.g., 'category_id')
+     * @param string $relatedTable  The related table for the child (e.g., 'sub_categories')
+     * @param string $foreignKey    The FK column in the related table (e.g., 'category_id')
+     * @param string $titleField    The display title column in the related table (e.g., 'name')
+     * @param string $keyField      The primary key of the related table (default: 'id')
+     * @param string|null $where    Extra WHERE condition (SQL string)
+     * @param string|null $orderBy  ORDER BY clause (SQL string)
+     */
+    public function setDependentRelation(
+        string $field,
+        string $dependsOnField,
+        string $relatedTable,
+        string $foreignKey,
+        string $titleField,
+        string $keyField = 'id',
+        ?string $where = null,
+        ?string $orderBy = null
+    ): self {
+        $this->dependentRelations[$field] = [
+            'dependsOnField' => $dependsOnField,
+            'relatedTable'   => $relatedTable,
+            'foreignKey'     => $foreignKey,
+            'titleField'     => $titleField,
+            'keyField'       => $keyField,
+            'where'          => $where,
+            'orderBy'        => $orderBy,
         ];
         return $this;
     }
@@ -1675,6 +1719,47 @@ class GroceryCrud
     }
 
     /**
+     * AJAX handler for dependent (cascading) dropdown options.
+     *
+     * POST parameters:
+     *   - field: The child field name
+     *   - parent_value: The selected value of the parent dropdown
+     */
+    public function ajaxDependentOptions(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+
+        $field = $request->getPost('field') ?? $request->getGet('field');
+        $parentValue  = $request->getPost('parent_value') ?? $request->getGet('parent_value');
+
+        if (!isset($this->dependentRelations[$field])) {
+            return $this->jsonResponse(false, ['message' => 'Invalid dependent field.']);
+        }
+
+        $config = $this->dependentRelations[$field];
+
+        // Build the WHERE condition for the parent FK
+        $where = [$config['foreignKey'] => $parentValue];
+
+        $options = $this->model->getRelationOptions(
+            $config['relatedTable'],
+            $config['titleField'],
+            $config['keyField'],
+            $where,
+            $config['where'],
+            $config['orderBy']
+        );
+
+        return Services::response()
+            ->setContentType('application/json')
+            ->setJSON([
+                'success' => true,
+                'options' => $options,
+            ]);
+    }
+
+    /**
      * Export data.
      */
     public function ajaxExport(string $format): ResponseInterface
@@ -2328,6 +2413,27 @@ class GroceryCrud
             // Options for dropdowns/relations (skip if already set via setFieldType)
             if (isset($fieldOptions[$field])) {
                 // Custom options provided, skip auto-detection
+            } elseif (isset($this->dependentRelations[$field])) {
+                // Dependent dropdown: skip loading ALL options on page load.
+                // If editing, still add the current selected value as an option
+                // so the dropdown shows it initially before AJAX loads the rest.
+                $depCfg = $this->dependentRelations[$field];
+                if ($mode === 'edit' && !empty($fieldValues[$field])) {
+                    $currentOptions = $this->model->getRelationOptions(
+                        $depCfg['relatedTable'],
+                        $depCfg['titleField'],
+                        $depCfg['keyField'],
+                        [$depCfg['keyField'] => $fieldValues[$field]],
+                        $depCfg['where'],
+                        $depCfg['orderBy']
+                    );
+                    $fieldOptions[$field] = [];
+                    foreach ($currentOptions as $item) {
+                        $fieldOptions[$field][$item['id']] = $item['title'];
+                    }
+                } else {
+                    $fieldOptions[$field] = [];
+                }
             } elseif ($type === 'dropdown' && $this->relationManager->getRelationType($field) === 'belongs_to') {
                 $relData = $this->relationManager->getRelationData($field);
                 $options = [];
@@ -2399,6 +2505,7 @@ class GroceryCrud
             'repeaterFields' => $this->repeaterFields,
             'repeaterData'   => $repeaterData,
             'dependsOn'      => $this->dependsOn,
+            'dependentRelations' => $this->dependentRelations,
         ];
     }
 
@@ -2647,8 +2754,9 @@ class GroceryCrud
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),
             'sub_grid'      => $this->ajaxSubGrid(),
-            'inline_save'   => $this->ajaxInlineSave(),
-            default         => $this->jsonResponse(false, ['message' => 'Invalid action.']),
+            'inline_save'         => $this->ajaxInlineSave(),
+            'dependent_options'   => $this->ajaxDependentOptions(),
+            default               => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
     }
 

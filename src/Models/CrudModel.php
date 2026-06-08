@@ -859,6 +859,33 @@ class CrudModel
         return $this->db;
     }
 
+    // ======== Dependent Dropdown Helper ========
+
+    /**
+     * Get options for a dependent dropdown filtered by parent value.
+     *
+     * @return array<int, array{id: mixed, title: string}>
+     */
+    public function getRelationOptions(string $relatedTable, string $titleField, string $keyField = 'id', array $where = [], ?string $extraWhere = null, ?string $orderBy = null): array
+    {
+        $builder = $this->db->table($relatedTable)
+            ->select($keyField . ' as id, ' . $titleField . ' as title');
+
+        foreach ($where as $field => $value) {
+            $builder->where($field, $value);
+        }
+
+        if ($extraWhere !== null && $extraWhere !== '') {
+            $builder->where($extraWhere);
+        }
+
+        if ($orderBy !== null && $orderBy !== '') {
+            $builder->orderBy($orderBy);
+        }
+
+        return $builder->get()->getResultArray();
+    }
+
     // ======== Repeater HasMany Helpers ========
 
     /**

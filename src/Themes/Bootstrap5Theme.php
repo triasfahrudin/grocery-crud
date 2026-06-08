@@ -507,6 +507,7 @@ class Bootstrap5Theme implements ThemeInterface
         $fieldValues = $data['fieldValues'] ?? [];
         $fieldOptions = $data['fieldOptions'] ?? [];
         $dependsOn   = $data['dependsOn'] ?? [];
+        $dependentRelations = $data['dependentRelations'] ?? [];
         $primaryKey  = $data['primaryKey'] ?? 'id';
         $recordId    = $data['recordId'] ?? null;
         $errors      = $data['errors'] ?? [];
@@ -662,7 +663,16 @@ class Bootstrap5Theme implements ThemeInterface
             case 'dropdown':
             case 'enum':
             case 'relation':
-                $html .= '<select class="form-select" id="' . $fieldId . '" name="' . $fieldName . '"' . ($isReadonly ? ' disabled' : '') . '>';
+                // Dependent dropdown data attributes
+                $dependentAttrs = '';
+                $dependentRelations = $data['dependentRelations'] ?? [];
+                if (isset($dependentRelations[$field])) {
+                    $depCfg = $dependentRelations[$field];
+                    $dependentAttrs = ' data-dependent-dropdown="1"'
+                        . ' data-depends-on-field="' . htmlspecialchars($depCfg['dependsOnField']) . '"'
+                        . ' data-dependent-field="' . htmlspecialchars($field) . '"';
+                }
+                $html .= '<select class="form-select' . ($dependentAttrs !== '' ? ' gc-dependent-select' : '') . '" id="' . $fieldId . '" name="' . $fieldName . '"' . ($isReadonly ? ' disabled' : '') . $dependentAttrs . '>';
                 $html .= '<option value="">-- Select --</option>';
                 foreach ($options as $optValue => $optLabel) {
                     $selected = ((string) $optValue === (string) $value) ? ' selected' : '';
