@@ -213,11 +213,6 @@
                     // Restore search value (crudId changes on re-render via uniqid)
                     var $newSearchInput = $parent.find('.grocery-crud-wrapper .gc-search-input');
                     $newSearchInput.val(search);
-                    // Restore advanced filters
-                    var savedFilters = $wrapper.data('gcAdvancedFilters');
-                    if (savedFilters && savedFilters.length) {
-                        $wrapper.data('gcAdvancedFilters', savedFilters);
-                    }
                     // Restore focus and caret position if previously focused
                     if (wasFocused) {
                         $newSearchInput.focus();
@@ -244,6 +239,10 @@
                     }
                     // Populate columns menu and filter selects from table headers
                     var $newWrapper = $parent.find('.grocery-crud-wrapper');
+                    // Restore advanced filters data on the new wrapper (gcAdvancedFilters was read before replaceWith)
+                    if (advancedFilters && advancedFilters.length) {
+                        $newWrapper.data('gcAdvancedFilters', advancedFilters);
+                    }
                     populateColumnsAndFilters($newWrapper);
                     initInlineEditing($newWrapper);
 
@@ -890,7 +889,7 @@
             if (exportScope === 'filtered') {
                 // Column filters (from filter inputs above table columns)
                 var filters = {};
-                $wrapper.find('.gc-filter-input').each(function () {
+                $wrapper.find('.gc-column-filter').each(function () {
                     var field = $(this).data('field');
                     var val = $(this).val();
                     if (field && val) {
