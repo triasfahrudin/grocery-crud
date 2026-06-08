@@ -7,7 +7,7 @@ namespace GroceryCrud\Themes;
 interface ThemeInterface
 {
     /**
-     * Render the list (table) view.
+     * Merender tampilan daftar (tabel).
      *
      * @param array<string, mixed> $data
      * @return string HTML output
@@ -15,7 +15,7 @@ interface ThemeInterface
     public function renderList(array $data): string;
 
     /**
-     * Render the add form.
+     * Merender form tambah.
      *
      * @param array<string, mixed> $data
      * @return string HTML output
@@ -23,7 +23,7 @@ interface ThemeInterface
     public function renderAddForm(array $data): string;
 
     /**
-     * Render the edit form.
+     * Merender form edit.
      *
      * @param array<string, mixed> $data
      * @return string HTML output
@@ -31,35 +31,35 @@ interface ThemeInterface
     public function renderEditForm(array $data): string;
 
     /**
-     * Get the theme name.
+     * Mendapatkan nama tema.
      */
     public function getName(): string;
 
     /**
-     * Get required CSS files.
+     * Mendapatkan file CSS yang dibutuhkan.
      *
      * @return array<int, string>
      */
     public function getCssFiles(): array;
 
     /**
-     * Get required JS files.
+     * Mendapatkan file JS yang dibutuhkan.
      *
      * @return array<int, string>
      */
     public function getJsFiles(): array;
 
     /**
-     * Render a sub-grid (expanded nested table).
+     * Merender sub-grid (tabel bersarang yang diperluas).
      *
-     * @param array<string, mixed> $config Sub-grid configuration
-     * @param array<int, array<string, mixed>> $records Sub-grid records
+     * @param array<string, mixed> $config Konfigurasi sub-grid
+     * @param array<int, array<string, mixed>> $records Record sub-grid
      * @return string HTML output
      */
     public function renderSubGrid(array $config, array $records): string;
 
     /**
-     * Render the import form (file upload + column mapping).
+     * Merender form impor (upload file + pemetaan kolom).
      *
      * @param array<string, mixed> $data
      * @return string

@@ -19,9 +19,9 @@ class ImportManager
     }
 
     /**
-     * Parse an uploaded CSV/XLSX file.
+     * Mem-parsing file CSV/XLSX yang diunggah.
      *
-     * @param array $file $_FILES entry
+     * @param array $file Entri $_FILES
      * @return array{headers: string[], preview: array[], totalRows: int, filename: string}
      */
     public function parse(array $file): array
@@ -38,18 +38,18 @@ class ImportManager
     }
 
     /**
-     * Detect best field match for each import column header.
+     * Mendeteksi kecocokan field terbaik untuk setiap header kolom impor.
      *
-     * @param string[] $headers Import column headers
-     * @param string[] $fields Available form fields
-     * @param string[] $columnLabels Label => field mapping
-     * @return array<int, string|null> header-index => field-name (or null)
+     * @param string[] $headers Header kolom impor
+     * @param string[] $fields Field form yang tersedia
+     * @param string[] $columnLabels Pemetaan Label => field
+     * @return array<int, string|null> index-header => nama-field (atau null)
      */
     public function detectMapping(array $headers, array $fields, array $columnLabels): array
     {
         $mapping = [];
 
-        // Build lookup: lower(label) => field, lower(field) => field
+        // Bangun lookup: lower(label) => field, lower(field) => field
         $labelLookup = [];
         foreach ($columnLabels as $field => $label) {
             $labelLookup[$this->normalize($label)] = $field;
@@ -61,13 +61,13 @@ class ImportManager
 
         foreach ($headers as $header) {
             $normalized = $this->normalize($header);
-            // Try exact label match first
+            // Coba kecocokan label tepat terlebih dahulu
             if (isset($labelLookup[$normalized])) {
                 $mapping[] = $labelLookup[$normalized];
             } elseif (isset($fieldLookup[$normalized])) {
                 $mapping[] = $fieldLookup[$normalized];
             } else {
-                $mapping[] = null; // Not mapped
+                $mapping[] = null; // Tidak terpetakan
             }
         }
 
@@ -75,10 +75,10 @@ class ImportManager
     }
 
     /**
-     * Execute import: insert rows into the model.
+     * Mengeksekusi impor: menyisipkan baris ke dalam model.
      *
-     * @param array<int, array<string, string>> $rows Data rows (field => value)
-     * @param callable $insertFn function(array $data): mixed Returns insertId
+     * @param array<int, array<string, string>> $rows Baris data (field => nilai)
+     * @param callable $insertFn function(array $data): mixed Mengembalikan insertId
      * @return array{imported: int, errors: array}
      */
     public function execute(array $rows, callable $insertFn): array
@@ -94,8 +94,8 @@ class ImportManager
                 } else {
                     $errors[] = [
                         'row'     => $index + 2, // +2 for header + 0-index
-                        'message' => 'Failed to insert row.',
-                    ];
+                'message' => 'Gagal menyisipkan baris.',
+            ];
                 }
             } catch (\Throwable $e) {
                 $errors[] = [
@@ -132,25 +132,25 @@ class ImportManager
     {
         $handle = fopen($path, 'r');
         if ($handle === false) {
-            throw new \RuntimeException('Cannot open CSV file.');
+            throw new \RuntimeException('Tidak dapat membuka file CSV.');
         }
 
-        // Detect BOM
+        // Deteksi BOM
         $bom = fread($handle, 3);
         if ($bom !== "\xEF\xBB\xBF") {
             rewind($handle);
         }
 
-        // Read headers
+        // Baca header
         $headers = fgetcsv($handle);
         if ($headers === false || $headers === null) {
             fclose($handle);
-            throw new \RuntimeException('CSV file is empty or has no headers.');
+            throw new \RuntimeException('File CSV kosong atau tidak memiliki header.');
         }
 
         $headers = array_map('trim', $headers);
 
-        // Read data rows
+        // Baca baris data
         $allRows = [];
         while (($row = fgetcsv($handle)) !== false) {
             $allRows[] = $row;
@@ -159,7 +159,7 @@ class ImportManager
 
         $totalRows = count($allRows);
 
-        // Map rows to associative arrays
+        // Petakan baris ke array asosiatif
         $mapped = [];
         foreach ($allRows as $rowIndex => $row) {
             $assoc = [];
@@ -169,7 +169,7 @@ class ImportManager
             $mapped[] = $assoc;
         }
 
-        // Preview: first N rows as raw arrays
+        // Pratinjau: N baris pertama sebagai array mentah
         $preview = array_slice($mapped, 0, self::MAX_PREVIEW_ROWS);
 
         return [
@@ -182,10 +182,10 @@ class ImportManager
 
     private function parseXlsx(string $path): array
     {
-        // Check if PhpSpreadsheet is available
+        // Periksa apakah PhpSpreadsheet tersedia
         if (!class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
             throw new \RuntimeException(
-                'Excel import requires phpoffice/phpspreadsheet. Install it with: composer require phpoffice/phpspreadsheet'
+                'Impor Excel membutuhkan phpoffice/phpspreadsheet. Instal dengan: composer require phpoffice/phpspreadsheet'
             );
         }
 
@@ -194,14 +194,14 @@ class ImportManager
         $data = $worksheet->toArray();
 
         if (empty($data)) {
-            throw new \RuntimeException('Excel file is empty.');
+            throw new \RuntimeException('File Excel kosong.');
         }
 
-        // First row = headers
+        // Baris pertama = header
         $headers = array_map('trim', array_map('strval', $data[0]));
         $totalRows = count($data) - 1;
 
-        // Preview: rows 1..N (after header)
+        // Pratinjau: baris 1..N (setelah header)
         $previewRows = array_slice($data, 1, self::MAX_PREVIEW_ROWS);
         $preview = [];
         foreach ($previewRows as $row) {

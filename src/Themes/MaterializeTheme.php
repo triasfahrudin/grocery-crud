@@ -385,7 +385,7 @@ class MaterializeTheme implements ThemeInterface
 
     public function renderImportForm(array $data): string
     {
-        // Delegate to Bootstrap5Theme's import form for consistent UI
+        // Delegasikan ke form impor Bootstrap5Theme untuk UI yang konsisten
         $bootstrap5 = new Bootstrap5Theme();
         return $bootstrap5->renderImportForm($data);
     }

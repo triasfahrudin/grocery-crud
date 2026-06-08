@@ -1,8 +1,8 @@
 /* ============================================================
-   Grocery CRUD - Custom Styles
+   Grocery CRUD - Gaya Kustom
    ============================================================ */
 
-/* Table styles */
+/* Gaya tabel */
 .grocery-crud-wrapper .table th {
     font-weight: 600;
     font-size: 0.875rem;
@@ -18,7 +18,7 @@
     background-color: rgba(13, 110, 253, 0.04);
 }
 
-/* table-dragger: drag handle inside headers */
+/* table-dragger: pegangan drag di dalam header */
 .gc-drag-handle {
     cursor: grab;
     opacity: 0.4;
@@ -33,12 +33,12 @@
     cursor: grabbing;
 }
 
-/* Card header spacing */
+/* Jarak header kartu */
 .grocery-crud-wrapper .card-header h5 {
     letter-spacing: -0.02em;
 }
 
-/* Form styles */
+/* Gaya form */
 .grocery-crud-form-wrapper .form-label {
     font-weight: 500;
     font-size: 0.875rem;
@@ -58,7 +58,7 @@
     font-size: 0.8rem;
 }
 
-/* Action buttons */
+/* Tombol aksi */
 .btn-gc-edit,
 .btn-gc-delete {
     transition: all 0.15s ease;
@@ -74,19 +74,19 @@
     color: #fff;
 }
 
-/* Pagination */
+/* Paginasi */
 .grocery-crud-wrapper .pagination .page-link {
     font-size: 0.825rem;
     padding: 0.3rem 0.6rem;
 }
 
-/* Search input */
+/* Input pencarian */
 .gc-search-input:focus {
     box-shadow: none;
     border-color: #86b7fe;
 }
 
-/* Loading overlay */
+/* Overlay loading */
 .gc-loading {
     position: fixed;
     top: 0;
@@ -114,7 +114,7 @@
     to { transform: rotate(360deg); }
 }
 
-/* Alert messages */
+/* Pesan peringatan */
 .gc-alert {
     position: fixed;
     top: 20px;
@@ -135,7 +135,7 @@
     }
 }
 
-/* Modal styles */
+/* Gaya modal */
 .gc-modal .modal-header {
     border-bottom: 0;
     padding-bottom: 0;
@@ -145,7 +145,7 @@
     border-top: 0;
 }
 
-/* Reduce modal backdrop opacity (AdminLTE 4 default is too dark) */
+/* Kurangi opacity backdrop modal (default AdminLTE 4 terlalu gelap) */
 body > .modal-backdrop,
 .gc-modal ~ .modal-backdrop,
 .gc-image-viewer ~ .modal-backdrop {
@@ -157,12 +157,12 @@ body > .modal-backdrop.show {
     opacity: 1 !important;
 }
 
-/* Ensure modal content has white background */
+/* Pastikan konten modal memiliki latar putih */
 .gc-modal .modal-content {
     background-color: #fff;
 }
 
-/* Responsive tweaks */
+/* Penyesuaian responsif */
 @media (max-width: 768px) {
     .grocery-crud-wrapper .card-header {
         flex-direction: column;
@@ -178,7 +178,7 @@ body > .modal-backdrop.show {
     }
 }
 
-/* Checkbox list for NtoN */
+/* Daftar checkbox untuk NtoN */
 .grocery-crud-form-wrapper .form-check {
     padding-top: 0.25rem;
     padding-bottom: 0.25rem;
@@ -188,7 +188,7 @@ body > .modal-backdrop.show {
     background-color: #f8f9fa;
 }
 
-/* Image thumbnails in table */
+/* Thumbnail gambar di tabel */
 .gc-table img.gc-thumb {
     width: 50px;
     height: 50px;
@@ -202,7 +202,7 @@ body > .modal-backdrop.show {
     opacity: 0.8;
 }
 
-/* Image viewer modal */
+/* Modal penampil gambar */
 .gc-image-viewer .modal-dialog {
     max-width: 95vw;
 }
@@ -223,7 +223,7 @@ body > .modal-backdrop.show {
     border-radius: 4px;
 }
 
-/* Sortable column headers */
+/* Header kolom yang bisa diurutkan */
 .gc-table th.gc-sortable {
     cursor: pointer;
     user-select: none;
@@ -235,7 +235,7 @@ body > .modal-backdrop.show {
     background-color: rgba(0, 0, 0, 0.04);
 }
 
-/* Column filter row */
+/* Baris filter kolom */
 .gc-filter-row td {
     vertical-align: middle;
     padding: 0.35rem 0.5rem;
@@ -246,7 +246,7 @@ body > .modal-backdrop.show {
     min-width: 100px;
 }
 
-/* Batch toolbar */
+/* Toolbar batch */
 .gc-batch-toolbar {
     display: inline-flex;
     align-items: center;
@@ -257,13 +257,13 @@ body > .modal-backdrop.show {
     font-size: 0.8rem;
 }
 
-/* Checkbox columns */
+/* Kolom checkbox */
 .gc-table th input[type="checkbox"],
 .gc-table td input[type="checkbox"] {
     cursor: pointer;
 }
 
-/* Loading state for buttons */
+/* State loading untuk tombol */
 .btn-gc-loading {
     position: relative;
     pointer-events: none;
@@ -283,15 +283,15 @@ body > .modal-backdrop.show {
     vertical-align: middle;
 }
 
-/* Per-page selector */
+/* Pemilih per-halaman */
 .gc-per-page {
     width: auto;
     display: inline-block;
 }
 
-/* ======== Filter, Columns & Settings Toolbar Buttons ======== */
+/* ======== Tombol Toolbar Filter, Kolom & Pengaturan ======== */
 
-/* Filter panel */
+/* Panel filter */
 .gc-filter-panel {
     background: #fff;
     border: 1px solid #dee2e6;
@@ -344,7 +344,7 @@ body > .modal-backdrop.show {
     margin-top: 0.5rem;
 }
 
-/* Columns dropdown */
+/* Dropdown kolom */
 .gc-columns-menu {
     padding: 0.5rem;
     min-width: 200px;
@@ -354,7 +354,7 @@ body > .modal-backdrop.show {
     cursor: pointer;
 }
 
-/* Settings dropdown */
+/* Dropdown pengaturan */
 .dropdown-menu.gc-settings-menu {
     min-width: 120px;
 }
@@ -368,7 +368,7 @@ body > .modal-backdrop.show {
     margin-right: 0.5rem;
 }
 
-/* Card tools button sizing */
+/* Ukuran tombol card-tools */
 .grocery-crud-wrapper .card-tools .btn-tool {
     font-size: 0.9rem;
 }
@@ -377,7 +377,7 @@ body > .modal-backdrop.show {
     font-size: 0.8rem;
 }
 
-/* Responsive: stack toolbar buttons on small screens */
+/* Responsif: tumpuk tombol toolbar di layar kecil */
 @media (max-width: 576px) {
     .gc-filter-item {
         flex-direction: column;
@@ -390,9 +390,9 @@ body > .modal-backdrop.show {
     }
 }
 
-/* ======== Soft Delete / Trashed ======== */
+/* ======== Soft Delete / Terhapus ======== */
 
-/* Trashed rows - muted, italic */
+/* Baris terhapus - redup, miring */
 tr.gc-trashed {
     opacity: 0.6;
     background-color: #f8f9fa;
@@ -408,13 +408,13 @@ tr.gc-trashed:hover {
     background-color: #f1f3f5 !important;
 }
 
-/* Restore button */
+/* Tombol restore */
 .btn-gc-restore:hover {
     background-color: #198754;
     color: #fff;
 }
 
-/* Trash toggle button active state */
+/* State aktif tombol toggle trash */
 .gc-btn-trash.active,
 .gc-btn-active.active {
     border-color: #6c757d;
@@ -423,7 +423,7 @@ tr.gc-trashed:hover {
 
 /* ======== Sub-Grid ======== */
 
-/* Sub-grid row (hidden by default) — smooth slide animation */
+/* Baris sub-grid (tersembunyi default) — animasi slide halus */
 tr.gc-subgrid-row td {
     padding: 0 !important;
     background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
@@ -433,12 +433,12 @@ tr.gc-subgrid-row {
     transition: opacity 0.25s ease;
 }
 
-/* Sub-grid inner container */
+/* Kontainer dalam sub-grid */
 .gc-subgrid-inner {
     padding: 0.75rem 1rem;
 }
 
-/* Sub-grid section header */
+/* Header seksi sub-grid */
 .gc-subgrid-inner .subgrid-header {
     display: flex;
     align-items: center;
@@ -472,7 +472,7 @@ tr.gc-subgrid-row {
     letter-spacing: 0.02em;
 }
 
-/* Sub-grid table — clean, modern look */
+/* Tabel sub-grid — tampilan bersih dan modern */
 .gc-subgrid-inner .gc-subgrid-table {
     font-size: 0.825rem;
     margin-bottom: 0;
@@ -532,7 +532,7 @@ tr.gc-subgrid-row {
     border-left-color: #0d6efd;
 }
 
-/* Empty state */
+/* State kosong */
 .gc-subgrid-inner .gc-subgrid-empty {
     font-style: italic;
     font-size: 0.825rem;
@@ -541,12 +541,12 @@ tr.gc-subgrid-row {
     text-align: center;
 }
 
-/* Sub-grid parent row accent when expanded */
+/* Aksen baris induk sub-grid saat diperluas */
 tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
     background-color: #f0f4ff;
 }
 
-/* Expand toggle button — subtle and clean */
+/* Tombol toggle perluas — halus dan bersih */
 .gc-subgrid-toggle {
     transition: all 0.2s ease;
     border: 1px solid transparent;
@@ -574,7 +574,7 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
     transform: rotate(90deg);
 }
 
-/* Sub-grid loading state — centered spinner */
+/* State loading sub-grid — spinner di tengah */
 .gc-subgrid-content .gc-loading-sub {
     display: flex;
     align-items: center;
@@ -592,10 +592,10 @@ tr.gc-subgrid-row.expanded + tr.gc-subgrid-row td {
 }
 
 /* ============================================================
-   Inline Editing
+   Pengeditan Inline
    ============================================================ */
 
-/* Editable cell indicator */
+/* Indikator sel yang dapat diedit */
 td[data-inline-edit] {
     cursor: pointer;
     position: relative;
@@ -622,7 +622,7 @@ td[data-inline-edit]:hover::after {
     opacity: 0.5;
 }
 
-/* Active editing state */
+/* State pengeditan aktif */
 td.gc-inline-editor-active {
     padding: 2px !important;
     background-color: #fff !important;
@@ -634,7 +634,7 @@ td.gc-inline-editor-active::after {
     display: none;
 }
 
-/* Inline editor wrapper */
+/* Pembungkus editor inline */
 .gc-inline-editor {
     width: 100%;
     min-width: 80px;
@@ -680,15 +680,15 @@ td.gc-inline-editor-active::after {
 }
 
 /* ============================================================
-   Theme-agnostic fallback styles for non-Bootstrap themes
+   Gaya fallback agnostik tema untuk tema non-Bootstrap
    ============================================================ */
 
-/* d-none fallback (used by columns toggle, etc.) */
+/* Fallback d-none (digunakan oleh toggle kolom, dll.) */
 .d-none {
     display: none !important;
 }
 
-/* Badge fallback (used by callbackColumn is_active) */
+/* Fallback badge (digunakan oleh callbackColumn is_active) */
 .badge {
     display: inline-block;
     padding: 0.35em 0.65em;
@@ -709,7 +709,7 @@ td.gc-inline-editor-active::after {
     color: #fff;
 }
 
-/* Form check fallback (columns menu checkboxes only — NOT general form) */
+/* Fallback form-check (hanya checkbox menu kolom — BUKAN form umum) */
 .gc-columns-menu .form-check {
     display: flex;
     align-items: center;
@@ -718,7 +718,7 @@ td.gc-inline-editor-active::after {
     min-height: 1.5rem;
     user-select: none;
 }
-/* Prevent input/label from intercepting mousedown — div handles click-to-toggle */
+/* Cegah input/label mencegat mousedown — div menangani klik-untuk-toggle */
 .gc-columns-menu .form-check-input,
 .gc-columns-menu .form-check-label {
     pointer-events: none !important;
@@ -732,7 +732,7 @@ td.gc-inline-editor-active::after {
     flex-shrink: 0;
     margin-left: 0;
     float: none;
-    /* Override Materialize hiding native checkboxes */
+    /* Timpa penyembunyian checkbox native oleh Materialize */
     opacity: 1;
     position: static;
 }
@@ -745,10 +745,10 @@ td.gc-inline-editor-active::after {
     word-break: break-word;
 }
 
-/* ======== Materialize Theme Overrides ======== */
+/* ======== Timpaan Tema Materialize ======== */
 
-/* Materialize CSS sets opacity:0, transform:scaleY(0) on .dropdown-content on init.
-   Our custom JS sets display:block but these properties keep it invisible.
+/* Materialize CSS mengatur opacity:0, transform:scaleY(0) pada .dropdown-content saat init.
+   JS kustom kami mengatur display:block tetapi properti ini membuatnya tidak terlihat.
    @see assets/js/grocery-crud.js — bindEvents() */
 .grocery-crud-wrapper .dropdown-content {
     opacity: 1 !important;
@@ -756,7 +756,7 @@ td.gc-inline-editor-active::after {
     pointer-events: auto !important;
 }
 
-/* Export columns modal: prevent checkbox items from overflowing */
+/* Modal kolom export: cegah item checkbox meluap */
 .gc-export-columns-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -795,12 +795,12 @@ td.gc-inline-editor-active::after {
     cursor: pointer;
 }
 
-/* Anchor the toolbar's dropdowns so position:absolute dropdowns appear below the buttons */
+/* Anchor dropdown toolbar agar dropdown position:absolute muncul di bawah tombol */
 .grocery-crud-wrapper .card-title > .right {
     position: relative;
 }
 
-/* Alert fallback */
+/* Fallback alert */
 .alert {
     position: fixed;
     top: 1rem;
@@ -855,7 +855,7 @@ td.gc-inline-editor-active::after {
     font-size: 1rem;
 }
 
-/* Modal fallback */
+/* Fallback modal */
 .modal {
     display: none;
     position: fixed;
@@ -912,22 +912,22 @@ td.gc-inline-editor-active::after {
 }
 
 /* ============================================================
-   Dynamic Form Conditions (Depends On)
+   Kondisi Form Dinamis (Depends On)
    ============================================================ */
 
-/* Dimmed appearance for disabled dependent fields */
+/* Tampilan redup untuk field dependen yang dinonaktifkan */
 .gc-depends-disabled {
     opacity: 0.5;
     pointer-events: none;
 }
 
-/* Smooth transition for show/hide */
+/* Transisi halus untuk tampil/sembunyi */
 [data-depends-on] {
     transition: opacity 0.2s ease;
 }
 
 /* ============================================================
-   Import Styles
+   Gaya Import
    ============================================================ */
 .gc-import-dropzone {
     transition: border-color 0.2s ease, background-color 0.2s ease;

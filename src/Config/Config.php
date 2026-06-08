@@ -9,12 +9,12 @@ use CodeIgniter\Config\BaseConfig;
 class Config extends BaseConfig
 {
     /**
-     * Default theme for rendering.
+     * Tema default untuk rendering.
      */
     public string $defaultTheme = 'bootstrap5';
 
     /**
-     * Registered themes.
+     * Tema yang terdaftar.
      */
     public array $themes = [
         'bootstrap5'  => \GroceryCrud\Themes\Bootstrap5Theme::class,
@@ -24,26 +24,26 @@ class Config extends BaseConfig
     ];
 
     /**
-     * Default number of items per page.
+     * Jumlah default item per halaman.
      */
     public int $perPage = 25;
 
     /**
-     * Per-page options for the pagination dropdown.
+     * Opsi per halaman untuk dropdown paginasi.
      *
      * @var int[]
      */
     public array $perPageOptions = [10, 25, 50, 100];
 
     /**
-     * Date format for date/datetime fields.
+     * Format tanggal untuk field date/datetime.
      */
     public string $dateFormat = 'Y-m-d';
 
     public string $datetimeFormat = 'Y-m-d H:i:s';
 
     /**
-     * Default upload configuration.
+     * Konfigurasi upload default.
      */
     public array $uploadConfig = [
         'maxSize'          => 2048, // KB
@@ -56,17 +56,17 @@ class Config extends BaseConfig
     ];
 
     /**
-     * Whether to use Datatables for listing.
+     * Apakah akan menggunakan Datatables untuk daftar.
      */
     public bool $useDatatables = true;
 
     /**
-     * Default language.
+     * Bahasa default.
      */
     public string $defaultLanguage = 'english';
 
     /**
-     * Available languages.
+     * Bahasa yang tersedia.
      */
     public array $languages = [
         'english'   => \GroceryCrud\Language\English::class,
@@ -74,42 +74,42 @@ class Config extends BaseConfig
     ];
 
     /**
-     * Default action buttons to show.
+     * Tombol aksi default yang ditampilkan.
      */
     public array $defaultActions = ['add', 'edit', 'delete'];
 
     /**
-     * Whether to enable export functionality.
+     * Apakah akan mengaktifkan fungsionalitas ekspor.
      */
     public bool $enableExport = true;
 
     /**
-     * Whether to enable print view function.
+     * Apakah akan mengaktifkan fungsi tampilan cetak.
      */
     public bool $enablePrintView = true;
 
     /**
-     * Whether to enable PDF export (requires dompdf/dompdf).
+     * Apakah akan mengaktifkan ekspor PDF (membutuhkan dompdf/dompdf).
      */
     public bool $enablePdfExport = true;
 
     /**
-     * Export formats.
+     * Format ekspor.
      */
     public array $exportFormats = ['csv', 'excel', 'pdf', 'print'];
 
     /**
-     * Pagination style: 'simple' or 'full' (with page numbers)
+     * Gaya paginasi: 'simple' atau 'full' (dengan nomor halaman)
      */
     public string $paginationStyle = 'full';
 
     /**
-     * Max records to export.
+     * Maksimal record yang diekspor.
      */
     public int $maxExportRecords = 10000;
 
     /**
-     * Whether to enable import functionality.
+     * Apakah akan mengaktifkan fungsionalitas impor.
      */
     public bool $enableImport = true;
 

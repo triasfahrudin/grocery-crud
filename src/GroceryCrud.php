@@ -97,19 +97,19 @@ class GroceryCrud
     /** @var array<string, array{type: string, options?: array}> */
     private array $fieldTypeOverrides = [];
 
-    /** @var array<string, array<string>> Role-based permissions: role => [actions] */
+    /** @var array<string, array<string>> Izin berbasis peran: role => [actions] */
     private array $permissions = [];
 
-    /** @var ?callable Callback to resolve current user's role: fn(): ?string */
+    /** @var ?callable Callback untuk mendapatkan peran pengguna saat ini: fn(): ?string */
     private $permissionCallback = null;
 
-    /** @var ?string Cached current user role */
+    /** @var ?string Peran pengguna yang di-cache */
     private ?string $userRole = null;
 
-    /** @var bool Enable inline editing on table cells */
+    /** @var bool Mengaktifkan pengeditan inline pada sel tabel */
     private bool $enableInlineEditing = false;
 
-    /** @var array<int, string> Columns that are editable inline (empty = all columns) */
+    /** @var array<int, string> Kolom yang dapat diedit inline (kosong = semua kolom) */
     private array $inlineEditColumns = [];
 
     /** @var array<int, string> */
@@ -127,10 +127,10 @@ class GroceryCrud
     /** @var array<string, array{table: string, labelField: string, keyField: string, where: ?string, order: ?string}> */
     private array $columnFilterRelations = [];
 
-    /** @var bool Enable soft delete on the model */
+    /** @var bool Mengaktifkan soft delete pada model */
     private bool $softDelete = false;
 
-    /** @var bool Whether we are viewing trashed records */
+    /** @var bool Apakah kita sedang melihat record yang terhapus (trashed) */
     private bool $trashedView = false;
 
     /** @var array<string, string> */
@@ -158,38 +158,38 @@ class GroceryCrud
     private bool $enableColumns = true;
     private bool $enableSettings = true;
 
-    /** @var bool Show Activity Log viewer button in the list toolbar */
+    /** @var bool Menampilkan tombol viewer Activity Log di toolbar daftar */
     private bool $enableActivityLogViewer = false;
 
-    /** @var string|null Date/datetime field name for Calendar View */
+    /** @var string|null Nama field tanggal/datetime untuk Tampilan Kalender */
     private ?string $calendarField = null;
 
-    /** @var string|null Field name to use as event title in Calendar View */
+    /** @var string|null Nama field yang digunakan sebagai judul event di Tampilan Kalender */
     private ?string $calendarTitleField = null;
 
     private string $crudId;
 
-    /** @var bool Enable REST API mode (returns JSON, no HTML) */
+    /** @var bool Mengaktifkan mode REST API (mengembalikan JSON, bukan HTML) */
     private bool $apiMode = false;
 
-    /** @var ?ActivityLogManager Activity Log / Audit Trail manager */
+    /** @var ?ActivityLogManager Manajer Activity Log / Audit Trail */
     private ?ActivityLogManager $activityLog = null;
 
-    /** @var ?RecordLockManager Record-level locking manager */
+    /** @var ?RecordLockManager Manajer penguncian tingkat record */
     private ?RecordLockManager $recordLockManager = null;
 
-    /** @var ?callable Callback to resolve current user info for locking: fn(): array{id: string, name: string} */
+    /** @var ?callable Callback untuk mendapatkan info pengguna saat ini untuk penguncian: fn(): array{id: string, name: string} */
     private $lockUserCallback = null;
 
-    /** @var int Minutes before a record lock auto-expires */
+    /** @var int Menit sebelum kunci record kedaluwarsa secara otomatis */
     private int $lockMinutes = 5;
 
-    /** @var string Optional HTML to inject at the top of the page (inside <body>) */
+    /** @var string HTML opsional untuk disisipkan di bagian atas halaman (di dalam <body>) */
     private string $headerHtml = '';
 
     /**
-     * Set additional HTML content to inject at the top of the rendered page,
-     * immediately after the <body> tag. Useful for navigation bars, banners, etc.
+     * Mengatur konten HTML tambahan untuk disisipkan di bagian atas halaman yang dirender,
+     * tepat setelah tag <body>. Berguna untuk navigation bar, banner, dll.
      *
      * @param string $html
      * @return $this
@@ -202,11 +202,11 @@ class GroceryCrud
     }
 
     /**
-     * Enable the built-in Activity Log viewer UI.
+     * Mengaktifkan UI viewer Activity Log bawaan.
      *
-     * Requires enableActivityLog() to be called first.
-     * Adds an "Activity Log" button to the list toolbar and renders
-     * a full viewer with filters, pagination, and detail diffs.
+     * Memerlukan enableActivityLog() untuk dipanggil terlebih dahulu.
+     * Menambahkan tombol "Activity Log" ke toolbar daftar dan merender
+     * viewer lengkap dengan filter, paginasi, dan diff detail.
      *
      * @param bool $enable
      * @return $this
@@ -219,15 +219,15 @@ class GroceryCrud
     }
 
     /**
-     * Enable Calendar View using FullCalendar.
+     * Mengaktifkan Tampilan Kalender menggunakan FullCalendar.
      *
-     * Adds a toggle button to switch between the table list view
-     * and a calendar view. Records are displayed as events based on
-     * the specified date/datetime field.
+     * Menambahkan tombol toggle untuk beralih antara tampilan daftar tabel
+     * dan tampilan kalender. Record ditampilkan sebagai event berdasarkan
+     * field tanggal/datetime yang ditentukan.
      *
-     * @param string $dateField   The date/datetime column name for event dates.
-     * @param string|null $titleField Optional field to use as the event title.
-     *                                Falls back to the primary key if null.
+     * @param string $dateField   Nama kolom tanggal/datetime untuk tanggal event.
+     * @param string|null $titleField Field opsional yang digunakan sebagai judul event.
+     *                                Kembali ke primary key jika null.
      * @return $this
      */
     public function setCalendarView(string $dateField, ?string $titleField = null): self
@@ -239,15 +239,15 @@ class GroceryCrud
     }
 
     /**
-     * Enable record-level locking to prevent concurrent edits by multiple users.
+     * Mengaktifkan penguncian tingkat record untuk mencegah pengeditan bersamaan oleh banyak pengguna.
      *
-     * When enabled, opening an edit form acquires a lock on that record.
-     * Other users will see a warning if they try to edit the same record.
-     * Locks are released on save/cancel and auto-expire after $lockMinutes.
+     * Saat diaktifkan, membuka form edit akan mengunci record tersebut.
+     * Pengguna lain akan melihat peringatan jika mereka mencoba mengedit record yang sama.
+     * Kunci dilepaskan saat simpan/batal dan kedaluwarsa otomatis setelah $lockMinutes.
      *
-     * Requires setLockUserCallback() to identify the current user.
+     * Memerlukan setLockUserCallback() untuk mengidentifikasi pengguna saat ini.
      *
-     * @param int $lockMinutes Lock expiry time in minutes (default: 5)
+     * @param int $lockMinutes Waktu kedaluwarsa kunci dalam menit (default: 5)
      * @return $this
      */
     public function enableRecordLocking(int $lockMinutes = 5): self
@@ -259,10 +259,10 @@ class GroceryCrud
     }
 
     /**
-     * Set a callback to resolve the current user's identity for record locking.
+     * Mengatur callback untuk mendapatkan identitas pengguna saat ini untuk penguncian record.
      *
-     * The callback must return an array with 'id' and 'name' keys.
-     * Example:
+     * Callback harus mengembalikan array dengan kunci 'id' dan 'name'.
+     * Contoh:
      *   $crud->setLockUserCallback(function() {
      *       return ['id' => (string) auth()->id(), 'name' => auth()->user()->name];
      *   });
@@ -278,7 +278,7 @@ class GroceryCrud
     }
 
     /**
-     * Get current user info for record locking.
+     * Mendapatkan info pengguna saat ini untuk penguncian record.
      *
      * @return array{id: string, name: string}
      */
@@ -291,7 +291,7 @@ class GroceryCrud
             }
         }
 
-        // Fallback: use session ID
+        // Fallback: gunakan session ID
         $sessionId = session_id() ?: md5($_SERVER['REMOTE_ADDR'] ?? 'unknown');
         return ['id' => $sessionId, 'name' => 'Anonymous (' . substr($sessionId, 0, 8) . ')'];
     }
@@ -312,11 +312,11 @@ class GroceryCrud
         $this->actions = $this->config->defaultActions;
         $this->crudId = 'crud_' . uniqid();
 
-        // Set default theme
+        // Mengatur tema default
         $themeClass = $this->config->themes[$this->config->defaultTheme] ?? Bootstrap5Theme::class;
         $this->theme = new $themeClass();
 
-        // Load default language
+        // Memuat bahasa default
         $langClass = $this->config->languages[$this->config->defaultLanguage] ?? $this->config->languages['english'];
         if (class_exists($langClass)) {
             $langObj = new $langClass();
@@ -325,17 +325,17 @@ class GroceryCrud
         }
     }
 
-    // ======== Fluent Configuration API ========
+    // ======== API Konfigurasi Fluent ========
 
     /**
-     * Set the main table and optional subject.
+     * Mengatur tabel utama dan subjek opsional.
      */
     public function setTable(string $table, ?string $subject = null): self
     {
         $this->table = $table;
         $this->subject = $subject ?? ucfirst(str_replace('_', ' ', $table));
 
-        // Initialize model and relation manager
+        // Inisialisasi model dan relation manager
         $this->model = new CrudModel($this->db, $table);
         $this->primaryKey = $this->model->getPrimaryKey();
         $this->relationManager = new RelationManager($this->db, $table, $this->primaryKey);
@@ -351,7 +351,7 @@ class GroceryCrud
     }
 
     /**
-     * Set the subject name.
+     * Mengatur nama subjek.
      */
     public function setSubject(string $subject): self
     {
@@ -360,7 +360,7 @@ class GroceryCrud
     }
 
     /**
-     * Set columns to display in the table.
+     * Mengatur kolom yang akan ditampilkan di tabel.
      */
     public function setColumns(...$columns): self
     {
@@ -369,7 +369,7 @@ class GroceryCrud
     }
 
     /**
-     * Set fields for add/edit forms.
+     * Mengatur field untuk form tambah/edit.
      */
     public function setFields(...$fields): self
     {
@@ -378,7 +378,7 @@ class GroceryCrud
     }
 
     /**
-     * Set fields for add form only.
+     * Mengatur field untuk form tambah saja.
      */
     public function setAddFields(...$fields): self
     {
@@ -387,7 +387,7 @@ class GroceryCrud
     }
 
     /**
-     * Set fields for edit form only.
+     * Mengatur field untuk form edit saja.
      */
     public function setEditFields(...$fields): self
     {
@@ -396,7 +396,7 @@ class GroceryCrud
     }
 
     /**
-     * Set a display label for a field/column.
+     * Mengatur label tampilan untuk sebuah field/kolom.
      */
     public function displayAs(string $field, string $label): self
     {
@@ -405,7 +405,7 @@ class GroceryCrud
     }
 
     /**
-     * Set a relation (belongs_to).
+     * Mengatur relasi (belongs_to).
      */
     public function setRelation(
         string $field,
@@ -417,7 +417,7 @@ class GroceryCrud
         $this->ensureInitialized();
         $this->relationManager->setRelation($field, $relatedTable, $relatedTitleField, $where, $orderBy);
 
-        // Register with model for display value fetching
+        // Mendaftarkan ke model untuk pengambilan nilai tampilan
         $this->model->setRelationField($field, [
             'relatedTable'      => $relatedTable,
             'relatedTitleField' => $relatedTitleField,
@@ -428,7 +428,7 @@ class GroceryCrud
     }
 
     /**
-     * Set an N-to-N relation (many-to-many).
+     * Mengatur relasi N-to-N (many-to-many).
      */
     public function setRelationNtoN(
         string $field,
@@ -447,7 +447,7 @@ class GroceryCrud
             $where, $orderBy
         );
 
-        // Register with model
+        // Mendaftarkan ke model
         $this->model->setRelationNtoN($field, [
             'junctionTable'        => $junctionTable,
             'primaryKeyInJunction' => $primaryKeyInJunction,
@@ -459,7 +459,7 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Callbacks ========
+    // ======== Callback ========
 
     public function callbackBeforeInsert(callable $callback): self
     {
@@ -498,7 +498,7 @@ class GroceryCrud
     }
 
     /**
-     * Callback for displaying a column value.
+     * Callback untuk menampilkan nilai kolom.
      */
     public function callbackColumn(string $field, callable $callback): self
     {
@@ -507,7 +507,7 @@ class GroceryCrud
     }
 
     /**
-     * Callback for both add and edit form field.
+     * Callback untuk field form tambah dan edit.
      */
     public function callbackField(string $field, callable $callback): self
     {
@@ -516,7 +516,7 @@ class GroceryCrud
     }
 
     /**
-     * Callback for add form field.
+     * Callback untuk field form tambah.
      */
     public function callbackAddField(string $field, callable $callback): self
     {
@@ -525,7 +525,7 @@ class GroceryCrud
     }
 
     /**
-     * Callback for edit form field.
+     * Callback untuk field form edit.
      */
     public function callbackEditField(string $field, callable $callback): self
     {
@@ -533,10 +533,10 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Validation ========
+    // ======== Validasi ========
 
     /**
-     * Set validation rules for a field.
+     * Mengatur aturan validasi untuk sebuah field.
      */
     public function setRules(string $field, string $rules, ?string $label = null): self
     {
@@ -545,7 +545,7 @@ class GroceryCrud
     }
 
     /**
-     * Mark a field as required.
+     * Menandai sebuah field sebagai wajib diisi.
      */
     public function required(string $field): self
     {
@@ -555,7 +555,7 @@ class GroceryCrud
     }
 
     /**
-     * Mark a field as unique.
+     * Menandai sebuah field sebagai unik.
      */
     public function unique(string $field): self
     {
@@ -564,10 +564,10 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Upload ========
+    // ======== Unggah ========
 
     /**
-     * Configure upload for a field.
+     * Mengatur konfigurasi upload untuk sebuah field.
      */
     public function setUpload(string $field, array $config = []): self
     {
@@ -576,10 +576,10 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Theme & Language ========
+    // ======== Tema & Bahasa ========
 
     /**
-     * Set the rendering theme.
+     * Mengatur tema rendering.
      */
     public function setTheme(string $theme): self
     {
@@ -595,7 +595,7 @@ class GroceryCrud
     }
 
     /**
-     * Set language.
+     * Mengatur bahasa.
      */
     public function setLanguage(string $language): self
     {
@@ -616,7 +616,7 @@ class GroceryCrud
     // ======== Actions ========
 
     /**
-     * Set which default actions to show.
+     * Mengatur aksi bawaan mana yang akan ditampilkan.
      */
     public function setActions(string ...$actions): self
     {
@@ -625,7 +625,7 @@ class GroceryCrud
     }
 
     /**
-     * Add a custom action button.
+     * Menambahkan tombol aksi kustom.
      */
     public function addAction(string $label, string $icon, string $url, string $cssClass = ''): self
     {
@@ -638,13 +638,13 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Soft Delete ========
+    // ======== Hapus Lunak (Soft Delete) ========
 
     /**
-     * Enable soft delete for the CRUD.
+     * Mengaktifkan soft delete untuk CRUD.
      *
-     * When enabled, delete() will set deleted_at instead of hard-deleting.
-     * Use withTrashed() to view/restore soft-deleted records.
+     * Saat diaktifkan, delete() akan mengisi deleted_at, bukan menghapus permanen.
+     * Gunakan withTrashed() untuk melihat/memulihkan record yang dihapus lunak.
      */
     public function setSoftDelete(bool $enabled = true): self
     {
@@ -655,8 +655,8 @@ class GroceryCrud
     }
 
     /**
-     * Show records including soft-deleted ones, as well as restore actions.
-     * Must be called before render().
+     * Menampilkan record termasuk yang di-soft-delete, serta aksi restore.
+     * Harus dipanggil sebelum render().
      */
     public function withTrashed(): self
     {
@@ -666,10 +666,10 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Query Configuration ========
+    // ======== Konfigurasi Query ========
 
     /**
-     * Set default order.
+     * Mengatur urutan default.
      */
     public function orderBy(string $field, string $direction = 'ASC'): self
     {
@@ -678,7 +678,7 @@ class GroceryCrud
     }
 
     /**
-     * Add WHERE condition.
+     * Menambahkan kondisi WHERE.
      */
     public function where(array|string $key, mixed $value = null): self
     {
@@ -693,7 +693,7 @@ class GroceryCrud
     }
 
     /**
-     * Set the number of items per page.
+     * Mengatur jumlah item per halaman.
      */
     public function setPerPage(int $perPage): self
     {
@@ -702,7 +702,7 @@ class GroceryCrud
     }
 
     /**
-     * Enable/disable search.
+     * Mengaktifkan/menonaktifkan pencarian.
      */
     public function setSearchable(bool $searchable): self
     {
@@ -711,7 +711,7 @@ class GroceryCrud
     }
 
     /**
-     * Enable/disable export.
+     * Mengaktifkan/menonaktifkan ekspor.
      */
     public function setExportable(bool $exportable): self
     {
@@ -720,7 +720,7 @@ class GroceryCrud
     }
 
     /**
-     * Enable/disable import.
+     * Mengaktifkan/menonaktifkan impor.
      */
     public function setImportable(bool $importable = true): self
     {
@@ -729,7 +729,7 @@ class GroceryCrud
     }
 
     /**
-     * Enable/disable print view.
+     * Mengaktifkan/menonaktifkan tampilan cetak.
      */
     public function setPrintView(bool $enable): self
     {
@@ -738,7 +738,7 @@ class GroceryCrud
     }
 
     /**
-     * Enable/disable PDF export.
+     * Mengaktifkan/menonaktifkan ekspor PDF.
      */
     public function setPdfExport(bool $enable): self
     {
@@ -746,20 +746,20 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Permissions / RBAC ========
+    // ======== Izin / RBAC ========
 
     /**
-     * Set allowed actions for a specific role.
+     * Mengatur aksi yang diizinkan untuk peran tertentu.
      *
-     * Available actions: 'add', 'edit', 'delete', 'view', 'export', 'import'
+     * Aksi yang tersedia: 'add', 'edit', 'delete', 'view', 'export', 'import'
      *
-     * Example:
+     * Contoh:
      *   $crud->setPermission('admin', ['add', 'edit', 'delete', 'view', 'export', 'import']);
      *   $crud->setPermission('editor', ['add', 'edit', 'view', 'export']);
      *   $crud->setPermission('viewer', ['view', 'export']);
      *
-     * @param string   $role    Role name (e.g. 'admin', 'editor', 'viewer')
-     * @param string[] $actions Allowed actions for this role
+     * @param string   $role    Nama peran (misal 'admin', 'editor', 'viewer')
+     * @param string[] $actions Aksi yang diizinkan untuk peran ini
      */
     public function setPermission(string $role, array $actions): self
     {
@@ -768,12 +768,12 @@ class GroceryCrud
     }
 
     /**
-     * Set a callback to resolve the current user's role.
+     * Mengatur callback untuk menentukan peran pengguna saat ini.
      *
-     * The callback should return a string (role name) or null (unauthenticated).
-     * When null is returned and permissions are defined, all actions are denied.
+     * Callback harus mengembalikan string (nama peran) atau null (tidak terautentikasi).
+     * Jika null dikembalikan dan izin ditentukan, semua aksi ditolak.
      *
-     * Example:
+     * Contoh:
      *   $crud->setPermissionCallback(fn() => session()->get('role'));
      *
      * @param callable $callback fn(): ?string
@@ -784,12 +784,12 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Inline Editing ========
+    // ======== Pengeditan Inline ========
 
     /**
-     * Enable or disable inline editing on the table.
+     * Mengaktifkan atau menonaktifkan pengeditan inline pada tabel.
      *
-     * When enabled, users can double-click on table cells to edit values directly.
+     * Saat diaktifkan, pengguna dapat klik dua kali pada sel tabel untuk mengedit nilai secara langsung.
      *
      * @param bool $enable
      * @return self
@@ -801,10 +801,10 @@ class GroceryCrud
     }
 
     /**
-     * Specify which columns are editable inline.
+     * Menentukan kolom mana yang dapat diedit inline.
      *
-     * If called with no arguments or an empty array, all visible columns are editable.
-     * Relation/foreign-key columns and date columns will show appropriate inputs.
+     * Jika dipanggil tanpa argumen atau array kosong, semua kolom yang terlihat dapat diedit.
+     * Kolom relasi/foreign-key dan kolom tanggal akan menampilkan input yang sesuai.
      *
      * @param array<int, string> $columns
      * @return self
@@ -816,7 +816,7 @@ class GroceryCrud
     }
 
     /**
-     * Determine inline editing field type and options for a column.
+     * Menentukan tipe field dan opsi pengeditan inline untuk sebuah kolom.
      *
      * @return array{type: string, options?: array<string, string>}
      */
@@ -824,7 +824,7 @@ class GroceryCrud
     {
         $this->ensureInitialized();
 
-        // Field type override takes priority
+        // Prioritas: override tipe field
         if (isset($this->fieldTypeOverrides[$field])) {
             $override = $this->fieldTypeOverrides[$field];
             return [
@@ -833,7 +833,7 @@ class GroceryCrud
             ];
         }
 
-        // Relation field (belongs_to) => dropdown with options
+        // Field relasi (belongs_to) => dropdown dengan opsi
         if ($this->relationManager->hasRelation($field) && $this->relationManager->getRelationType($field) === 'belongs_to') {
             $relData = $this->relationManager->getRelationData($field);
             $options = [];
@@ -843,14 +843,14 @@ class GroceryCrud
             return ['type' => 'select', 'options' => $options];
         }
 
-        // ENUM => dropdown with enum options
+        // ENUM => dropdown dengan opsi enum
         $enumValues = $this->model->getEnumValues($field);
         if (!empty($enumValues)) {
             $options = array_combine($enumValues, $enumValues);
             return ['type' => 'select', 'options' => $options];
         }
 
-        // Database type detection
+        // Deteksi tipe database
         $dbType = $this->model->getFieldType($field);
         $detected = FieldType::detect($dbType ?? 'text', []);
 
@@ -881,31 +881,31 @@ class GroceryCrud
     }
 
     /**
-     * Check if the current user has permission for the given action.
+     * Memeriksa apakah pengguna saat ini memiliki izin untuk aksi yang diberikan.
      */
     private function hasPermission(string $action): bool
     {
-        // If no permissions defined, allow all
+        // Jika tidak ada izin yang ditentukan, izinkan semua
         if (empty($this->permissions) && $this->permissionCallback === null) {
             return true;
         }
 
-        // Resolve user role from callback (lazy, once)
+        // Resolve peran pengguna dari callback (lazy, sekali)
         if ($this->permissionCallback !== null && $this->userRole === null) {
             $this->userRole = call_user_func($this->permissionCallback);
         }
 
-        // If user has a known role, check its permissions
+        // Jika pengguna memiliki peran yang dikenal, periksa izinnya
         if ($this->userRole !== null && isset($this->permissions[$this->userRole])) {
             return in_array($action, $this->permissions[$this->userRole], true);
         }
 
-        // Role not found in permissions map or unauthenticated: deny
+        // Peran tidak ditemukan di peta izin atau tidak terautentikasi: tolak
         return false;
     }
 
     /**
-     * Set a field as read-only.
+     * Mengatur sebuah field sebagai read-only.
      */
     public function setReadOnly(string $field): self
     {
@@ -914,7 +914,7 @@ class GroceryCrud
     }
 
     /**
-     * Override auto-detected field type.
+     * Menimpa tipe field yang terdeteksi otomatis.
      */
     public function setFieldType(string $field, string $type, array $options = []): self
     {
@@ -923,20 +923,20 @@ class GroceryCrud
     }
 
     /**
-     * Define a dynamic form condition: show/hide or enable/disable a field
-     * based on the value of another field.
+     * Mendefinisikan kondisi form dinamis: tampilkan/sembunyikan atau aktifkan/nonaktifkan field
+     * berdasarkan nilai field lain.
      *
-     * Example:
+     * Contoh:
      *   $crud->dependsOn('discount_price', 'has_discount', true);
-     *   // discount_price is shown only when has_discount is checked (true)
+     *   // discount_price ditampilkan hanya ketika has_discount dicentang (true)
      *
      *   $crud->dependsOn('shipping_address', 'same_as_billing', false, 'enable');
-     *   // shipping_address is disabled when same_as_billing is checked (true)
+     *   // shipping_address dinonaktifkan ketika same_as_billing dicentang (true)
      *
-     * @param string $field         The field that depends on another field
-     * @param string $dependsOnField The controlling field name
-     * @param mixed  $value         The value that triggers the action
-     * @param string $action        'show' (hide when not matching) or 'enable' (disable when not matching)
+     * @param string $field          Field yang tergantung pada field lain
+     * @param string $dependsOnField Nama field pengontrol
+     * @param mixed  $value          Nilai yang memicu aksi
+     * @param string $action         'show' (sembunyikan jika tidak cocok) atau 'enable' (nonaktifkan jika tidak cocok)
      */
     public function dependsOn(
         string $field,
@@ -953,23 +953,23 @@ class GroceryCrud
     }
 
     /**
-     * Define a dependent (cascading) dropdown relationship.
+     * Mendefinisikan relasi dropdown dependen (cascading).
      *
-     * When the parent dropdown changes, the child dropdown options are
-     * automatically refreshed via AJAX.
+     * Ketika dropdown induk berubah, opsi dropdown anak akan
+     * otomatis dimuat ulang melalui AJAX.
      *
-     * Example:
+     * Contoh:
      *   $crud->setDependentRelation('sub_category_id', 'category_id', 'sub_categories', 'category_id', 'name');
-     *   // sub_category_id options are filtered by category_id value
+     *   // opsi sub_category_id difilter berdasarkan nilai category_id
      *
-     * @param string $field         The child field name (e.g., 'sub_category_id')
-     * @param string $dependsOnField The parent field name (e.g., 'category_id')
-     * @param string $relatedTable  The related table for the child (e.g., 'sub_categories')
-     * @param string $foreignKey    The FK column in the related table (e.g., 'category_id')
-     * @param string $titleField    The display title column in the related table (e.g., 'name')
-     * @param string $keyField      The primary key of the related table (default: 'id')
-     * @param string|null $where    Extra WHERE condition (SQL string)
-     * @param string|null $orderBy  ORDER BY clause (SQL string)
+     * @param string $field          Nama field anak (misal 'sub_category_id')
+     * @param string $dependsOnField Nama field induk (misal 'category_id')
+     * @param string $relatedTable   Tabel terkait untuk anak (misal 'sub_categories')
+     * @param string $foreignKey     Kolom FK di tabel terkait (misal 'category_id')
+     * @param string $titleField     Kolom judul tampilan di tabel terkait (misal 'name')
+     * @param string $keyField       Primary key dari tabel terkait (default: 'id')
+     * @param string|null $where     Kondisi WHERE tambahan (string SQL)
+     * @param string|null $orderBy   Klausa ORDER BY (string SQL)
      */
     public function setDependentRelation(
         string $field,
@@ -994,17 +994,17 @@ class GroceryCrud
     }
 
     /**
-     * Enable a relation popover for a field in the list view.
+     * Mengaktifkan popover relasi untuk sebuah field di tampilan daftar.
      *
-     * When hovering over a relation field value, a tooltip/popover
-     * shows related record details fetched via AJAX.
+     * Saat mengarahkan kursor ke nilai field relasi, tooltip/popover
+     * menampilkan detail record terkait yang dimuat melalui AJAX.
      *
-     * Example:
+     * Contoh:
      *   $crud->setRelation('category_id', 'categories', 'name');
      *   $crud->setRelationPopover('category_id', ['name', 'description', 'created_at']);
      *
-     * @param string $field         The relation field name
-     * @param array<int, string> $displayFields Fields from related table to show in the popover (default: [])
+     * @param string $field          Nama field relasi
+     * @param array<int, string> $displayFields Field dari tabel terkait untuk ditampilkan di popover (default: [])
      */
     public function setRelationPopover(string $field, array $displayFields = []): self
     {
@@ -1015,13 +1015,13 @@ class GroceryCrud
     }
 
     /**
-     * Group fields into tabs or sections in add/edit forms.
+     * Mengelompokkan field ke dalam tab atau seksi di form tambah/edit.
      *
-     * Fields not assigned to any group will appear in a default "General" tab.
+     * Field yang tidak ditetapkan ke grup mana pun akan muncul di tab "General" default.
      *
-     * @param string $label  Group label (tab title or section heading)
-     * @param array<int, string> $fields List of field names in this group
-     * @param string $type   Group type: 'tab' (default) or 'section'
+     * @param string $label  Label grup (judul tab atau heading seksi)
+     * @param array<int, string> $fields Daftar nama field dalam grup ini
+     * @param string $type   Tipe grup: 'tab' (default) atau 'section'
      * @return $this
      */
     public function setFieldGroup(string $label, array $fields, string $type = 'tab'): self
@@ -1035,18 +1035,18 @@ class GroceryCrud
     }
 
     /**
-     * Remove validation rules for fields that are hidden/disabled via dependsOn
-     * when the controller field value does not match the expected trigger value.
+     * Menghapus aturan validasi untuk field yang disembunyikan/dinonaktifkan melalui dependsOn
+     * ketika nilai field pengontrol tidak sesuai dengan nilai pemicu yang diharapkan.
      *
-     * This prevents false validation errors for fields that were intentionally
-     * hidden or disabled in the browser and therefore not submitted.
+     * Ini mencegah kesalahan validasi palsu untuk field yang sengaja
+     * disembunyikan atau dinonaktifkan di browser sehingga tidak dikirim.
      */
     private function filterDependsOnValidationRules(array $data): void
     {
         foreach ($this->dependsOn as $targetField => $config) {
             $controllerValue = $data[$config['field']] ?? null;
 
-            // Normalize: boolean true/false -> '1'/'0' to match checkbox values
+            // Normalisasi: boolean true/false -> '1'/'0' agar sesuai dengan nilai checkbox
             $expectedValue = $config['value'];
             if (is_bool($expectedValue)) {
                 $expectedValue = $expectedValue ? '1' : '0';
@@ -1059,13 +1059,13 @@ class GroceryCrud
     }
 
     /**
-     * Add a column filter which renders a filter control in the table header.
+     * Menambahkan filter kolom yang merender kontrol filter di header tabel.
      *
-     * Supported types: 'text', 'dropdown'
+     * Tipe yang didukung: 'text', 'dropdown'
      *
-     * @param string $field   Column name
-     * @param string $type    Filter type ('text' or 'dropdown')
-     * @param array  $options For 'dropdown': ['1' => 'Active', '0' => 'Inactive']
+     * @param string $field   Nama kolom
+     * @param string $type    Tipe filter ('text' atau 'dropdown')
+     * @param array  $options Untuk 'dropdown': ['1' => 'Active', '0' => 'Inactive']
      */
     public function setColumnFilter(string $field, string $type, array $options = []): self
     {
@@ -1074,14 +1074,14 @@ class GroceryCrud
     }
 
     /**
-     * Set a column filter with options dynamically fetched from a related table.
+     * Mengatur filter kolom dengan opsi yang diambil secara dinamis dari tabel terkait.
      *
-     * @param string      $field       Column name in current table
-     * @param string      $table       Related table name
-     * @param string      $labelField  Field to display as option label
-     * @param string|null $keyField    Key field (default: primary key of related table)
-     * @param string|null $where       Optional WHERE condition (e.g., "status = 'active'")
-     * @param string|null $order       Optional ORDER BY (e.g., "name ASC")
+     * @param string      $field       Nama kolom di tabel saat ini
+     * @param string      $table       Nama tabel terkait
+     * @param string      $labelField  Field yang ditampilkan sebagai label opsi
+     * @param string|null $keyField    Field kunci (default: primary key tabel terkait)
+     * @param string|null $where       Kondisi WHERE opsional (misal "status = 'active'")
+     * @param string|null $order       ORDER BY opsional (misal "name ASC")
      */
     public function setColumnFilterRelation(string $field, string $table, string $labelField, ?string $keyField = null, ?string $where = null, ?string $order = null): self
     {
@@ -1096,9 +1096,9 @@ class GroceryCrud
     }
 
     /**
-     * Set a batch action.
+     * Mengatur aksi batch.
      *
-     * Built-in actions: 'delete_selected'
+     * Aksi bawaan: 'delete_selected'
      *
      * @param string $actionId
      * @param string $label
@@ -1110,7 +1110,7 @@ class GroceryCrud
     }
 
     /**
-     * Alias for setBatchAction.
+     * Alias untuk setBatchAction.
      */
     public function addBatchAction(string $actionId, string $label): self
     {
@@ -1118,7 +1118,7 @@ class GroceryCrud
     }
 
     /**
-     * Define a repeater field (repeatable group of sub-fields).
+     * Mendefinisikan field repeater (grup sub-field yang dapat diulang).
      */
     public function setRepeater(string $field, string $label, array $repeatables, string $preset = 'json', array $options = []): self
     {
@@ -1134,17 +1134,17 @@ class GroceryCrud
     }
 
     /**
-     * Define a sub-grid (nested CRUD table) that renders related records
-     * in an expandable row below each parent record.
+     * Mendefinisikan sub-grid (tabel CRUD bersarang) yang merender record terkait
+     * dalam baris yang dapat diperluas di bawah setiap record induk.
      *
-     * @param string $field           Virtual field name (identifier, not a real column)
-     * @param string $relatedTable    Related table name
-     * @param string $foreignKey      FK in related table pointing to parent
-     * @param array  $columns         Columns to display in sub-grid
-     * @param array  $columnLabels    Optional column labels
-     * @param array  $columnRelations Optional relation lookups for columns.
-     *                                Format: ['column' => ['relatedTable', 'displayField', 'localKey', 'foreignKey']]
-     *                                Example: ['tag_id' => ['tags', 'name', 'tag_id', 'id']]
+     * @param string $field            Nama field virtual (pengenal, bukan kolom nyata)
+     * @param string $relatedTable     Nama tabel terkait
+     * @param string $foreignKey       FK di tabel terkait yang mengarah ke induk
+     * @param array  $columns          Kolom untuk ditampilkan di sub-grid
+     * @param array  $columnLabels     Label kolom opsional
+     * @param array  $columnRelations  Pencarian relasi opsional untuk kolom.
+     *                                 Format: ['column' => ['relatedTable', 'displayField', 'localKey', 'foreignKey']]
+     *                                 Contoh: ['tag_id' => ['tags', 'name', 'tag_id', 'id']]
      */
     public function setSubGrid(string $field, string $relatedTable, string $foreignKey, array $columns, array $columnLabels = [], array $columnRelations = []): self
     {
@@ -1167,7 +1167,7 @@ class GroceryCrud
     }
 
     /**
-     * Remove the Filters button from the datagrid toolbar.
+     * Menghapus tombol Filters dari toolbar datagrid.
      */
     public function unsetFilters(): self
     {
@@ -1176,7 +1176,7 @@ class GroceryCrud
     }
 
     /**
-     * Remove the Columns button from the datagrid toolbar.
+     * Menghapus tombol Columns dari toolbar datagrid.
      */
     public function unsetColumns(): self
     {
@@ -1185,7 +1185,7 @@ class GroceryCrud
     }
 
     /**
-     * Remove the Settings button from the datagrid toolbar.
+     * Menghapus tombol Settings dari toolbar datagrid.
      */
     public function unsetSettings(): self
     {
@@ -1193,20 +1193,20 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== REST API Mode ========
+    // ======== Mode REST API ========
 
     /**
-     * Enable REST API mode.
+     * Mengaktifkan mode REST API.
      *
-     * When enabled, `render()` returns clean JSON responses instead of HTML.
-     * Actions are auto-detected from HTTP method:
-     *   GET    → list (paginated)
+     * Saat diaktifkan, `render()` mengembalikan respons JSON bersih, bukan HTML.
+     * Aksi terdeteksi otomatis dari metode HTTP:
+     *   GET    → list (dipaginasi)
      *   POST   → create (insert)
      *   PUT    → update (edit)
      *   DELETE → delete
      *
-     * You can also pass `gc_action` query param to override.
-     * Record ID is resolved from `id` or primary key in GET/POST params.
+     * Anda juga dapat melewatkan param query `gc_action` untuk menimpa.
+     * Record ID diselesaikan dari `id` atau primary key di parameter GET/POST.
      *
      * @param bool $apiMode
      * @return self
@@ -1217,10 +1217,10 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Activity Log / Audit Trail ========
+    // ======== Log Aktivitas / Audit Trail ========
 
     /**
-     * Enable Activity Log (Audit Trail).
+     * Mengaktifkan Activity Log (Audit Trail).
      *
      * Mencatat otomatis semua operasi CRUD (insert, update, delete, restore,
      * batch) ke tabel activity_logs, termasuk data sebelum & sesudah.
@@ -1242,7 +1242,8 @@ class GroceryCrud
     }
 
     /**
-     * Set custom table name for activity logs.
+     * Mengatur nama tabel kustom untuk activity logs.
+     *
      * Default: 'activity_logs'
      *
      * @param string $tableName
@@ -1258,7 +1259,7 @@ class GroceryCrud
     }
 
     /**
-     * Get the ActivityLogManager instance.
+     * Mendapatkan instance ActivityLogManager.
      *
      * @return ActivityLogManager|null
      */
@@ -1268,7 +1269,7 @@ class GroceryCrud
     }
 
     /**
-     * Set field labels for human-readable diff in activity logs.
+     * Mengatur label field untuk diff yang mudah dibaca di activity logs.
      *
      * @param array<string, string> $labels ['field_name' => 'Label']
      * @return self
@@ -1283,7 +1284,7 @@ class GroceryCrud
     }
 
     /**
-     * Set fields to exclude from activity log data (e.g. passwords).
+     * Mengatur field yang dikecualikan dari data activity log (misal password).
      *
      * @param array<int, string> $fields
      * @return self
@@ -1297,14 +1298,14 @@ class GroceryCrud
         return $this;
     }
 
-    // ======== Render Methods ========
+    // ======== Metode Render ========
 
     /**
-     * Render the full CRUD interface (list + actions).
-     * In AJAX context, returns JSON; otherwise returns HTML.
+     * Merender antarmuka CRUD lengkap (daftar + aksi).
+     * Dalam konteks AJAX, mengembalikan JSON; jika tidak, mengembalikan HTML.
      *
-     * In API mode, returns clean JSON with REST-style responses,
-     * auto-detecting action from HTTP method.
+     * Dalam mode API, mengembalikan JSON bersih dengan respons gaya REST,
+     * mendeteksi aksi secara otomatis dari metode HTTP.
      *
      * @return ResponseInterface|string
      */
@@ -1313,7 +1314,7 @@ class GroceryCrud
         $this->ensureInitialized();
         $request = Services::request();
 
-        // Handle AJAX actions
+        // Tangani aksi AJAX
         $action = $request->getPost('gc_action') ?? $request->getGet('gc_action');
 
         if ($action !== null) {
@@ -1323,7 +1324,7 @@ class GroceryCrud
             return $this->handleAjaxAction($action);
         }
 
-        // API mode: auto-detect action from HTTP method
+        // Mode API: deteksi aksi otomatis dari metode HTTP
         if ($this->apiMode) {
             $method = strtoupper($request->getMethod());
             $hasId = $request->getGet($this->primaryKey) !== null
@@ -1340,16 +1341,16 @@ class GroceryCrud
             return $this->handleApiAction($action);
         }
 
-        // If trashed view, show trashed records on initial load
+        // Jika tampilan trash, tampilkan record yang terhapus pada muatan awal
         if ($this->trashedView) {
             $this->model->onlyTrashed();
         }
 
-        // Render the list view
+        // Render tampilan daftar
         $listData = $this->buildListData(1, null, null, null, null, [], [], [], $this->trashedView);
         $html = $this->theme->renderList($listData);
 
-        // If it's an AJAX request, return JSON with HTML
+        // Jika request AJAX, kembalikan JSON dengan HTML
         if ($request->isAJAX()) {
             return Services::response()
                 ->setContentType('application/json')
@@ -1359,12 +1360,12 @@ class GroceryCrud
                 ]);
         }
 
-        // Full page render
+        // Render halaman penuh
         return $this->renderer->renderPage($this->theme, $listData, $this->headerHtml);
     }
 
     /**
-     * Get list data for AJAX loading.
+     * Mendapatkan data daftar untuk pemuatan AJAX.
      */
     public function ajaxList(): ResponseInterface
     {
@@ -1394,7 +1395,7 @@ class GroceryCrud
     }
 
     /**
-     * Get add form.
+     * Mendapatkan form tambah.
      */
     public function ajaxAddForm(): ResponseInterface
     {
@@ -1410,7 +1411,7 @@ class GroceryCrud
     }
 
     /**
-     * Process add form submission.
+     * Memproses pengiriman form tambah.
      */
     public function ajaxAdd(): ResponseInterface
     {
@@ -1418,13 +1419,13 @@ class GroceryCrud
         $request = Services::request();
         $data = $request->getPost();
 
-        // Remove action key
+        // Hapus kunci aksi
         unset($data['gc_action']);
 
-        // Skip validation for fields disabled via dependsOn (action='enable')
+        // Lewati validasi untuk field yang dinonaktifkan melalui dependsOn (action='enable')
         $this->filterDependsOnValidationRules($data);
 
-        // Validation
+        // Validasi
         $errors = $this->validationManager->validate($data);
         if (!empty($errors)) {
             return $this->jsonResponse(false, [
@@ -1434,10 +1435,10 @@ class GroceryCrud
         }
 
         try {
-            // Before insert callback
+            // Callback sebelum insert
             $data = $this->callbackManager->executeBefore('beforeInsert', $data);
 
-            // Handle uploads
+            // Tangani unggahan
             $data = $this->handleUploads($data);
             if ($data === false) {
                 return $this->jsonResponse(false, [
@@ -1445,13 +1446,13 @@ class GroceryCrud
                 ]);
             }
 
-            // Process repeater fields (JSON encode / unset hasMany)
+            // Proses field repeater (JSON encode / unset hasMany)
             $this->processRepeaterDataBeforeSave($data);
 
-            // Remove N-to-N fields (virtual, not actual columns) before insert
+            // Hapus field N-to-N (virtual, bukan kolom nyata) sebelum insert
             $data = $this->stripNtoNFields($data);
 
-            // Insert
+            // Lakukan insert
             $insertId = $this->model->insert($data);
 
             if ($insertId === false || $insertId === 0) {
@@ -1460,13 +1461,13 @@ class GroceryCrud
                 ]);
             }
 
-            // Handle repeater hasMany data
+            // Tangani data hasMany repeater
             $this->processRepeaterDataAfterSave($insertId);
 
-            // Handle NtoN relations
+            // Tangani relasi NtoN
             $this->handleNtoNInsert($insertId, $request->getPost());
 
-            // After insert callback
+            // Callback setelah insert
             $this->callbackManager->executeAfter('afterInsert', [
                 'table'         => $this->table,
                 'primaryKey'    => $this->primaryKey,
@@ -1474,7 +1475,7 @@ class GroceryCrud
                 'data'          => $request->getPost(),
             ]);
 
-            // Activity Log
+            // Log Aktivitas
             $this->logActivityInsert($insertId, $data);
 
             return $this->jsonResponse(true, [
@@ -1489,13 +1490,13 @@ class GroceryCrud
     }
 
     /**
-     * Get edit form.
+     * Mendapatkan form edit.
      */
     public function ajaxEditForm(mixed $id): ResponseInterface
     {
         $this->ensureInitialized();
 
-        // Record locking check
+        // Pemeriksaan kunci record
         if ($this->recordLockManager !== null) {
             $userInfo = $this->getLockUserInfo();
             $lockOk = $this->recordLockManager->acquireLock(
@@ -1529,13 +1530,13 @@ class GroceryCrud
     }
 
     /**
-     * Process edit form submission.
+     * Memproses pengiriman form edit.
      */
     public function ajaxEdit(mixed $id): ResponseInterface
     {
         $this->ensureInitialized();
 
-        // Record locking check: verify current user owns the lock
+        // Pemeriksaan kunci record: verifikasi pengguna saat ini memiliki kunci
         if ($this->recordLockManager !== null) {
             $userInfo = $this->getLockUserInfo();
             $lock = $this->recordLockManager->getLock($this->table, $id);
@@ -1554,14 +1555,14 @@ class GroceryCrud
 
         unset($data['gc_action'], $data[$this->primaryKey]);
 
-        // Validation (unique ignore current record)
+        // Validasi (unique abaikan record saat ini)
         foreach ($this->uniqueFields as $uniqueField) {
             if (isset($data[$uniqueField])) {
                 $this->validationManager->uniqueExcept($uniqueField, $id, $this->columnLabels[$uniqueField] ?? null);
             }
         }
 
-        // Skip validation for fields disabled via dependsOn (action='enable')
+        // Lewati validasi untuk field yang dinonaktifkan melalui dependsOn (action='enable')
         $this->filterDependsOnValidationRules($data);
 
         $errors = $this->validationManager->validate($data);
@@ -1573,13 +1574,13 @@ class GroceryCrud
         }
 
         try {
-            // Before update callback
+            // Callback sebelum update
             $data = $this->callbackManager->executeBefore('beforeUpdate', $data);
 
-            // Fetch old data for activity log before updating
+            // Ambil data lama untuk activity log sebelum update
             $oldData = $this->activityLog !== null ? $this->model->getRawRow($id) : null;
 
-            // Handle uploads
+            // Tangani unggahan
             $data = $this->handleUploads($data, $id);
             if ($data === false) {
                 return $this->jsonResponse(false, [
@@ -1587,30 +1588,30 @@ class GroceryCrud
                 ]);
             }
 
-            // Preserve existing file if no new upload
+            // Pertahankan file yang ada jika tidak ada unggahan baru
             foreach ($this->uploadFieldConfigs as $field => $config) {
                 if (!isset($data[$field]) && $request->getPost($field . '_existing')) {
                     $data[$field] = $request->getPost($field . '_existing');
                 }
             }
 
-            // Strip _existing keys from data (hidden inputs, not real columns)
+            // Hapus kunci _existing dari data (input tersembunyi, bukan kolom nyata)
             foreach (array_keys($data) as $key) {
                 if (str_ends_with($key, '_existing')) {
                     unset($data[$key]);
                 }
             }
 
-            // Process repeater fields (JSON encode / unset hasMany)
+            // Proses field repeater (JSON encode / unset hasMany)
             $this->processRepeaterDataBeforeSave($data);
 
-            // Remove N-to-N fields (virtual, not actual columns) before update
+            // Hapus field N-to-N (virtual, bukan kolom nyata) sebelum update
             $data = $this->stripNtoNFields($data);
 
-            // Update
+            // Lakukan update
             $updated = $this->model->update($id, $data);
 
-            // Handle repeater hasMany data
+            // Tangani data hasMany repeater
             $this->processRepeaterDataAfterSave($id);
 
             if (!$updated) {
@@ -1619,10 +1620,10 @@ class GroceryCrud
                 ]);
             }
 
-            // Handle NtoN relations
+            // Tangani relasi NtoN
             $this->handleNtoNUpdate($id, $request->getPost());
 
-            // After update callback
+            // Callback setelah update
             $this->callbackManager->executeAfter('afterUpdate', [
                 'table'      => $this->table,
                 'primaryKey' => $this->primaryKey,
@@ -1630,10 +1631,10 @@ class GroceryCrud
                 'data'       => $request->getPost(),
             ]);
 
-            // Activity Log: log update with old + new data
+            // Log Aktivitas: log update with old + new data
             $this->logActivityUpdate($id, $oldData ?? [], $data);
 
-            // Release record lock
+            // Lepaskan kunci record
             if ($this->recordLockManager !== null) {
                 $this->recordLockManager->releaseLock($this->table, $id);
             }
@@ -1649,9 +1650,9 @@ class GroceryCrud
     }
 
     /**
-     * Handle inline save (inline editing).
+     * Menangani penyimpanan inline (pengeditan inline).
      *
-     * Expects POST: id, field, value
+     * Menerima POST: id, field, value
      */
     private function ajaxInlineSave(): ResponseInterface
     {
@@ -1666,18 +1667,18 @@ class GroceryCrud
             return $this->jsonResponse(false, ['message' => 'Missing parameters.']);
         }
 
-        // Check if inline editing is enabled
+        // Periksa apakah pengeditan inline diaktifkan
         if (!$this->enableInlineEditing) {
             return $this->jsonResponse(false, ['message' => 'Inline editing is disabled.']);
         }
 
-        // Check if column is allowed for inline editing
+        // Periksa apakah kolom diizinkan untuk pengeditan inline
         if (!empty($this->inlineEditColumns) && !in_array($field, $this->inlineEditColumns, true)) {
             return $this->jsonResponse(false, ['message' => 'Column is not editable.']);
         }
 
-        // Validate only the field being edited (other fields not submitted)
-        // Pass record ID so is_unique excludes current record
+        // Validasi hanya field yang diedit (field lain tidak dikirim)
+        // Kirim ID record agar is_unique mengecualikan record saat ini
         $errors = $this->validationManager->validateField($field, $value, $id);
         if (!empty($errors)) {
             return $this->jsonResponse(false, [
@@ -1689,13 +1690,13 @@ class GroceryCrud
         try {
             $data = [$field => $value];
 
-            // Before update callback
+            // Callback sebelum update
             $data = $this->callbackManager->executeBefore('beforeUpdate', $data);
 
-            // Fetch old data for activity log before updating
+            // Ambil data lama untuk activity log sebelum update
             $oldData = $this->activityLog !== null ? $this->model->getRawRow($id) : null;
 
-            // Update
+            // Lakukan update
             $updated = $this->model->update($id, $data);
 
             if (!$updated) {
@@ -1704,7 +1705,7 @@ class GroceryCrud
                 ]);
             }
 
-            // After update callback
+            // Callback setelah update
             $this->callbackManager->executeAfter('afterUpdate', [
                 'table'      => $this->table,
                 'primaryKey' => $this->primaryKey,
@@ -1712,22 +1713,22 @@ class GroceryCrud
                 'data'       => [$field => $value],
             ]);
 
-            // Activity Log: log inline update with old + new data
+            // Log Aktivitas: log inline update with old + new data
             $this->logActivityUpdate($id, $oldData ?? [], $data);
 
-            // Fetch updated record with relations resolved
+            // Ambil record yang diperbarui dengan relasi terselesaikan
             $record = $this->model->getRow($id);
 
-            // Get display value (with relation labels)
+            // Dapatkan nilai tampilan (dengan label relasi)
             $displayValue = $record[$field] ?? $value;
 
-            // Apply column callbacks
+            // Terapkan callback kolom
             $columnCallbacks = $this->callbackManager->getColumnCallbacks();
             if (isset($columnCallbacks[$field])) {
                 $displayValue = $columnCallbacks[$field]($displayValue, $record);
             }
 
-            // If display value is the same as raw value, check fieldOptions for label mapping
+            // Jika nilai tampilan sama dengan nilai mentah, periksa fieldOptions untuk pemetaan label
             if ($displayValue === $value || $displayValue === null) {
                 $fieldTypeOverrides = $this->fieldTypeOverrides[$field] ?? [];
                 if (!empty($fieldTypeOverrides['options'][$value])) {
@@ -1747,24 +1748,24 @@ class GroceryCrud
     }
 
     /**
-     * Delete a record.
+     * Menghapus sebuah record.
      */
     public function ajaxDelete(mixed $id): ResponseInterface
     {
         $this->ensureInitialized();
 
         try {
-            // Fetch old data for activity log before deleting
+            // Ambil data lama untuk activity log sebelum menghapus
             $oldData = $this->activityLog !== null ? $this->model->getRawRow($id) : null;
 
-            // Before delete callback
+            // Callback sebelum hapus
             $this->callbackManager->executeBefore('beforeDelete', [
                 'table'      => $this->table,
                 'primaryKey' => $this->primaryKey,
                 'id'         => $id,
             ]);
 
-            // Delete related NtoN records
+            // Hapus record NtoN terkait
             $this->handleNtoNDelete($id);
 
             $deleted = $this->model->delete($id);
@@ -1775,17 +1776,17 @@ class GroceryCrud
                 ]);
             }
 
-            // After delete callback
+            // Callback setelah hapus
             $this->callbackManager->executeAfter('afterDelete', [
                 'table'      => $this->table,
                 'primaryKey' => $this->primaryKey,
                 'id'         => $id,
             ]);
 
-            // Activity Log
+            // Log Aktivitas
             $this->logActivityDelete($id, $oldData);
 
-            // Release record lock if held
+            // Lepaskan kunci record if held
             if ($this->recordLockManager !== null) {
                 $this->recordLockManager->releaseLock($this->table, $id);
             }
@@ -1801,7 +1802,7 @@ class GroceryCrud
     }
 
     /**
-     * Restore a soft-deleted record.
+     * Memulihkan record yang di-soft-delete.
      */
     public function ajaxRestore(mixed $id): ResponseInterface
     {
@@ -1816,7 +1817,7 @@ class GroceryCrud
                 ]);
             }
 
-            // Activity Log
+            // Log Aktivitas
             $this->logActivityRestore($id);
 
             return $this->jsonResponse(true, [
@@ -1830,7 +1831,7 @@ class GroceryCrud
     }
 
     /**
-     * Get list of trashed (soft-deleted) records.
+     * Mendapatkan daftar record yang dihapus (soft-deleted).
      */
     public function ajaxTrashList(): ResponseInterface
     {
@@ -1845,7 +1846,7 @@ class GroceryCrud
         $filtersJson = $request->getGet('filters') ?? $request->getPost('filters') ?? '{}';
         $filters = json_decode($filtersJson, true) ?? [];
 
-        // Show only trashed records
+        // Tampilkan hanya record yang terhapus
         $this->model->onlyTrashed();
 
         $listData = $this->buildListData(max(1, $page), $search, $perPage, $sortField, $sortDir, $filters, [], $this->resolveColumns(), true);
@@ -1862,7 +1863,7 @@ class GroceryCrud
     }
 
     /**
-     * Get sub-grid data for a parent record.
+     * Mendapatkan data sub-grid untuk sebuah record induk.
      */
     public function ajaxSubGrid(): ResponseInterface
     {
@@ -1882,7 +1883,7 @@ class GroceryCrud
 
         $records = $this->model->getSubGridData($subGridField, $parentId);
 
-        // Render sub-grid HTML
+        // Render HTML sub-grid
         $html = $this->theme->renderSubGrid($config, $records);
 
         return Services::response()
@@ -1894,7 +1895,7 @@ class GroceryCrud
     }
 
     /**
-     * Print View - returns clean printable HTML page.
+     * Tampilan Cetak - mengembalikan halaman HTML bersih yang dapat dicetak.
      */
     public function ajaxPrintView(): ResponseInterface
     {
@@ -1925,11 +1926,11 @@ class GroceryCrud
     }
 
     /**
-     * AJAX handler for dependent (cascading) dropdown options.
+     * Handler AJAX untuk opsi dropdown dependen (cascading).
      *
-     * POST parameters:
-     *   - field: The child field name
-     *   - parent_value: The selected value of the parent dropdown
+     * Parameter POST:
+     *   - field: Nama field anak
+     *   - parent_value: Nilai yang dipilih dari dropdown induk
      */
     public function ajaxDependentOptions(): ResponseInterface
     {
@@ -1945,7 +1946,7 @@ class GroceryCrud
 
         $config = $this->dependentRelations[$field];
 
-        // Build the WHERE condition for the parent FK
+        // Bangun kondisi WHERE untuk FK induk
         $where = [$config['foreignKey'] => $parentValue];
 
         $options = $this->model->getRelationOptions(
@@ -1966,11 +1967,11 @@ class GroceryCrud
     }
 
     /**
-     * AJAX handler for relation popover data.
+     * Handler AJAX untuk data popover relasi.
      *
-     * POST parameters:
-     *   - field: The relation field name
-     *   - id:    The related record ID
+     * Parameter POST:
+     *   - field: Nama field relasi
+     *   - id:    ID record terkait
      */
     public function ajaxRelationPopover(): ResponseInterface
     {
@@ -1995,11 +1996,11 @@ class GroceryCrud
 
         $displayFields = $config['displayFields'];
         if (empty($displayFields)) {
-            // Auto-detect: default to key field + title field
+            // Deteksi otomatis: default ke key field + title field
             $displayFields = [$keyField, $relInfo['relatedTitleField']];
         }
 
-        // Ensure key field is included
+        // Pastikan key field disertakan
         if (!in_array($keyField, $displayFields, true)) {
             array_unshift($displayFields, $keyField);
         }
@@ -2010,7 +2011,7 @@ class GroceryCrud
             return $this->jsonResponse(false, ['message' => 'Record not found.']);
         }
 
-        // Build HTML for popover
+        // Bangun HTML untuk popover
         $html = '<div class="gc-popover-body" style="font-size:0.8125rem;min-width:180px;">';
         foreach ($record as $col => $val) {
             $label = $this->columnLabels[$col] ?? ucfirst(str_replace('_', ' ', (string) $col));
@@ -2025,7 +2026,7 @@ class GroceryCrud
     }
 
     /**
-     * Export data.
+     * Mengekspor data.
      */
     public function ajaxExport(string $format): ResponseInterface
     {
@@ -2033,7 +2034,7 @@ class GroceryCrud
 
         $columns = $this->resolveColumns();
 
-        // Filter columns if specific columns requested for export (POST)
+        // Filter kolom jika kolom tertentu diminta untuk ekspor (POST)
         $request = Services::request();
         $exportColumns = $request->getPost('columns');
         if (!empty($exportColumns) && is_array($exportColumns)) {
@@ -2043,11 +2044,11 @@ class GroceryCrud
             }
         }
 
-        // Apply filters if export scope is "filtered"
+        // Terapkan filter jika lingkup ekspor adalah "filtered"
         $exportScope = $request->getPost('export_scope') ?? 'all';
         $filters = [];
         if ($exportScope === 'filtered') {
-            // Simple column filters
+            // Filter kolom sederhana
             $exportFilters = $request->getPost('export_filters');
             if (!empty($exportFilters)) {
                 $decoded = json_decode($exportFilters, true);
@@ -2056,7 +2057,7 @@ class GroceryCrud
                 }
                 $this->model->setFilterTypes(array_fill_keys(array_keys($filters), 'text'));
             }
-            // Advanced filters from filter panel
+            // Filter lanjutan dari panel filter
             $exportAdvanced = $request->getPost('export_advanced_filters');
             if (!empty($exportAdvanced)) {
                 $decoded = json_decode($exportAdvanced, true);
@@ -2085,7 +2086,7 @@ class GroceryCrud
             $filters
         );
 
-        // Note: column callbacks NOT applied to export (raw data only)
+        // Catatan: callback kolom TIDAK diterapkan pada ekspor (data mentah saja)
         if ($format === 'csv') {
             $exporter = new CsvExport();
             $content = $exporter->export($records, $this->columnLabels, $columns);
@@ -2120,14 +2121,14 @@ class GroceryCrud
                 ->setBody($content);
         }
 
-        // Unknown format
+        // Format tidak dikenal
         return $this->jsonResponse(false, ['message' => 'Unknown export format.']);
     }
 
     // ======== Import Methods ========
 
     /**
-     * Get the import form HTML.
+     * Mendapatkan HTML form impor.
      */
     public function ajaxImportForm(): ResponseInterface
     {
@@ -2153,7 +2154,7 @@ class GroceryCrud
     }
 
     /**
-     * Build the URL for downloading a CSV import template.
+     * Membangun URL untuk mengunduh template CSV impor.
      */
 
     private function getImportTemplateUrl(): string
@@ -2161,7 +2162,7 @@ class GroceryCrud
         $request = Services::request();
         $uri = (string) $request->getUri();
 
-        // Parse existing query params
+        // Parsing parameter query yang ada
         $parsed = parse_url($uri);
         $query = [];
         if (isset($parsed['query'])) {
@@ -2179,7 +2180,7 @@ class GroceryCrud
     }
 
     /**
-     * Upload and parse import file, return preview + mapping.
+     * Mengunggah dan mengurai file impor, mengembalikan pratinjau + pemetaan.
      */
     public function ajaxImportUpload(): ResponseInterface
     {
@@ -2203,7 +2204,7 @@ class GroceryCrud
                 'error'    => $file->getError(),
             ]);
 
-            // Auto-detect column mapping
+            // Deteksi otomatis pemetaan kolom
             $fields = $this->resolveFields('add');
             $mapping = $importManager->detectMapping(
                 $result['headers'],
@@ -2228,7 +2229,7 @@ class GroceryCrud
     }
 
     /**
-     * Execute import with mapped columns.
+     * Menjalankan impor dengan kolom yang sudah dipetakan.
      */
     public function ajaxImportExecute(): ResponseInterface
     {
@@ -2253,7 +2254,7 @@ class GroceryCrud
             ]);
         }
 
-        // Map rows: header-indexed → field-indexed
+        // Petakan baris: header-indexed → field-indexed
         $mappedRows = [];
         foreach ($rows as $row) {
             $mapped = [];
@@ -2276,10 +2277,10 @@ class GroceryCrud
         $importManager = $this->getImportManager();
         $result = $importManager->execute($mappedRows, function (array $row) {
             try {
-                // Check for beforeInsert callback
+                // Periksa callback beforeInsert
                 $row = $this->callbackManager->executeBefore('beforeInsert', $row);
 
-                // Remove N-to-N fields (virtual, not actual columns)
+                // Hapus field N-to-N (virtual, bukan kolom nyata)
                 $row = $this->stripNtoNFields($row);
 
                 $insertId = $this->model->insert($row);
@@ -2313,7 +2314,7 @@ class GroceryCrud
     }
 
     /**
-     * Generate and download a CSV template based on the active CRUD fields.
+     * Membuat dan mengunduh template CSV berdasarkan field CRUD yang aktif.
      */
 
     public function ajaxImportTemplate(): ResponseInterface
@@ -2326,22 +2327,22 @@ class GroceryCrud
         $fields = $this->resolveFields('add');
         $labels = $this->columnLabels;
 
-        // If specific fields requested, filter to only those
+        // Jika field tertentu diminta, filter hanya itu
         if (!empty($selectedFields) && is_array($selectedFields)) {
             $fields = array_intersect($fields, $selectedFields);
         }
 
-        // Build CSV in memory
+        // Bangun CSV di memori
         $output = fopen('php://temp', 'r+');
 
-        // Header: use field labels if available, otherwise field name
+        // Header: gunakan label field jika tersedia, jika tidak gunakan nama field
         $header = [];
         foreach ($fields as $field) {
             $header[] = $labels[$field] ?? $field;
         }
         fputcsv($output, $header);
 
-        // Sample row with placeholders
+        // Baris contoh dengan placeholder
         $sample = [];
         foreach ($fields as $field) {
             $sample[] = $this->getSampleValue($field);
@@ -2361,7 +2362,7 @@ class GroceryCrud
     }
 
     /**
-     * Generate a sample value for a field based on its name/type.
+     * Menghasilkan nilai contoh untuk sebuah field berdasarkan nama/tipe.
      */
 
     private function getSampleValue(string $field): string
@@ -2403,7 +2404,7 @@ class GroceryCrud
     }
 
     /**
-     * Get (or create) the ImportManager.
+     * Mendapatkan (atau membuat) ImportManager.
      */
     private function getImportManager(): ImportManager
     {
@@ -2416,7 +2417,7 @@ class GroceryCrud
     // ======== Internal Methods ========
 
     /**
-     * Ensure the table is set before operations.
+     * Memastikan tabel sudah diatur sebelum operasi.
      */
     private function ensureInitialized(): void
     {
@@ -2426,11 +2427,11 @@ class GroceryCrud
     }
 
     /**
-     * Build the data array for list rendering.
+     * Membangun array data untuk rendering daftar.
      */
     private function buildListData(int $page = 1, ?string $search = null, ?int $perPage = null, ?string $sortField = null, ?string $sortDir = null, array $filters = [], array $advancedFilters = [], array $columns = [], bool $trashedView = false): array
     {
-        // Filter actions and features based on permissions
+        // Filter aksi dan fitur berdasarkan izin
         $allowedActions = ['add', 'edit', 'delete'];
         foreach ($allowedActions as $action) {
             if (!$this->hasPermission($action)) {
@@ -2438,17 +2439,17 @@ class GroceryCrud
             }
         }
 
-        // Filter batch actions based on permissions
+        // Filter aksi batch berdasarkan izin
         if (!$this->hasPermission('delete')) {
             $this->batchActions = array_filter($this->batchActions, fn($label, $id) => !in_array($id, ['delete_selected', 'restore_selected'], true), ARRAY_FILTER_USE_BOTH);
         }
 
-        // Disable export if not permitted
+        // Nonaktifkan ekspor jika tidak diizinkan
         if (!$this->hasPermission('export')) {
             $this->enableExport = false;
         }
 
-        // Disable import if not permitted
+        // Nonaktifkan impor jika tidak diizinkan
         if (!$this->hasPermission('import')) {
             $this->enableImport = false;
         }
@@ -2461,7 +2462,7 @@ class GroceryCrud
 
         $searchableColumns = $this->searchable ? $columns : [];
 
-        // Merge request sort with default orderBy (request sort takes priority)
+        // Gabungkan sort request dengan orderBy default (sort request diutamakan)
         $orders = $this->orderBy;
         if ($sortField !== null && $sortField !== '') {
             $direction = strtoupper($sortDir ?? 'ASC');
@@ -2471,14 +2472,14 @@ class GroceryCrud
             array_unshift($orders, ['field' => $sortField, 'direction' => $direction]);
         }
 
-        // Set filter types so model knows LIKE vs exact match
+        // Atur tipe filter agar model tahu LIKE vs pencocokan tepat
         $filterTypes = [];
         foreach ($this->columnFilters as $field => $config) {
             $filterTypes[$field] = $config['type'] ?? 'dropdown';
         }
         $this->model->setFilterTypes($filterTypes);
 
-        // Apply advanced filters
+        // Terapkan filter lanjutan
         if (!empty($advancedFilters)) {
             foreach ($advancedFilters as $filter) {
                 if (!empty($filter['field']) && !empty($filter['value'])) {
@@ -2505,10 +2506,10 @@ class GroceryCrud
             $filters
         );
 
-        // Apply column callbacks
+        // Terapkan callback kolom
         $columnCallbacks = $this->callbackManager->getColumnCallbacks();
         foreach ($records as &$row) {
-            // Ensure _raw exists (populated by model's getList)
+            // Pastikan _raw ada (diisi oleh getList model)
             if (!isset($row['_raw'])) {
                 $row['_raw'] = [];
                 foreach ($columns as $col) {
@@ -2522,7 +2523,7 @@ class GroceryCrud
             }
         }
 
-        // Fetch relation options for column filters
+        // Ambil opsi relasi untuk filter kolom
         $mergedFilters = $this->columnFilters;
         foreach ($this->columnFilterRelations as $field => $rel) {
             $options = $this->fetchRelationOptions(
@@ -2538,7 +2539,7 @@ class GroceryCrud
             ];
         }
 
-        // Build field options for columns (dropdown labels, etc.)
+        // Bangun opsi field untuk kolom (label dropdown, dll.)
         $fieldOptions = [];
         foreach ($columns as $col) {
             if (isset($this->fieldTypeOverrides[$col]) && !empty($this->fieldTypeOverrides[$col]['options'])) {
@@ -2546,11 +2547,11 @@ class GroceryCrud
             }
         }
 
-        // Build inline editing field info
+        // Bangun info field pengeditan inline
         $inlineEditFieldTypes = [];
         $inlineFieldInfo = [];
         if ($this->enableInlineEditing) {
-            // Determine which columns are inline-editable
+            // Tentukan kolom mana yang dapat diedit inline
             $editableColumns = !empty($this->inlineEditColumns)
                 ? array_intersect($columns, $this->inlineEditColumns)
                 : $columns;
@@ -2560,7 +2561,7 @@ class GroceryCrud
                 $inlineEditFieldTypes[$col] = $info['type'];
                 if (!empty($info['options'])) {
                     $inlineFieldInfo[$col] = $info['options'];
-                    // Also ensure fieldOptions has these for display mapping
+                    // Juga pastikan fieldOptions memiliki ini untuk pemetaan tampilan
                     if (!isset($fieldOptions[$col])) {
                         $fieldOptions[$col] = $info['options'];
                     }
@@ -2643,7 +2644,7 @@ class GroceryCrud
         $record = null;
 
         if ($mode === 'edit' && $id !== null) {
-            // Use raw row to preserve FK values (e.g., category_id=1, not "Electronics")
+            // Gunakan baris mentah untuk mempertahankan nilai FK (misal category_id=1, bukan "Electronics")
             $record = $this->model->getRawRow($id);
             if ($record === null) {
                 return null;
@@ -2656,7 +2657,7 @@ class GroceryCrud
         $uploadFields = [];
         $repeaterData = [];
 
-        // Resolve repeater values
+        // Selesaikan nilai repeater
         foreach ($this->repeaterFields as $rField => $rDef) {
             if (!in_array($rField, $fields, true)) {
                 $fields[] = $rField;
@@ -2680,14 +2681,14 @@ class GroceryCrud
             }
         }
 
-        // Detect field types and values
+        // Deteksi tipe dan nilai field
         foreach ($fields as $field) {
-            // Skip repeater fields (already resolved above)
+            // Lewati field repeater (sudah diselesaikan di atas)
             if (isset($this->repeaterFields[$field])) {
                 continue;
             }
 
-            // Type detection
+            // Deteksi tipe
             if (isset($this->fieldTypeOverrides[$field])) {
                 $override = $this->fieldTypeOverrides[$field];
                 $type = $override['type'];
@@ -2706,20 +2707,20 @@ class GroceryCrud
 
             $fieldTypes[$field] = $type;
 
-            // Value
+            // Nilai
             if ($mode === 'edit' && $record !== null) {
                 $fieldValues[$field] = $record[$field] ?? '';
             } elseif ($mode === 'add') {
                 $fieldValues[$field] = '';
             }
 
-            // Options for dropdowns/relations (skip if already set via setFieldType)
+            // Opsi untuk dropdown/relasi (lewati jika sudah diatur melalui setFieldType)
             if (isset($fieldOptions[$field])) {
-                // Custom options provided, skip auto-detection
+                // Opsi kustom disediakan, lewati deteksi otomatis
             } elseif (isset($this->dependentRelations[$field])) {
-                // Dependent dropdown: skip loading ALL options on page load.
-                // If editing, still add the current selected value as an option
-                // so the dropdown shows it initially before AJAX loads the rest.
+                // Dropdown dependen: lewati memuat SEMUA opsi saat muat halaman.
+                // Jika mengedit, tetap tambahkan nilai yang dipilih saat ini sebagai opsi
+                // agar dropdown menampilkannya di awal sebelum AJAX memuat sisanya.
                 $depCfg = $this->dependentRelations[$field];
                 if ($mode === 'edit' && !empty($fieldValues[$field])) {
                     $currentOptions = $this->model->getRelationOptions(
@@ -2750,7 +2751,7 @@ class GroceryCrud
                     $fieldOptions[$field] = array_combine($enumValues, $enumValues);
                 }
             } elseif ($this->relationManager->getRelationType($field) === 'n_to_n') {
-                // NtoN data for checklist
+                // Data NtoN untuk checklist
                 $relData = $this->relationManager->getRelationNtoNData($field);
                 $options = [];
                 foreach ($relData as $item) {
@@ -2758,13 +2759,13 @@ class GroceryCrud
                 }
                 $fieldOptions[$field] = $options;
 
-                // Selected values
+                // Nilai yang dipilih
                 if ($mode === 'edit' && $id !== null) {
                     $fieldValues[$field] = $this->relationManager->getRelationNtoNValues($field, $id);
                 }
             }
 
-            // Upload fields
+            // Field unggahan
             if (isset($this->uploadFieldConfigs[$field])) {
                 $uploadFields[$field] = true;
                 $fieldTypes[$field] = 'file';
@@ -2774,7 +2775,7 @@ class GroceryCrud
             }
         }
 
-        // Apply field callbacks
+        // Terapkan callback field
         if ($mode === 'add') {
             $addFieldCallbacks = $this->callbackManager->getAddFieldCallbacks();
             foreach ($addFieldCallbacks as $field => $callback) {
@@ -2824,7 +2825,7 @@ class GroceryCrud
             return $this->columns;
         }
 
-        // Default: all columns except primary key
+        // Default: semua kolom kecuali primary key
         $allColumns = $this->model->getColumnNames();
         return array_values(array_filter($allColumns, fn($col) => $col !== $this->primaryKey));
     }
@@ -2846,7 +2847,7 @@ class GroceryCrud
             return $this->fields;
         }
 
-        // Default: exclude primary key from forms
+        // Default: kecualikan primary key dari form
         $allColumns = $this->model->getColumnNames();
         return array_values(array_filter($allColumns, fn($col) => $col !== $this->primaryKey));
     }
@@ -2864,7 +2865,7 @@ class GroceryCrud
                 try {
                     $filename = $this->uploadManager->processUpload($file, $field);
                     if ($filename !== null) {
-                        // Delete old file if updating
+                        // Hapus file lama jika memperbarui
                         if ($existingId !== null) {
                             $oldRecord = $this->model->getRow($existingId);
                             $oldFile = $oldRecord[$field] ?? null;
@@ -2878,10 +2879,10 @@ class GroceryCrud
                     return false;
                 }
             } else {
-                // Keep existing file if no new upload
+                // Pertahankan file yang ada jika tidak ada unggahan baru
                 $existing = $request->getPost($field . '_existing');
                 if ($existing) {
-                    // Safety: if old data stored full URL, extract filename only
+                    // Keamanan: jika data lama menyimpan URL lengkap, ekstrak hanya nama file
                     if (str_contains($existing, '://')) {
                         $existing = basename($existing);
                     }
@@ -2929,12 +2930,12 @@ class GroceryCrud
     private function handleNtoNUpdate(mixed $id, array $postData): void
     {
         foreach ($this->relationManager->getRelationNtoN() as $field => $rel) {
-            // Delete existing relations
+            // Hapus relasi yang ada
             $this->db->table($rel['junctionTable'])
                 ->where($rel['primaryKeyInJunction'], $id)
                 ->delete();
 
-            // Insert new relations
+            // Masukkan relasi baru
             if (isset($postData[$field]) && is_array($postData[$field])) {
                 $insertBatch = [];
                 foreach ($postData[$field] as $targetId) {
@@ -2954,7 +2955,7 @@ class GroceryCrud
     }
 
     /**
-     * Check if a relation value should be treated as empty/invalid.
+     * Memeriksa apakah nilai relasi harus dianggap kosong/tidak valid.
      *
      * @param  mixed $value
      * @return bool
@@ -2965,7 +2966,7 @@ class GroceryCrud
     }
 
     /**
-     * Handle NtoN relation data on delete.
+     * Menangani data relasi N-to-N saat penghapusan.
      */
     private function handleNtoNDelete(mixed $id): void
     {
@@ -2977,11 +2978,11 @@ class GroceryCrud
     }
 
     /**
-     * Strip N-to-N relation fields from data array.
+     * Menghapus field relasi N-to-N dari array data.
      *
-     * N-to-N fields (e.g., tags) are virtual — they don't exist as columns
-     * in the main table. They must be removed before insert/update to
-     * avoid "unknown column" SQL errors.
+     * Field N-to-N (misal tags) bersifat virtual — tidak ada sebagai kolom
+     * di tabel utama. Mereka harus dihapus sebelum insert/update untuk
+     * menghindari error SQL "unknown column".
      *
      * @param  array<string, mixed> $data
      * @return array<string, mixed>
@@ -2995,10 +2996,10 @@ class GroceryCrud
     }
 
     /**
-     * Filter batch actions based on view mode.
+     * Menyaring aksi batch berdasarkan mode tampilan.
      *
-     * Active view:  only show delete_selected (hide restore_selected)
-     * Trash view:   show both delete_selected and restore_selected
+     * Tampilan aktif: hanya tampilkan delete_selected (sembunyikan restore_selected)
+     * Tampilan trash: tampilkan delete_selected dan restore_selected
      *
      * @param bool $trashedView
      * @return array<string, string>
@@ -3006,16 +3007,16 @@ class GroceryCrud
     private function filterBatchActions(bool $trashedView): array
     {
         if ($trashedView) {
-            // Trash view: show all batch actions
+            // Tampilan trash: tampilkan semua aksi batch
             return $this->batchActions;
         }
 
-        // Active view: show only delete_selected
+        // Tampilan aktif: tampilkan hanya delete_selected
         return array_intersect_key($this->batchActions, ['delete_selected' => true]);
     }
 
     /**
-     * Map AJAX actions to permission names.
+     * Memetakan aksi AJAX ke nama izin.
      */
     private function getActionPermission(string $action): string
     {
@@ -3031,11 +3032,11 @@ class GroceryCrud
     }
 
     /**
-     * Handle AJAX action routing.
+     * Menangani perutean aksi AJAX.
      */
     private function handleAjaxAction(string $action): ResponseInterface
     {
-        // Check permission for this action
+        // Periksa izin untuk aksi ini
         $requiredPermission = $this->getActionPermission($action);
         if (!$this->hasPermission($requiredPermission)) {
             return $this->jsonResponse(false, ['message' => $this->getLang('permission_denied') ?? 'Permission denied.']);
@@ -3071,14 +3072,14 @@ class GroceryCrud
     }
 
     /**
-     * Handle API action routing (REST API mode).
+     * Menangani perutean aksi API (mode REST API).
      *
-     * Maps actions to dedicated API handlers that return standardized JSON
-     * with proper HTTP status codes, no HTML.
+     * Memetakan aksi ke handler API khusus yang mengembalikan JSON terstandarisasi
+     * dengan kode status HTTP yang tepat, tanpa HTML.
      */
     private function handleApiAction(string $action): ResponseInterface
     {
-        // Check permission for this action
+        // Periksa izin untuk aksi ini
         $requiredPermission = $this->getActionPermission($action);
         if (!$this->hasPermission($requiredPermission)) {
             return $this->apiError(
@@ -3110,7 +3111,7 @@ class GroceryCrud
     // ======== REST API Handlers ========
 
     /**
-     * API: List records with pagination.
+     * API: Menampilkan daftar record dengan paginasi.
      *
      * GET /api/table?page=1&perPage=10&search=...
      */
@@ -3147,7 +3148,7 @@ class GroceryCrud
     }
 
     /**
-     * API: Read a single record.
+     * API: Membaca satu record.
      *
      * GET /api/table?id=123
      */
@@ -3166,7 +3167,7 @@ class GroceryCrud
             return $this->apiError('Record not found.', 404);
         }
 
-        // Apply column callbacks
+        // Terapkan callback kolom
         $columnCallbacks = $this->callbackManager->getColumnCallbacks();
         foreach ($columnCallbacks as $field => $callback) {
             if (isset($record[$field])) {
@@ -3174,7 +3175,7 @@ class GroceryCrud
             }
         }
 
-        // Filter to requested columns if specified
+        // Filter ke kolom yang diminta jika ditentukan
         if (!empty($columns)) {
             $record = array_intersect_key($record, array_flip($columns));
         }
@@ -3183,9 +3184,9 @@ class GroceryCrud
     }
 
     /**
-     * API: Create a new record.
+     * API: Membuat record baru.
      *
-     * POST /api/table with JSON body or form data
+     * POST /api/table dengan body JSON atau data form
      */
     private function apiCreate(): ResponseInterface
     {
@@ -3193,13 +3194,13 @@ class GroceryCrud
         $request = Services::request();
         $data = $request->getPost() ?? $request->getJSON(true) ?? [];
 
-        // Remove action key
+        // Hapus kunci aksi
         unset($data['gc_action']);
 
-        // Skip validation for fields disabled via dependsOn (action='enable')
+        // Lewati validasi untuk field yang dinonaktifkan melalui dependsOn (action='enable')
         $this->filterDependsOnValidationRules($data);
 
-        // Validation
+        // Validasi
         $errors = $this->validationManager->validate($data);
         if (!empty($errors)) {
             return $this->apiError(
@@ -3210,22 +3211,22 @@ class GroceryCrud
         }
 
         try {
-            // Before insert callback
+            // Callback sebelum insert
             $data = $this->callbackManager->executeBefore('beforeInsert', $data);
 
-            // Handle uploads
+            // Tangani unggahan
             $data = $this->handleUploads($data);
             if ($data === false) {
                 return $this->apiError($this->getLang('upload_error') ?? 'Upload failed.', 400);
             }
 
-            // Process repeater fields
+            // Proses field repeater
             $this->processRepeaterDataBeforeSave($data);
 
-            // Remove N-to-N fields
+            // Hapus field N-to-N
             $data = $this->stripNtoNFields($data);
 
-            // Insert
+            // Lakukan insert
             $insertId = $this->model->insert($data);
 
             if ($insertId === false || $insertId === 0) {
@@ -3235,13 +3236,13 @@ class GroceryCrud
                 );
             }
 
-            // Handle repeater hasMany data
+            // Tangani data hasMany repeater
             $this->processRepeaterDataAfterSave($insertId);
 
-            // Handle NtoN relations
+            // Tangani relasi NtoN
             $this->handleNtoNInsert($insertId, $data);
 
-            // After insert callback
+            // Callback setelah insert
             $this->callbackManager->executeAfter('afterInsert', [
                 'table'         => $this->table,
                 'primaryKey'    => $this->primaryKey,
@@ -3276,7 +3277,7 @@ class GroceryCrud
 
         unset($data['gc_action'], $data[$this->primaryKey]);
 
-        // Validation (unique ignore current record)
+        // Validasi (unique abaikan record saat ini)
         foreach ($this->uniqueFields as $uniqueField) {
             if (isset($data[$uniqueField])) {
                 $this->validationManager->uniqueExcept($uniqueField, $id, $this->columnLabels[$uniqueField] ?? null);
@@ -3293,39 +3294,39 @@ class GroceryCrud
         }
 
         try {
-            // Before update callback
+            // Callback sebelum update
             $data = $this->callbackManager->executeBefore('beforeUpdate', $data);
 
-            // Handle uploads
+            // Tangani unggahan
             $data = $this->handleUploads($data, $id);
             if ($data === false) {
                 return $this->apiError($this->getLang('upload_error') ?? 'Upload failed.', 400);
             }
 
-            // Preserve existing files
+            // Pertahankan file yang ada
             foreach ($this->uploadFieldConfigs as $field => $config) {
                 if (!isset($data[$field]) && $request->getPost($field . '_existing')) {
                     $data[$field] = $request->getPost($field . '_existing');
                 }
             }
 
-            // Strip _existing keys
+            // Hapus kunci _existing
             foreach (array_keys($data) as $key) {
                 if (str_ends_with($key, '_existing')) {
                     unset($data[$key]);
                 }
             }
 
-            // Process repeater fields
+            // Proses field repeater
             $this->processRepeaterDataBeforeSave($data);
 
-            // Remove N-to-N fields
+            // Hapus field N-to-N
             $data = $this->stripNtoNFields($data);
 
-            // Update
+            // Lakukan update
             $updated = $this->model->update($id, $data);
 
-            // Handle repeater hasMany data
+            // Tangani data hasMany repeater
             $this->processRepeaterDataAfterSave($id);
 
             if (!$updated) {
@@ -3335,10 +3336,10 @@ class GroceryCrud
                 );
             }
 
-            // Handle NtoN relations
+            // Tangani relasi NtoN
             $this->handleNtoNUpdate($id, $data);
 
-            // After update callback
+            // Callback setelah update
             $this->callbackManager->executeAfter('afterUpdate', [
                 'table'         => $this->table,
                 'primaryKey'    => $this->primaryKey,
@@ -3369,14 +3370,14 @@ class GroceryCrud
         $this->ensureInitialized();
 
         try {
-            // Before delete callback
+            // Callback sebelum hapus
             $this->callbackManager->executeBefore('beforeDelete', [
                 'table'         => $this->table,
                 'primaryKey'    => $this->primaryKey,
                 'id'            => $id,
             ]);
 
-            // Delete related NtoN records
+            // Hapus record NtoN terkait
             $this->handleNtoNDelete($id);
 
             $deleted = $this->model->delete($id);
@@ -3388,7 +3389,7 @@ class GroceryCrud
                 );
             }
 
-            // After delete callback
+            // Callback setelah hapus
             $this->callbackManager->executeAfter('afterDelete', [
                 'table'         => $this->table,
                 'primaryKey'    => $this->primaryKey,
@@ -3490,7 +3491,7 @@ class GroceryCrud
             return $this->apiError('Record not found.', 404);
         }
 
-        // Format field definitions for SPA consumption
+        // Format definisi field untuk konsumsi SPA
         $fields = [];
         foreach ($data['fields'] as $field) {
             $fields[] = [
@@ -3572,7 +3573,7 @@ class GroceryCrud
         $mapping = $request->getPost('mapping') ?? [];
         $fields = $this->resolveFields('add');
 
-        // Map rows using column mapping
+        // Petakan baris menggunakan pemetaan kolom
         $mappedRows = [];
         foreach ($rows as $row) {
             $mapped = [];
@@ -3708,7 +3709,7 @@ class GroceryCrud
             };
 
             if ($result) {
-                // Activity Log for batch actions
+                // Log Aktivitas for batch actions
                 if ($this->activityLog !== null) {
                     $actionType = match ($batchAction) {
                         'delete_selected' => 'batch_delete',
@@ -3736,7 +3737,7 @@ class GroceryCrud
     }
 
     /**
-     * Get request ID from POST or GET.
+     * Mendapatkan ID request dari POST atau GET.
      */
     private function getRequestId(): mixed
     {
@@ -3750,7 +3751,7 @@ class GroceryCrud
     }
 
     /**
-     * Get export format from request.
+     * Mendapatkan format ekspor dari request.
      */
     private function getExportFormat(): string
     {
@@ -3759,7 +3760,7 @@ class GroceryCrud
     }
 
     /**
-     * Build the list of available export formats.
+     * Membangun daftar format ekspor yang tersedia.
      *
      * @return array<int, string>
      */
@@ -3779,7 +3780,7 @@ class GroceryCrud
     }
 
     /**
-     * Get a language string.
+     * Mendapatkan string bahasa.
      */
     private function getLang(string $key): string
     {
@@ -3789,7 +3790,7 @@ class GroceryCrud
     // ======== Activity Log Internal Helpers ========
 
     /**
-     * Log an insert activity.
+     * Mencatat aktivitas insert.
      */
     private function logActivityInsert(mixed $insertId, array $data): void
     {
@@ -3805,7 +3806,7 @@ class GroceryCrud
     }
 
     /**
-     * Log an update activity with old and new data.
+     * Mencatat aktivitas update dengan data lama dan baru.
      */
     private function logActivityUpdate(mixed $id, array $oldData, array $newData): void
     {
@@ -3822,7 +3823,7 @@ class GroceryCrud
     }
 
     /**
-     * Log a delete activity.
+     * Mencatat aktivitas delete.
      */
     private function logActivityDelete(mixed $id, ?array $oldData): void
     {
@@ -3838,7 +3839,7 @@ class GroceryCrud
     }
 
     /**
-     * Log a restore activity.
+     * Mencatat aktivitas restore.
      */
     private function logActivityRestore(mixed $id): void
     {
@@ -3853,9 +3854,9 @@ class GroceryCrud
     }
 
     /**
-     * Log a batch activity (delete/restore multiple).
+     * Mencatat aktivitas batch (delete/restore banyak).
      *
-     * @param string $actionType 'batch_delete' or 'batch_restore'
+     * @param string $actionType 'batch_delete' atau 'batch_restore'
      * @param array<int, mixed> $ids
      */
     private function logActivityBatch(string $actionType, array $ids): void
@@ -3864,7 +3865,7 @@ class GroceryCrud
             return;
         }
 
-        // Log each ID individually for better traceability
+        // Catat setiap ID secara individual untuk ketertelusuran yang lebih baik
         foreach ($ids as $id) {
             if ($actionType === 'batch_delete') {
                 $this->activityLog->logDelete($this->table, $id);
@@ -3877,10 +3878,10 @@ class GroceryCrud
     // ======== Activity Log Viewer Handlers ========
 
     /**
-     * Render the Activity Log viewer page.
+     * Merender halaman penampil Activity Log.
      *
-     * Replaces the main CRUD list view with a browsable, filterable
-     * activity log viewer showing all logged operations.
+     * Mengganti tampilan daftar CRUD utama dengan penampil activity log
+     * yang dapat dijelajahi dan difilter, menampilkan semua operasi yang tercatat.
      */
     public function ajaxActivityLogViewer(): ResponseInterface
     {
@@ -3914,9 +3915,9 @@ class GroceryCrud
     }
 
     /**
-     * AJAX: Return paginated & filtered activity log table HTML.
+     * AJAX: Mengembalikan HTML tabel activity log yang difilter & dipaginasi.
      *
-     * Called when user changes page, applies filters, or changes sort.
+     * Dipanggil ketika pengguna mengganti halaman, menerapkan filter, atau mengubah urutan.
      */
     public function ajaxActivityLogData(): ResponseInterface
     {
@@ -3979,9 +3980,9 @@ class GroceryCrud
     }
 
     /**
-     * AJAX: Return activity log detail modal HTML.
+     * AJAX: Mengembalikan HTML modal detail activity log.
      *
-     * Shows old vs new values diff for a specific log entry.
+     * Menampilkan perbandingan nilai lama vs baru untuk entri log tertentu.
      */
     public function ajaxActivityLogDetail(): ResponseInterface
     {
@@ -4010,15 +4011,15 @@ class GroceryCrud
     }
 
     /**
-     * AJAX handler: Return records formatted as FullCalendar events.
+     * Handler AJAX: Mengembalikan record yang diformat sebagai event FullCalendar.
      *
      * GET /?gc_action=calendar_data
-     * Returns JSON with events array compatible with FullCalendar.
+     * Mengembalikan JSON dengan array events yang kompatibel dengan FullCalendar.
      */
     /**
-     * Release a record lock (called when user cancels/closes edit form).
+     * Melepaskan kunci record (dipanggil saat pengguna membatalkan/menutup form edit).
      *
-     * Expects POST: id
+     * Menerima POST: id
      */
     private function ajaxReleaseLock(): ResponseInterface
     {
@@ -4055,13 +4056,13 @@ class GroceryCrud
         $filters   = json_decode($filtersJson, true) ?? [];
         $advancedFilters = json_decode($request->getGet('advanced_filters') ?? '[]', true) ?: [];
 
-        // Resolve columns using the same logic as the table
+        // Selesaikan kolom menggunakan logika yang sama dengan tabel
         $columns = $this->resolveColumns();
 
-        // Determine the title field
+        // Tentukan field judul
         $titleField = $this->calendarTitleField ?? $this->primaryKey;
 
-        // Build list data with all records (no pagination limit for calendar)
+        // Bangun data daftar dengan semua record (tanpa batas paginasi untuk kalender)
         $listData = $this->buildListData(1, $search, 999999, null, null, $filters, $advancedFilters, $columns);
 
         $events = [];
@@ -4079,9 +4080,9 @@ class GroceryCrud
                 'start' => $dateValue,
             ];
 
-            // Try to detect if it includes time (not just a date)
+            // Coba deteksi apakah menyertakan waktu (bukan hanya tanggal)
             if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateValue)) {
-                // Date only — mark as all-day
+                // Hanya tanggal — tandai sebagai all-day
                 $event['allDay'] = true;
             }
 
@@ -4092,7 +4093,7 @@ class GroceryCrud
     }
 
     /**
-     * Create a JSON response.
+     * Membuat respons JSON.
      */
     private function jsonResponse(bool $success, array $data = []): ResponseInterface
     {
@@ -4105,12 +4106,12 @@ class GroceryCrud
     // ======== REST API Response Helpers ========
 
     /**
-     * Create a standardized success response for REST API mode.
+     * Membuat respons sukses terstandarisasi untuk mode REST API.
      *
-     * @param mixed       $data       Response payload (null, array, or object)
-     * @param string      $message    Optional success message
-     * @param int         $statusCode HTTP status code (200, 201, etc.)
-     * @param array       $extra      Extra top-level keys (e.g., pagination)
+     * @param mixed       $data       Muatan respons (null, array, atau object)
+     * @param string      $message    Pesan sukses opsional
+     * @param int         $statusCode Kode status HTTP (200, 201, dll.)
+     * @param array       $extra      Kunci tingkat atas tambahan (misal pagination)
      * @return ResponseInterface
      */
     private function apiResponse(mixed $data = null, string $message = '', int $statusCode = 200, array $extra = []): ResponseInterface
@@ -4120,12 +4121,12 @@ class GroceryCrud
             'message' => $message,
         ], $extra);
 
-        // Remove message key if empty
+        // Hapus kunci message jika kosong
         if (empty($message)) {
             unset($body['message']);
         }
 
-        // Remove data key if null
+        // Hapus kunci data jika null
         if ($data === null) {
             unset($body['data']);
         }
@@ -4137,11 +4138,11 @@ class GroceryCrud
     }
 
     /**
-     * Create a standardized error response for REST API mode.
+     * Membuat respons error terstandarisasi untuk mode REST API.
      *
-     * @param string $message    Error description
-     * @param int    $statusCode HTTP status code (400, 403, 404, 422, 500)
-     * @param array  $errors     Optional field-level validation errors
+     * @param string $message    Deskripsi error
+     * @param int    $statusCode Kode status HTTP (400, 403, 404, 422, 500)
+     * @param array  $errors     Error validasi tingkat field opsional
      * @return ResponseInterface
      */
     private function apiError(string $message, int $statusCode = 400, array $errors = []): ResponseInterface
@@ -4161,9 +4162,9 @@ class GroceryCrud
     // ======== Repeater Field Helpers ========
 
     /**
-     * Process repeater data before save.
-     * For JSON preset: json_encode the array.
-     * For HasMany preset: unset from data (handled separately).
+     * Memproses data repeater sebelum penyimpanan.
+     * Untuk preset JSON: json_encode array.
+     * Untuk preset HasMany: hapus dari data (ditangani terpisah).
      */
     private function processRepeaterDataBeforeSave(array &$data): void
     {
@@ -4174,18 +4175,18 @@ class GroceryCrud
             if ($rDef['preset'] === 'json') {
                 $data[$field] = json_encode(array_values($data[$field]));
             } elseif ($rDef['preset'] === 'hasMany') {
-                // Store temporarily for later processing
+                // Simpan sementara untuk diproses nanti
                 $this->repeaterUnsaved[$field] = $data[$field];
                 unset($data[$field]);
             }
         }
     }
 
-    /** @var array<string, array> Temporary storage for hasMany repeater data during save */
+    /** @var array<string, array> Penyimpanan sementara untuk data repeater hasMany selama penyimpanan */
     private array $repeaterUnsaved = [];
 
     /**
-     * Save hasMany repeater data after the main record is saved.
+     * Menyimpan data repeater hasMany setelah record utama disimpan.
      */
     private function saveRepeaterHasMany(string $field, mixed $parentId): void
     {
@@ -4199,10 +4200,10 @@ class GroceryCrud
         $foreignKey = $rDef['foreignKey'];
         $relatedKey = $rDef['relatedKey'] ?? 'id';
 
-        // Delete existing related rows
+        // Hapus baris terkait yang ada
         $this->model->deleteRelatedRows($relatedTable, $foreignKey, $parentId);
 
-        // Insert new rows
+        // Masukkan baris baru
         foreach ($items as $item) {
             $item[$foreignKey] = $parentId;
             $this->model->insertRelatedRow($relatedTable, $item);
@@ -4210,7 +4211,7 @@ class GroceryCrud
     }
 
     /**
-     * Process repeater data after the main record is saved.
+     * Memproses data repeater setelah record utama disimpan.
      */
     private function processRepeaterDataAfterSave(mixed $recordId): void
     {

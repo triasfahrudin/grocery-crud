@@ -19,7 +19,7 @@ class TableRenderer
     }
 
     /**
-     * Prepare table data for theme rendering.
+     * Menyiapkan data tabel untuk rendering tema.
      *
      * @param array<string, mixed> $crudData
      * @return array<string, mixed>
@@ -81,9 +81,9 @@ class TableRenderer
     }
 
     /**
-     * Render full page response.
+     * Merender respons halaman penuh.
      *
-     * @param string $headerHtml Optional HTML to inject after <body> tag.
+     * @param string $headerHtml HTML opsional untuk disisipkan setelah tag <body>.
      */
     public function renderPage(ThemeInterface $theme, array $data, string $headerHtml = ''): ResponseInterface
     {
@@ -97,15 +97,15 @@ class TableRenderer
     }
 
     /**
-     * Wrap content in a full HTML page (for non-AJAX).
+     * Membungkus konten dalam halaman HTML penuh (untuk non-AJAX).
      *
-     * @param string $headerHtml Optional HTML to inject after <body> tag.
+     * @param string $headerHtml HTML opsional untuk disisipkan setelah tag <body>.
      */
     private function wrapInPage(string $content, ThemeInterface $theme, string $headerHtml = ''): string
     {
         $cssLinks = '';
         foreach ($theme->getCssFiles() as $css) {
-            // Skip Bootstrap CSS — we already include it globally for navbar
+            // Lewati Bootstrap CSS — sudah disertakan secara global untuk navbar
             if (str_contains($css, 'bootstrap')) {
                 continue;
             }
@@ -114,7 +114,7 @@ class TableRenderer
 
         $jsLinks = '';
         foreach ($theme->getJsFiles() as $js) {
-            // Skip Bootstrap JS — we include a fresh version globally
+            // Lewati Bootstrap JS — sudah disertakan versi baru secara global
             if (str_contains($js, 'bootstrap')) {
                 continue;
             }
@@ -127,7 +127,7 @@ class TableRenderer
 
         $navbarFixCss = <<<'CSS'
 <style>
-/* Navbar overrides: protect Bootstrap navbar from non-Bootstrap themes (Materialize, etc.) */
+/* Override navbar: lindungi navbar Bootstrap dari tema non-Bootstrap (Materialize, dll.) */
 body nav.navbar { height: auto !important; line-height: normal !important; }
 body nav.navbar .navbar-brand { color: #fff !important; text-decoration: none !important; display: inline-flex !important; align-items: center !important; }
 body nav.navbar .navbar-brand i.bi.bi-grid.me-2 { width: 40px !important; height: 40px !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; border-radius: 50% !important; padding: 0 !important; background-color: rgba(255, 255, 255, 0.15) !important; color: #fff !important; font-size: 1.3em !important; }

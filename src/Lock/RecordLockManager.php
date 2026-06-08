@@ -5,16 +5,16 @@ declare(strict_types=1);
 namespace GroceryCrud\Lock;
 
 /**
- * Record Lock Manager — optimistic record-level locking for multi-user environments.
+ * Record Lock Manager — penguncian tingkat record untuk lingkungan multi-pengguna.
  *
- * Stores locks as JSON files in a writable directory (default: WRITEPATH . 'locks').
- * Each lock file is named {table}_{recordId}.json and contains:
+ * Menyimpan kunci sebagai file JSON di direktori yang dapat ditulis (default: WRITEPATH . 'locks').
+ * Setiap file kunci bernama {table}_{recordId}.json dan berisi:
  *   - table, record_id, user_id, user_name, locked_at, expires_at
  *
- * Usage:
+ * Penggunaan:
  *   $lockManager = new RecordLockManager();
  *   $acquired = $lockManager->acquireLock('products', 5, '1', 'Admin');
- *   $lock = $lockManager->getLock('products', 5); // null if not locked or expired
+ *   $lock = $lockManager->getLock('products', 5); // null jika tidak terkunci atau kedaluwarsa
  *   $lockManager->releaseLock('products', 5);
  */
 class RecordLockManager
@@ -23,8 +23,8 @@ class RecordLockManager
     private int $lockMinutes;
 
     /**
-     * @param string|null $lockDir Directory for lock files. Default: WRITEPATH . 'locks' (CI4) or sys_get_temp_dir() . '/gc-locks'
-     * @param int $lockMinutes Minutes before a lock auto-expires (default: 5)
+     * @param string|null $lockDir Direktori untuk file kunci. Default: WRITEPATH . 'locks' (CI4) atau sys_get_temp_dir() . '/gc-locks'
+     * @param int $lockMinutes Menit sebelum kunci kedaluwarsa otomatis (default: 5)
      */
     public function __construct(?string $lockDir = null, int $lockMinutes = 5)
     {
@@ -37,16 +37,16 @@ class RecordLockManager
     }
 
     /**
-     * Attempt to acquire a lock on a record.
+     * Mencoba mengunci sebuah record.
      *
-     * @return bool True if lock acquired (or already owned by this user), false if locked by another user.
+     * @return bool True jika kunci berhasil (atau sudah dimiliki pengguna ini), false jika dikunci pengguna lain.
      */
     public function acquireLock(string $table, mixed $recordId, string $userId, string $userName): bool
     {
         $this->cleanExpiredLocks();
         $lockFile = $this->getLockFile($table, $recordId);
 
-        // Check if already locked by someone else
+        // Periksa apakah sudah dikunci oleh orang lain
         $existing = $this->getLock($table, $recordId);
         if ($existing !== null && $existing['user_id'] !== $userId) {
             return false;
@@ -68,7 +68,7 @@ class RecordLockManager
     }
 
     /**
-     * Release a lock on a record.
+     * Melepaskan kunci pada sebuah record.
      */
     public function releaseLock(string $table, mixed $recordId): void
     {
@@ -79,7 +79,7 @@ class RecordLockManager
     }
 
     /**
-     * Get lock information for a record, or null if not locked / expired.
+     * Mendapatkan informasi kunci untuk sebuah record, atau null jika tidak terkunci / kedaluwarsa.
      *
      * @return array{table: string, record_id: string, user_id: string, user_name: string, locked_at: string, expires_at: string}|null
      */
@@ -106,7 +106,7 @@ class RecordLockManager
     }
 
     /**
-     * Remove all expired lock files.
+     * Menghapus semua file kunci yang kedaluwarsa.
      */
     public function cleanExpiredLocks(): void
     {

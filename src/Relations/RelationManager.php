@@ -27,13 +27,13 @@ class RelationManager
     }
 
     /**
-     * Set a belongs_to relation.
+     * Mengatur relasi belongs_to.
      *
-     * @param string      $field      Field name in the main table
-     * @param string      $relatedTable  Related table name
-     * @param string      $relatedTitleField Title field from related table to display
-     * @param string|null $where      Additional WHERE clause
-     * @param string|null $orderBy    Order for the related data
+     * @param string      $field      Nama field di tabel utama
+     * @param string      $relatedTable  Nama tabel terkait
+     * @param string      $relatedTitleField Field judul dari tabel terkait untuk ditampilkan
+     * @param string|null $where      Klausa WHERE tambahan
+     * @param string|null $orderBy    Urutan untuk data terkait
      */
     public function setRelation(
         string $field,
@@ -56,16 +56,16 @@ class RelationManager
     }
 
     /**
-     * Set a many-to-many relation (n to n).
+     * Mengatur relasi many-to-many (n to n).
      *
-     * @param string $field            Field name (for display)
-     * @param string $junctionTable    Junction/pivot table name
-     * @param string $primaryKeyInJunction  FK column in junction pointing to main table
-     * @param string $foreignKeyInJunction  FK column in junction pointing to target table
-     * @param string $targetTable      Target/related table
-     * @param string $targetTitleField Title field from target table
-     * @param string|null $where       Additional WHERE
-     * @param string|null $orderBy     Order
+     * @param string $field            Nama field (untuk tampilan)
+     * @param string $junctionTable    Nama tabel junction/pivot
+     * @param string $primaryKeyInJunction  Kolom FK di junction yang mengarah ke tabel utama
+     * @param string $foreignKeyInJunction  Kolom FK di junction yang mengarah ke tabel target
+     * @param string $targetTable      Tabel target/terkait
+     * @param string $targetTitleField Field judul dari tabel target
+     * @param string|null $where       WHERE tambahan
+     * @param string|null $orderBy     Urutan
      */
     public function setRelationNtoN(
         string $field,
@@ -91,7 +91,7 @@ class RelationManager
     }
 
     /**
-     * Get relation data for a belongs_to field.
+     * Mendapatkan data relasi untuk field belongs_to.
      *
      * @return array<int, array{id: mixed, title: string}>
      */
@@ -128,7 +128,7 @@ class RelationManager
     }
 
     /**
-     * Get selected values for a relation field (for edit form).
+     * Mendapatkan nilai terpilih untuk field relasi (untuk form edit).
      */
     public function getRelationValue(string $field, mixed $primaryKeyValue): mixed
     {
@@ -147,7 +147,7 @@ class RelationManager
     }
 
     /**
-     * Get NtoN selected values for a field.
+     * Mendapatkan nilai terpilih NtoN untuk sebuah field.
      *
      * @return array<int, mixed>
      */
@@ -168,7 +168,7 @@ class RelationManager
     }
 
     /**
-     * Get NtoN relation data for dropdown/checkbox rendering.
+     * Mendapatkan data relasi NtoN untuk rendering dropdown/checkbox.
      *
      * @return array<int, array{id: mixed, title: string}>
      */
@@ -204,7 +204,7 @@ class RelationManager
     }
 
     /**
-     * Get all relations.
+     * Mendapatkan semua relasi.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -214,7 +214,7 @@ class RelationManager
     }
 
     /**
-     * Get all NtoN relations.
+     * Mendapatkan semua relasi NtoN.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -224,7 +224,7 @@ class RelationManager
     }
 
     /**
-     * Check if a field has a relation.
+     * Memeriksa apakah sebuah field memiliki relasi.
      */
     public function hasRelation(string $field): bool
     {
@@ -232,7 +232,7 @@ class RelationManager
     }
 
     /**
-     * Get relation type for a field.
+     * Mendapatkan tipe relasi untuk sebuah field.
      */
     public function getRelationType(string $field): ?string
     {
@@ -246,7 +246,7 @@ class RelationManager
     }
 
     /**
-     * Get full relation info for a belongs_to field.
+     * Mendapatkan info relasi lengkap untuk field belongs_to.
      *
      * @return array{relatedTable: string, relatedTitleField: string, keyField: string, foreignKey: string}|null
      */
@@ -267,7 +267,7 @@ class RelationManager
     }
 
     /**
-     * Clean table name (remove prefix if any).
+     * Membersihkan nama tabel (menghapus prefiks jika ada).
      */
     private function cleanTableName(string $table): string
     {
@@ -275,7 +275,7 @@ class RelationManager
     }
 
     /**
-     * Get primary key of a table.
+     * Mendapatkan primary key dari sebuah tabel.
      */
     private function getPrimaryKeyOfTable(string $table): string
     {

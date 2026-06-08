@@ -17,7 +17,7 @@ class Bootstrap5Theme implements ThemeInterface
     }
 
     /**
-     * Set language strings for the theme.
+     * Mengatur string bahasa untuk tema.
      *
      * @param array<string, string> $strings
      */
@@ -1400,10 +1400,10 @@ class Bootstrap5Theme implements ThemeInterface
     }
 
     /**
-     * Render the Activity Log detail modal HTML.
+     * Merender HTML modal detail Activity Log.
      *
-     * Shows old vs new values diff for update actions,
-     * or new/old values for insert/delete actions.
+     * Menampilkan perbedaan nilai lama vs baru untuk aksi update,
+     * atau nilai baru/lama untuk aksi insert/delete.
      *
      * @param array<string, mixed> $log
      * @return string

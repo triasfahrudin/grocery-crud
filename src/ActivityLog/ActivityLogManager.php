@@ -25,10 +25,10 @@ class ActivityLogManager
     /** @var ?callable(): array{id: string|null, name: string|null} */
     private $userResolver = null;
 
-    /** @var array<string, string> Field labels untuk human-readable diff */
+    /** @var array<string, string> Label field untuk diff yang mudah dibaca */
     private array $fieldLabels = [];
 
-    /** @var array<int, string> Field names yang harus di-exclude dari log */
+    /** @var array<int, string> Nama field yang harus dikecualikan dari log */
     private array $excludeFields = ['password', 'password_hash', 'passwd'];
 
     /** @var bool Apakah logging aktif */
@@ -40,7 +40,7 @@ class ActivityLogManager
     }
 
     /**
-     * Set custom table name untuk activity logs.
+     * Mengatur nama tabel kustom untuk activity logs.
      */
     public function setTableName(string $tableName): self
     {
@@ -57,7 +57,7 @@ class ActivityLogManager
     }
 
     /**
-     * Set resolver untuk mendapatkan user current.
+     * Mengatur resolver untuk mendapatkan user saat ini.
      *
      * Callback harus mengembalikan array dengan key 'id' dan 'name':
      *   ['id' => '1', 'name' => 'Admin']
@@ -71,7 +71,7 @@ class ActivityLogManager
     }
 
     /**
-     * Set field labels untuk human-readable diff.
+     * Mengatur label field untuk diff yang mudah dibaca.
      *
      * @param array<string, string> $labels
      */
@@ -82,7 +82,7 @@ class ActivityLogManager
     }
 
     /**
-     * Set field names yang harus dikecualikan dari log (tidak dicatat nilainya).
+     * Mengatur nama field yang harus dikecualikan dari log (tidak dicatat nilainya).
      *
      * @param array<int, string> $fields
      */
@@ -93,7 +93,7 @@ class ActivityLogManager
     }
 
     /**
-     * Tambah field name ke daftar exclude.
+     * Tambah nama field ke daftar pengecualian.
      */
     public function addExcludeField(string $field): self
     {
@@ -116,7 +116,7 @@ class ActivityLogManager
     }
 
     /**
-     * Log insert record.
+     * Catat log insert record.
      *
      * @param string $table Nama tabel
      * @param mixed  $recordPk Primary key value record yang di-insert
@@ -138,7 +138,7 @@ class ActivityLogManager
     }
 
     /**
-     * Log update record.
+     * Catat log update record.
      *
      * @param string $table Nama tabel
      * @param mixed  $recordPk Primary key value
@@ -161,7 +161,7 @@ class ActivityLogManager
     }
 
     /**
-     * Log delete record.
+     * Catat log delete record.
      *
      * @param string $table Nama tabel
      * @param mixed  $recordPk Primary key value record yang dihapus
@@ -183,7 +183,7 @@ class ActivityLogManager
     }
 
     /**
-     * Log restore record (soft delete -> active).
+     * Catat log restore record (soft delete -> aktif).
      *
      * @param string $table Nama tabel
      * @param mixed  $recordPk Primary key value
@@ -204,7 +204,7 @@ class ActivityLogManager
     }
 
     /**
-     * Log batch delete.
+     * Catat log hapus batch.
      *
      * @param string $table Nama tabel
      * @param array<int, mixed> $recordPks Array of primary key values
@@ -221,7 +221,7 @@ class ActivityLogManager
     }
 
     /**
-     * Log batch restore.
+     * Catat log restore batch.
      *
      * @param string $table Nama tabel
      * @param array<int, mixed> $recordPks Array of primary key values
@@ -238,7 +238,7 @@ class ActivityLogManager
     }
 
     /**
-     * Log import.
+     * Catat log import.
      *
      * @param string $table Nama tabel
      * @param int    $importedCount Jumlah record berhasil di-import
@@ -262,10 +262,10 @@ class ActivityLogManager
         ]);
     }
 
-    // ======== Query Methods ========
+    // ======== Metode Query ========
 
     /**
-     * Get paginated activity logs.
+     * Dapatkan activity logs dengan paginasi.
      *
      * @param array<string, mixed> $filters [table_name?, action?, user_id?, date_from?, date_to?]
      * @param int  $page
@@ -283,7 +283,7 @@ class ActivityLogManager
     ): array {
         $builder = $this->db->table($this->tableName);
 
-        // Apply filters
+        // Terapkan filter
         if (!empty($filters['table_name'])) {
             $builder->where('table_name', $filters['table_name']);
         }
@@ -312,7 +312,7 @@ class ActivityLogManager
             ->get()
             ->getResultArray();
 
-        // Decode JSON data
+        // Decode data JSON
         foreach ($logs as &$log) {
             if (isset($log['old_data']) && is_string($log['old_data'])) {
                 $log['old_data'] = json_decode($log['old_data'], true);
@@ -329,7 +329,7 @@ class ActivityLogManager
     }
 
     /**
-     * Get a single log entry by its ID.
+     * Dapatkan satu entri log berdasarkan ID-nya.
      *
      * @param int $id
      * @return array<string, mixed>|null
@@ -345,7 +345,7 @@ class ActivityLogManager
             return null;
         }
 
-        // Decode JSON data
+        // Decode data JSON
         if (isset($row['old_data']) && is_string($row['old_data'])) {
             $row['old_data'] = json_decode($row['old_data'], true);
         }
@@ -357,7 +357,7 @@ class ActivityLogManager
     }
 
     /**
-     * Get distinct table names that have logs.
+     * Dapatkan nama tabel unik yang memiliki log.
      *
      * @return array<int, string>
      */
@@ -372,7 +372,7 @@ class ActivityLogManager
     }
 
     /**
-     * Generate human-readable diff dari old_data vs new_data.
+     * Hasilkan diff yang mudah dibaca dari old_data vs new_data.
      *
      * @param array<string, mixed>|null $oldData
      * @param array<string, mixed>|null $newData
@@ -411,9 +411,9 @@ class ActivityLogManager
     }
 
     /**
-     * Purge logs older than specified date.
+     * Hapus log yang lebih lama dari tanggal yang ditentukan.
      *
-     * @param string $date Date string (Y-m-d)
+     * @param string $date String tanggal (Y-m-d)
      * @return int Jumlah record yang dihapus
      */
     public function purgeOlderThan(string $date): int
@@ -440,7 +440,7 @@ class ActivityLogManager
     // ======== Internal ========
 
     /**
-     * Write log ke database.
+     * Tulis log ke database.
      *
      * @param array<string, mixed> $data
      * @return int Insert ID
@@ -473,7 +473,7 @@ class ActivityLogManager
             'created_at' => date('Y-m-d H:i:s'),
         ]);
 
-        // Encode JSON data
+        // Encode data JSON
         if (isset($logData['old_data']) && is_array($logData['old_data'])) {
             $logData['old_data'] = json_encode($logData['old_data']);
         }
@@ -487,7 +487,7 @@ class ActivityLogManager
     }
 
     /**
-     * Resolve current user dari callback.
+     * Dapatkan user saat ini dari callback.
      *
      * @return array{id: string|null, name: string|null}
      */
@@ -505,7 +505,7 @@ class ActivityLogManager
     }
 
     /**
-     * Sanitize data: remove excluded fields, limit size.
+     * Sanitasi data: hapus field yang dikecualikan, batasi ukuran.
      *
      * @param array<string, mixed> $data
      * @return array<string, mixed>
@@ -515,22 +515,22 @@ class ActivityLogManager
         $result = [];
 
         foreach ($data as $key => $value) {
-            // Skip excluded fields
+            // Lewati field yang dikecualikan
             if (in_array($key, $this->excludeFields, true)) {
                 continue;
             }
 
-            // Skip internal keys
+            // Lewati key internal
             if (str_starts_with((string) $key, '_') || str_ends_with((string) $key, '_existing')) {
                 continue;
             }
 
-            // Encode complex types to string
+            // Encode tipe kompleks ke string
             if (is_array($value) || is_object($value)) {
                 $value = json_encode($value);
             }
 
-            // Truncate very long values
+            // Potong nilai yang sangat panjang
             if (is_string($value) && strlen($value) > 10000) {
                 $value = mb_substr($value, 0, 10000) . '...[truncated]';
             }

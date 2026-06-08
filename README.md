@@ -23,7 +23,7 @@ Library CRUD generator full-featured untuk CodeIgniter 4. Terinspirasi dari Groc
 - **Theme System** — Bootstrap 5 & AdminLTE 4, mudah ditambahkan tema baru
 - **Multi-language** — English & Indonesian bawaan
 - **Custom Actions** — Tombol aksi kustom per baris
-- **Repeater Fields** — Repeatable group of sub-fields (Nova-style)
+- **Repeater Fields** — Grup sub-field yang dapat diulang (Nova-style)
 - **Dynamic Form Conditions** — Show/hide atau enable/disable field berdasarkan nilai field lain (dependsOn)
 - **Field Type Detection** — Auto-detect tipe field dari database
 - **Field Type Override** — Override tipe field manual (dropdown, enum, color, dll)
@@ -115,7 +115,7 @@ $crud->callbackColumn('price', function ($value, $row) {
 });
 
 $crud->callbackAfterInsert(function ($data) {
-    // log activity, send email, etc.
+    // log aktivitas, kirim email, dll.
     return true;
 });
 ```
@@ -165,10 +165,10 @@ $crud->setColumnFilterRelation('category_id', 'categories', 'name', 'id', "statu
 ### 7. Batch Actions
 
 ```php
-// Delete Selected (built-in)
+// Hapus Terpilih (bawaan)
 $crud->setBatchAction('delete_selected', 'Delete Selected');
 
-// Restore Selected (built-in, untuk soft delete)
+// Pulihkan Terpilih (bawaan, untuk soft delete)
 $crud->setBatchAction('restore_selected', 'Restore Selected');
 ```
 
@@ -188,12 +188,12 @@ $crud->withTrashed();
 
 ```php
 $crud->setSubGrid(
-    'variants',                      // Identifier field
-    'product_variants',              // Related table
-    'product_id',                    // FK di related table
-    ['name', 'price', 'stock'],      // Columns
-    ['name' => 'Variant', 'price' => 'Price', 'stock' => 'Stock'],  // Labels
-    []                               // Relations
+    'variants',                      // Field identifier
+    'product_variants',              // Tabel relasi
+    'product_id',                    // FK di tabel relasi
+    ['name', 'price', 'stock'],      // Kolom
+    ['name' => 'Variant', 'price' => 'Price', 'stock' => 'Stock'],  // Label
+    []                               // Relasi
 );
 ```
 
@@ -576,7 +576,7 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 
 | Method | Deskripsi |
 |--------|-----------|
-| `setRepeater(string $field, string $label, array $repeatables, string $preset, array $options)` | Repeatable group of sub-fields |
+| `setRepeater(string $field, string $label, array $repeatables, string $preset, array $options)` | Grup sub-field yang dapat diulang |
 
 ### Dynamic Form Conditions
 

@@ -26,7 +26,7 @@ class UploadManager
     }
 
     /**
-     * Configure upload for a specific field.
+     * Mengonfigurasi upload untuk field tertentu.
      *
      * @param string $field
      * @param array<string, mixed> $config
@@ -37,7 +37,7 @@ class UploadManager
     }
 
     /**
-     * Get configuration for a field.
+     * Mendapatkan konfigurasi untuk sebuah field.
      */
     public function getFieldConfig(string $field): array
     {
@@ -45,11 +45,11 @@ class UploadManager
     }
 
     /**
-     * Process an uploaded file for a field.
+     * Memproses file yang diupload untuk sebuah field.
      *
      * @param  UploadedFile|null $file
      * @param  string            $field
-     * @return string|null       The saved filename, or null if no file
+     * @return string|null       Nama file yang disimpan, atau null jika tidak ada file
      * @throws GroceryCrudException
      */
     public function processUpload(?UploadedFile $file, string $field): ?string
@@ -105,7 +105,7 @@ class UploadManager
     }
 
     /**
-     * Delete an uploaded file.
+     * Menghapus file yang diupload.
      */
     public function deleteFile(?string $filename, string $field): bool
     {
@@ -128,7 +128,7 @@ class UploadManager
     }
 
     /**
-     * Check if a file extension is an image.
+     * Memeriksa apakah ekstensi file adalah gambar.
      */
     private function isImage(string $ext): bool
     {
@@ -136,12 +136,12 @@ class UploadManager
     }
 
     /**
-     * Generate a thumbnail for an image.
+     * Menghasilkan thumbnail untuk sebuah gambar.
      */
     private function generateThumbnail(string $sourcePath, string $field, int $width, int $height): void
     {
         if (!extension_loaded('gd')) {
-            return; // GD not available, skip thumbnail
+            return; // GD tidak tersedia, lewati thumbnail
         }
 
         $thumbDir = $this->thumbnailPath . $field . '/';
@@ -157,7 +157,7 @@ class UploadManager
     }
 
     /**
-     * Ensure a directory exists.
+     * Memastikan direktori ada.
      */
     private function ensureDirectory(string $path): void
     {
@@ -167,7 +167,7 @@ class UploadManager
     }
 
     /**
-     * Get the URL path for a field's upload.
+     * Mendapatkan path URL untuk upload field.
      */
     public function getUploadUrl(string $field, ?string $filename): string
     {
@@ -178,7 +178,7 @@ class UploadManager
     }
 
     /**
-     * Get the URL path for a field's thumbnail.
+     * Mendapatkan path URL untuk thumbnail field.
      */
     public function getThumbnailUrl(string $field, ?string $filename): string
     {

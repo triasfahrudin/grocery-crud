@@ -1,13 +1,13 @@
 /**
- * Grocery CRUD - JavaScript functionality
- * Handles AJAX CRUD operations, form submissions, and UI interactions
+ * Grocery CRUD - Fungsionalitas JavaScript
+ * Menangani operasi CRUD AJAX, pengiriman formulir, dan interaksi UI
  */
 (function ($) {
     'use strict';
 
-    // ======== Alert Handler ========
+    // ======== Penangan Alert ========
 
-    /** @var {string|null} Record ID currently locked for editing (for release on close) */
+    /** @var {string|null} ID catatan yang terkunci untuk pengeditan (untuk dilepaskan saat ditutup) */
     var _lockedRecordId = null;
 
     function showAlert(message, type) {
@@ -30,7 +30,7 @@
         }, 4000);
     }
 
-    // ======== Loading Overlay ========
+    // ======== Overlay Loading ========
     function showLoading() {
         if ($('.gc-loading').length === 0) {
             $('body').append('<div class="gc-loading"></div>');
@@ -41,7 +41,7 @@
         $('.gc-loading').remove();
     }
 
-    // ======== Modal Manager ========
+    // ======== Manajer Modal ========
     var GcModal = {
         show: function (html) {
             this.remove();
@@ -59,12 +59,12 @@
             $('body').append($modal);
             $modal.modal('show');
 
-            // Initialize Materialize form elements if Materialize is loaded
+            // Inisialisasi elemen formulir Materialize jika Materialize dimuat
             if (typeof M !== 'undefined') {
                 M.updateTextFields();
 
-                // Fix labels for selects and textareas in input-field
-                // (M.updateTextFields only handles text inputs)
+                // Perbaiki label untuk select dan textarea di input-field
+                // (M.updateTextFields hanya menangani input teks)
                 $('.gc-modal .input-field select, .gc-modal .input-field textarea').each(function () {
                     var $input = $(this);
                     var $label = $input.siblings('label');
@@ -86,12 +86,12 @@
         }
     };
 
-    // ======== Form Serializer (handles checkboxes) ========
+    // ======== Serializer Formulir (menangani checkbox) ========
     function serializeForm($form) {
         var data = {};
         var formArray = $form.serializeArray();
 
-        // Handle checkboxes
+        // Tangani checkbox
         $form.find('input[type="checkbox"]').each(function () {
             var $cb = $(this);
             if ($cb.prop('checked')) {
@@ -102,7 +102,7 @@
             }
         });
 
-        // Overwrite with serializeArray values (for non-checkbox inputs)
+        // Timpa dengan nilai serializeArray (untuk input non-checkbox)
         $.each(formArray, function (i, field) {
             if (field.name.indexOf('[]') === -1) {
                 data[field.name] = field.value;
@@ -111,7 +111,7 @@
                 if (data[name] === undefined) {
                     data[name] = [];
                 }
-                // Only add if not already added by checkbox handler
+                // Hanya tambahkan jika belum ditambahkan oleh penangan checkbox
                 if ($.inArray(field.value, data[name]) === -1) {
                     data[name].push(field.value);
                 }
@@ -121,25 +121,25 @@
         return data;
     }
 
-    // ======== File Upload FormData ========
+    // ======== FormData Upload File ========
     function buildFormData($form) {
         var formData = new FormData($form[0]);
         var mode = $form.data('mode');
 
-        // Add the CRUD action (missing from FormData)
+        // Tambahkan aksi CRUD (hilang dari FormData)
         formData.append('gc_action', mode);
 
-        // Handle checkboxes not in FormData automatically
+        // Tangani checkbox yang tidak ada di FormData secara otomatis
         $form.find('input[type="checkbox"]:not(:checked)').each(function () {
             var $cb = $(this);
             var name = $cb.attr('name');
-            // Skip array fields (e.g., tags[]) — they're only meaningful when checked.
-            // Setting '0' on an array field makes PHP see ['0'], which causes FK errors.
+            // Lewati field array (misal, tags[]) — hanya bermakna jika dicentang.
+            // Mengatur '0' pada field array membuat PHP melihat ['0'], yang menyebabkan error FK.
             if (name.indexOf('[]') !== -1) {
                 return;
             }
-            // FormData doesn't include unchecked checkboxes
-            // We need to ensure the field is present
+            // FormData tidak menyertakan checkbox yang tidak dicentang
+            // Kita perlu memastikan field tersebut ada
             if (!formData.has(name)) {
                 formData.set(name, '0');
             }
@@ -148,7 +148,7 @@
         return formData;
     }
 
-    // ======== CRUD Operations ========
+    // ======== Operasi CRUD ========
     function refreshList($wrapper) {
         var crudId = $wrapper.attr('id');
         var $parent = $wrapper.parent();
@@ -163,7 +163,7 @@
             ? $searchInput[0].selectionStart
             : -1;
 
-        // Track filter input focus for restore after DOM replacement
+        // Lacak fokus input filter untuk dipulihkan setelah penggantian DOM
         var $focusedFilter = $wrapper.find('.gc-column-filter:focus');
         var wasFilterFocused = $focusedFilter.length > 0;
         var focusedFilterField = wasFilterFocused ? $focusedFilter.data('filter-field') : null;
@@ -171,7 +171,7 @@
             ? $focusedFilter[0].selectionStart
             : -1;
 
-        // Save hidden columns state before refresh (columns menu will be regenerated)
+        // Simpan status kolom tersembunyi sebelum refresh (menu kolom akan dibuat ulang)
         var hiddenColumns = [];
         $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
             if (!$(this).is(':checked')) {
@@ -179,7 +179,7 @@
             }
         });
 
-        // Collect column filters from DOM
+        // Kumpulkan filter kolom dari DOM
         var filters = {};
         $wrapper.find('.gc-column-filter').each(function () {
             var $el = $(this);
@@ -208,26 +208,31 @@
             success: function (response) {
                 if (response.success) {
                     $wrapper.replaceWith(response.html);
-                    // Re-bind events
+                    // Ikat ulang event
                     bindEvents();
-                    // Restore search value (crudId changes on re-render via uniqid)
+                    // Pulihkan nilai pencarian (crudId berubah saat render ulang via uniqid)
                     var $newSearchInput = $parent.find('.grocery-crud-wrapper .gc-search-input');
                     $newSearchInput.val(search);
-                    // Restore focus and caret position if previously focused
+                    // Pulihkan filter lanjutan
+                    var savedFilters = $wrapper.data('gcAdvancedFilters');
+                    if (savedFilters && savedFilters.length) {
+                        $wrapper.data('gcAdvancedFilters', savedFilters);
+                    }
+                    // Pulihkan fokus dan posisi kursor jika sebelumnya difokuskan
                     if (wasFocused) {
                         $newSearchInput.focus();
                         if (caretPos >= 0 && $newSearchInput[0].setSelectionRange) {
                             $newSearchInput[0].setSelectionRange(caretPos, caretPos);
                         }
                     }
-                    // Sync clear button visibility (fresh HTML always has it hidden)
+                    // Sinkronkan visibilitas tombol hapus (HTML segar selalu menyembunyikannya)
                     var $clearBtn = $newSearchInput.closest('.input-group').find('.gc-search-clear');
                     if (search) {
                         $clearBtn.show();
                     } else {
                         $clearBtn.hide();
                     }
-                    // Restore focus to filter input if previously focused
+                    // Pulihkan fokus ke input filter jika sebelumnya difokuskan
                     if (wasFilterFocused && focusedFilterField) {
                         var $newFilter = $parent.find('.grocery-crud-wrapper .gc-column-filter[data-filter-field="' + focusedFilterField + '"]');
                         if ($newFilter.length) {
@@ -237,7 +242,7 @@
                             }
                         }
                     }
-                    // Populate columns menu and filter selects from table headers
+                    // Isi menu kolom dan filter select dari header tabel
                     var $newWrapper = $parent.find('.grocery-crud-wrapper');
                     // Restore advanced filters data on the new wrapper (gcAdvancedFilters was read before replaceWith)
                     if (advancedFilters && advancedFilters.length) {
@@ -246,7 +251,7 @@
                     populateColumnsAndFilters($newWrapper);
                     initInlineEditing($newWrapper);
 
-                    // Restore hidden columns state (user unchecked some checkboxes before refresh)
+                    // Pulihkan status kolom tersembunyi (pengguna tidak mencentang beberapa checkbox sebelum refresh)
                     if (hiddenColumns.length) {
                         hiddenColumns.forEach(function (col) {
                             $newWrapper.find('.gc-columns-menu input[data-column="' + col + '"]')
@@ -255,7 +260,7 @@
                         });
                     }
 
-                    // Restore saved column order from localStorage
+                    // Pulihkan urutan kolom yang disimpan dari localStorage
                     try {
                         var url = window.location.href;
                         var raw = localStorage.getItem('gc_settings_' + btoa(url));
@@ -266,10 +271,10 @@
                             }
                         }
                     } catch (e) {}
-                    // Initialize table-dragger on the refreshed table
+                    // Inisialisasi table-dragger pada tabel yang telah di-refresh
                     initTableDragger($newWrapper);
 
-                    // Restore advanced filter panel items and visibility
+                    // Pulihkan item panel filter lanjutan dan visibilitas
                     if (advancedFilters && advancedFilters.length) {
                         var $panel = $newWrapper.find('.gc-filter-panel');
                         var $rows = $panel.find('.gc-filter-rows');
@@ -340,7 +345,7 @@
             success: function (response) {
                 if (response.success) {
                     var $modal = GcModal.show(response.html);
-                    _lockedRecordId = id; // Track for lock release on close
+                    _lockedRecordId = id; // Lacak untuk pelepasan kunci saat ditutup
                     bindFormEvents($modal);
                 } else {
                     showAlert(response.message || 'Failed to load form.', 'danger');
@@ -355,9 +360,9 @@
         });
     }
 
-    // ======== Columns & Filter Populate ========
+    // ======== Isi Kolom & Filter ========
     function populateColumnsAndFilters($wrapper) {
-        // Columns menu: populate checkboxes from table headers
+        // Menu kolom: isi checkbox dari header tabel
         var $menu = $wrapper.find('.gc-columns-menu');
         if ($menu.length) {
             $menu.empty();
@@ -375,11 +380,11 @@
             });
         }
 
-        // Filter column selects: populate options from table headers
+        // Select filter kolom: isi opsi dari header tabel
         $wrapper.find('.gc-filter-col').each(function () {
             var $select = $(this);
             var currentVal = $select.val();
-            // Only populate if empty (template only has the placeholder option)
+            // Hanya isi jika kosong (template hanya memiliki opsi placeholder)
             if ($select.find('option[value]').length <= 1) {
                 $wrapper.find('.gc-table th[data-column]').each(function () {
                     var col = $(this).data('column');
@@ -392,12 +397,12 @@
     }
 
     /**
-     * Reorder table columns and columns menu to match saved order.
+     * Urutkan ulang kolom tabel dan menu kolom agar sesuai dengan urutan yang disimpan.
      */
     function applyColumnOrder($wrapper, columnOrder) {
         if (!columnOrder || !columnOrder.length) return;
 
-        // 1. Reorder columns menu checkboxes
+        // 1. Urutkan ulang checkbox menu kolom
         var $menu = $wrapper.find('.gc-columns-menu');
         if ($menu.length) {
             var items = [];
@@ -412,14 +417,14 @@
                 if (ib === -1) ib = 999;
                 return ia - ib;
             });
-            // Detach and re-append in sorted order
+            // Lepas dan pasang kembali dalam urutan yang diurutkan
             $menu.find('.form-check').detach();
             items.forEach(function (item) {
                 $menu.append(item.$el);
             });
         }
 
-        // 2. Reorder table columns
+        // 2. Urutkan ulang kolom tabel
         var $table = $wrapper.find('.gc-table');
         if (!$table.length) return;
 
@@ -428,13 +433,13 @@
             var $dataCells = $row.find('[data-column]');
             if ($dataCells.length < 2) return;
 
-            // Collect cells in an array
+            // Kumpulkan sel dalam array
             var cells = [];
             $dataCells.each(function () {
                 cells.push({ col: $(this).data('column'), $el: $(this) });
             });
 
-            // Sort by columnOrder
+            // Urutkan berdasarkan columnOrder
             cells.sort(function (a, b) {
                 var ia = columnOrder.indexOf(a.col);
                 var ib = columnOrder.indexOf(b.col);
@@ -443,15 +448,15 @@
                 return ia - ib;
             });
 
-            // Find reference: element just before the first data-cell
+            // Temukan referensi: elemen tepat sebelum data-cell pertama
             var $firstDataCell = $dataCells.first();
             var $prev = $firstDataCell.prev();
             var hasPrev = $prev.length > 0;
 
-            // Detach all data cells
+            // Lepas semua data cell
             $dataCells.detach();
 
-            // Insert sorted cells after prev (or at start of row)
+            // Sisipkan sel yang terurut setelah prev (atau di awal baris)
             var sortedEls = cells.map(function (c) { return c.$el[0]; });
             if (hasPrev) {
                 $prev.after(sortedEls);
@@ -460,7 +465,7 @@
             }
         });
 
-        // Restore d-none visibility on any columns that were hidden
+        // Pulihkan visibilitas d-none pada kolom yang disembunyikan
         if ($wrapper.find('.gc-columns-menu').length) {
             $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                 var col = $(this).data('column');
@@ -472,7 +477,7 @@
     }
 
     /**
-     * Save current column order from the columns menu to localStorage.
+     * Simpan urutan kolom saat ini dari menu kolom ke localStorage.
      */
     function saveColumnOrder($wrapper) {
         var menu = $wrapper.find('.gc-columns-menu');
@@ -492,27 +497,27 @@
     }
 
     /**
-     * Initialize table-dragger on all tables inside the given wrapper.
-     * Uses .gc-drag-handle inside headers so sorting (click on header text)
-     * and dragging (click on handle) don't conflict.
+     * Inisialisasi table-dragger pada semua tabel di dalam wrapper yang diberikan.
+     * Menggunakan .gc-drag-handle di dalam header agar pengurutan (klik pada teks header)
+     * dan penyeretan (klik pada handle) tidak saling bertentangan.
      */
     function initTableDragger($wrapper) {
         console.log('[GC_TD] initTableDragger called, tableDragger=',
             typeof tableDragger, 'wrapper=', $wrapper.length);
-        // table-dragger via CDN is UMD: actual function is .default
+        // table-dragger via CDN adalah UMD: fungsi sebenarnya adalah .default
         var draggerFn = (tableDragger && tableDragger.default) || tableDragger;
         if (typeof draggerFn !== 'function') {
             console.warn('[GC_TD] tableDragger not available, obj=', tableDragger);
             return;
         }
-        // Destroy any previous instance on this wrapper
+        // Hancurkan instance sebelumnya pada wrapper ini
         var prev = $wrapper.data('gcDragger');
         if (prev) { try { prev.destroy(); } catch(e) {} }
         var $table = $wrapper.find('.gc-table');
         console.log('[GC_TD] table found:', $table.length);
         if (!$table.length) return;
         try {
-            // Add drag handle to each data-column header in the first header row
+            // Tambahkan gagang seret ke setiap header data-column di baris header pertama
             var $handles = $table.find('thead tr:first-child th[data-column]');
             console.log('[GC_TD] data-column headers:', $handles.length);
             if ($handles.length < 2) {
@@ -534,14 +539,14 @@
             console.log('[GC_TD] table-dragger initialized');
             dragger.on('drop', function (oldIndex, newIndex, el, mode) {
                 console.log('[GC_TD] drop event', oldIndex, newIndex, mode);
-                // table-dragger already reordered table DOM
-                // Read new column order from table headers
+                // table-dragger sudah mengurutkan ulang DOM tabel
+                // Baca urutan kolom baru dari header tabel
                 var newOrder = [];
                 $table[0].querySelectorAll('thead th[data-column]').forEach(function (th) {
                     newOrder.push(th.getAttribute('data-column'));
                 });
                 if (!newOrder.length) return;
-                // Sync columns menu order to match
+                // Sinkronkan urutan menu kolom agar sesuai
                 var $menu = $wrapper.find('.gc-columns-menu');
                 if ($menu.length) {
                     var sorted = [];
@@ -549,14 +554,14 @@
                         var $item = $menu.find('.form-check-input[data-column="' + col + '"]').closest('.form-check');
                         if ($item.length) sorted.push($item[0]);
                     });
-                    // Append any remaining items at end
+                    // Tambahkan item yang tersisa di akhir
                     $menu.find('.form-check').each(function () {
                         if (sorted.indexOf(this) === -1) sorted.push(this);
                     });
                     $menu.find('.form-check').detach();
                     sorted.forEach(function (el) { $menu.append(el); });
                 }
-                // Save order
+                // Simpan urutan
                 saveColumnOrder($wrapper);
             });
         } catch (e) {
@@ -570,7 +575,7 @@
         var mode = $form.data('mode');
         var hasFile = $form.find('input[type="file"]').length > 0;
 
-        // Disable button
+        // Nonaktifkan tombol
         $submitBtn.prop('disabled', true).addClass('btn-gc-loading');
 
         syncRichtextEditors($modal);
@@ -581,15 +586,15 @@
             dataType: 'json',
             success: function (response) {
                 if (response.success) {
-                    _lockedRecordId = null; // Lock already released server-side
+                    _lockedRecordId = null; // Lock sudah dilepaskan di sisi server
                     GcModal.hide();
                     showAlert(response.message, 'success');
-                    // Refresh the list
+                    // Refresh daftar
                     refreshList($('.grocery-crud-wrapper'));
                 } else {
-                    // Show validation errors
+                    // Tampilkan error validasi
                     if (response.errors) {
-                        // Clear previous errors
+                        // Hapus error sebelumnya
                         $form.find('.has-error').removeClass('has-error');
                         $form.find('.invalid-feedback').remove();
 
@@ -616,15 +621,15 @@
             ajaxConfig.processData = false;
             ajaxConfig.contentType = false;
         } else {
-            // $form.serialize() skips disabled inputs AND unchecked checkboxes.
-            // We need to ensure unchecked checkboxes are sent as '0'.
+            // $form.serialize() melewatkan input yang dinonaktifkan DAN checkbox yang tidak dicentang.
+            // Kita perlu memastikan checkbox yang tidak dicentang dikirim sebagai '0'.
             var formData = $form.serialize();
             $form.find('input[type="checkbox"]:not(:checked)').each(function () {
                 var $cb = $(this);
                 var name = $cb.attr('name');
-                // Skip array fields (e.g., tags[]) — they're only meaningful when checked
+                // Lewati field array (misal, tags[]) — hanya bermakna jika dicentang
                 if (name.indexOf('[]') !== -1) return;
-                // Only add if not already serialized (e.g., via a hidden sibling)
+                // Hanya tambahkan jika belum diserialisasi (misal, melalui sibling tersembunyi)
                 if (formData.indexOf(name + '=') === -1) {
                     formData += '&' + name + '=0';
                 }
@@ -729,7 +734,7 @@
 
         if ($subRow.length === 0) return;
 
-        // If already loaded, just toggle
+        // Jika sudah dimuat, cukup toggle
         var $content = $subRow.find('.gc-subgrid-content');
         var $table = $content.find('.gc-subgrid-inner');
         if ($table.length > 0) {
@@ -738,7 +743,7 @@
             return;
         }
 
-        // Load via AJAX
+        // Muat via AJAX
         showLoading();
         $.ajax({
             url: window.location.href,
@@ -769,14 +774,14 @@
 
     function handleExport($btn, format) {
         if (format === 'print') {
-            // Print view: open in new window
+            // Tampilan cetak: buka di jendela baru
             window.open(
                 window.location.pathname + '?gc_action=print_view',
                 '_blank',
                 'width=1200,height=800,scrollbars=yes'
             );
         } else {
-            // CSV, Excel, PDF: show column selector modal
+            // CSV, Excel, PDF: tampilkan modal pemilih kolom
             showExportColumnSelector($btn, format);
         }
     }
@@ -786,7 +791,7 @@
         var $table = $wrapper.find('.gc-table');
         if (!$table.length) return;
 
-        // Collect columns from table headers
+        // Kumpulkan kolom dari header tabel
         var columns = [];
         $table.find('thead th[data-column]').each(function () {
             var $th = $(this);
@@ -798,23 +803,23 @@
 
         if (columns.length === 0) return;
 
-        // Format label
+        // Label format
         var fmtLabels = { csv: 'CSV', excel: 'Excel', pdf: 'PDF' };
         var fmtLabel = fmtLabels[format] || format.toUpperCase();
 
-        // Build modal HTML
+        // Bangun HTML modal
         var html = '<div class="p-3">';
         html += '<h5 class="mb-3 fw-bold"><i class="bi bi-download me-2"></i>Select Columns to Export</h5>';
         html += '<p class="text-muted small mb-3">Choose which columns to include in the ' + fmtLabel + ' export.</p>';
         html += '<div class="mb-3">';
 
-        // Select All / Deselect All
+        // Pilih Semua / Batalkan Pilih Semua
         html += '<div class="mb-2">';
         html += '<button type="button" class="btn btn-sm btn-outline-secondary me-2 gc-export-selall">Select All</button>';
         html += '<button type="button" class="btn btn-sm btn-outline-secondary gc-export-deselall">Deselect All</button>';
         html += '</div>';
 
-        // Column checkboxes
+        // Checkbox kolom
         html += '<div class="gc-export-columns-list">';
         for (var i = 0; i < columns.length; i++) {
             var col = columns[i];
@@ -825,7 +830,7 @@
         }
         html += '</div>';
 
-        // Export scope: All records vs Filtered only
+        // Lingkup ekspor: Semua catatan vs Hanya yang difilter
         var hasFilters = $wrapper.find('.gc-filter-item').length > 0
             || ($wrapper.data('gcAdvancedFilters') && $wrapper.data('gcAdvancedFilters').length > 0);
         html += '<div class="mb-3 border-top pt-3">';
@@ -840,7 +845,7 @@
         html += '</div>';
         html += '</div>';
 
-        // Footer buttons
+        // Tombol footer
         html += '<div class="d-flex justify-content-end gap-2 border-top pt-3">';
         html += '<button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>';
         html += '<button type="button" class="btn btn-primary gc-export-submit-btn" data-format="' + format + '"><i class="bi bi-download me-1"></i>Export ' + fmtLabel + '</button>';
@@ -848,17 +853,17 @@
 
         var $modal = GcModal.show(html);
 
-        // Select All
+        // Pilih Semua
         $modal.find('.gc-export-selall').on('click', function () {
             $modal.find('.gc-export-col-cb').prop('checked', true);
         });
 
-        // Deselect All
+        // Batalkan Pilih Semua
         $modal.find('.gc-export-deselall').on('click', function () {
             $modal.find('.gc-export-col-cb').prop('checked', false);
         });
 
-        // Submit export
+        // Kirim ekspor
         $modal.find('.gc-export-submit-btn').on('click', function () {
             var selectedFormat = $(this).data('format');
             var selectedColumns = [];
@@ -874,7 +879,7 @@
             GcModal.remove();
             showLoading();
 
-            // Build POST form to trigger file download
+            // Bangun formulir POST untuk memicu unduhan file
             var $form = $('<form method="post" style="display:none"></form>');
             $form.attr('action', window.location.href.split('?')[0]);
             $form.append('<input type="hidden" name="gc_action" value="export">');
@@ -882,12 +887,12 @@
             for (var j = 0; j < selectedColumns.length; j++) {
                 $form.append('<input type="hidden" name="columns[]" value="' + selectedColumns[j] + '">');
             }
-            // Pass export scope
+            // Berikan lingkup ekspor
             var exportScope = $modal.find('input[name="export_scope"]:checked').val() || 'all';
             $form.append('<input type="hidden" name="export_scope" value="' + exportScope + '">');
-            // If filtered, pass current filters
+            // Jika difilter, berikan filter saat ini
             if (exportScope === 'filtered') {
-                // Column filters (from filter inputs above table columns)
+                // Filter kolom (dari input filter di atas kolom tabel)
                 var filters = {};
                 $wrapper.find('.gc-column-filter').each(function () {
                     var field = $(this).data('field');
@@ -899,7 +904,7 @@
                 if (Object.keys(filters).length > 0) {
                     $form.append('<input type="hidden" name="export_filters" value=\'' + JSON.stringify(filters) + '\'>');
                 }
-                // Advanced filters (from filter panel)
+                // Filter lanjutan (dari panel filter)
                 var advancedFilters = $wrapper.data('gcAdvancedFilters') || [];
                 if (advancedFilters.length > 0) {
                     $form.append('<input type="hidden" name="export_advanced_filters" value=\'' + JSON.stringify(advancedFilters) + '\'>');
@@ -915,7 +920,7 @@
         });
     }
 
-    // ======== Import Workflow ========
+    // ======== Alur Kerja Impor ========
     var _importing = false;
 
     function loadImportForm($btn) {
@@ -946,46 +951,46 @@
     }
 
     function bindImportEvents($modal) {
-        // Close button
+        // Tombol tutup
         $modal.on('click', '.gc-form-close', function (e) {
             e.preventDefault();
             GcModal.hide();
         });
 
-        // Close on backdrop click
+        // Tutup saat backdrop diklik
         $modal.on('hidden.bs.modal', function () {
             GcModal.remove();
         });
 
-        // Browse button -> trigger file input
+        // Tombol jelajah -> picu input file
         $modal.on('click', '.gc-import-browse-btn', function () {
             $modal.find('.gc-import-file-input').click();
         });
 
-        // Click on dropzone -> trigger file input (skip if click originated from the file input itself)
+        // Klik pada dropzone -> picu input file (lewati jika klik berasal dari input file itu sendiri)
         $modal.on('click', '.gc-import-dropzone', function (e) {
             if ($(e.target).closest('.gc-import-file-input, .gc-import-browse-btn').length) return;
             $modal.find('.gc-import-file-input').click();
         });
 
-        // File selected -> upload
+        // File dipilih -> unggah
         $modal.on('change', '.gc-import-file-input', function () {
             var file = this.files[0];
             if (!file) return;
 
-            // Show filename
+            // Tampilkan nama file
             $modal.find('.gc-import-filename').text(file.name).removeClass('d-none');
 
-            // Upload
+            // Unggah
             uploadImportFile($modal, file);
         });
 
-        // Execute import
+        // Jalankan impor
         $modal.on('click', '.gc-import-execute-btn', function () {
             executeImport($modal);
         });
 
-        // Download template with selected fields
+        // Unduh template dengan field yang dipilih
         $modal.on('click', '.gc-template-download-selected', function () {
             var fields = [];
             $modal.find('.gc-template-field-cb:checked').each(function () {
@@ -1006,7 +1011,7 @@
         formData.append('import_file', file);
         formData.append('gc_action', 'import_upload');
 
-        // Show uploading state
+        // Tampilkan status unggah
         $modal.find('.gc-import-dropzone').addClass('d-none');
         $modal.find('.gc-import-filename').addClass('d-none');
         $modal.find('.gc-import-uploading').removeClass('d-none');
@@ -1044,7 +1049,7 @@
         var fieldLabels = data.fieldLabels || {};
         var totalRows = data.totalRows || 0;
 
-        // Build mapping table
+        // Bangun tabel pemetaan
         var $mappingBody = $modal.find('.gc-import-mapping-table tbody');
         $mappingBody.empty();
 
@@ -1072,7 +1077,7 @@
             $mappingBody.append($row);
         });
 
-        // Build preview table
+        // Bangun tabel pratinjau
         var $previewHead = $modal.find('.gc-import-preview-table thead tr');
         var $previewBody = $modal.find('.gc-import-preview-table tbody');
         $previewHead.empty();
@@ -1090,19 +1095,19 @@
             $previewBody.append($row);
         });
 
-        // Show total rows
+        // Tampilkan total baris
         $modal.find('.gc-import-preview-info').text(data.total_rows_label || 'Total rows in file') + ': ' + totalRows;
         $modal.find('.gc-import-preview-info').html(
             '<span class="text-muted">' + (data.total_rows_label || 'Total rows in file') + ': <strong>' + totalRows + '</strong></span>'
         );
 
-        // Show execute button
+        // Tampilkan tombol eksekusi
         $modal.find('.gc-import-execute-btn').removeClass('d-none');
 
-        // Show mapping step
+        // Tampilkan langkah pemetaan
         $modal.find('.gc-import-step[data-step="mapping"]').removeClass('d-none');
 
-        // Store file data for later
+        // Simpan data file untuk nanti
         $modal.data('importData', {
             totalRows: totalRows,
             preview: preview,
@@ -1115,7 +1120,7 @@
         var importData = $modal.data('importData');
         if (!importData) return;
 
-        // Read current mapping from UI
+        // Baca pemetaan saat ini dari UI
         var mapping = [];
         $modal.find('.gc-import-mapping-table tbody tr').each(function () {
             var $select = $(this).find('select');
@@ -1126,14 +1131,14 @@
         var msg = (importData.confirm_label || 'Are you sure you want to import {total} records?').replace('{total}', totalRows);
         if (!confirm(msg)) return;
 
-        // Get preview data as rows (header-indexed arrays)
+        // Ambil data pratinjau sebagai baris (array terindeks header)
         var rows = importData.preview.map(function (row) {
             return importData.headers.map(function (header) {
                 return row[header] || '';
             });
         });
 
-        // Disable button
+        // Nonaktifkan tombol
         var $btn = $modal.find('.gc-import-execute-btn');
         $btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1"></span> Importing...');
 
@@ -1167,45 +1172,45 @@
         });
     }
 
-    // ======== Event Binding ========
+    // ======== Pengikatan Event ========
     function bindEvents() {
-        // Import button
+        // Tombol impor
         $(document).off('click', '.btn-gc-import').on('click', '.btn-gc-import', function (e) {
             e.preventDefault();
             loadImportForm($(this));
         });
 
-        // Add button
+        // Tombol tambah
         $(document).off('click', '.btn-gc-add').on('click', '.btn-gc-add', function (e) {
             e.preventDefault();
             loadAddForm($(this));
         });
 
-        // Edit button
+        // Tombol edit
         $(document).off('click', '.btn-gc-edit').on('click', '.btn-gc-edit', function (e) {
             e.preventDefault();
             loadEditForm($(this));
         });
 
-        // Delete button
+        // Tombol hapus
         $(document).off('click', '.btn-gc-delete').on('click', '.btn-gc-delete', function (e) {
             e.preventDefault();
             deleteRecord($(this));
         });
 
-        // Restore button (trashed view)
+        // Tombol pulihkan (tampilan sampah)
         $(document).off('click', '.btn-gc-restore').on('click', '.btn-gc-restore', function (e) {
             e.preventDefault();
             restoreRecord($(this));
         });
 
-        // Trash list button
+        // Tombol daftar sampah
         $(document).off('click', '.gc-btn-trash').on('click', '.gc-btn-trash', function (e) {
             e.preventDefault();
             loadTrashList($(this));
         });
 
-        // Active list button (from trashed view)
+        // Tombol daftar aktif (dari tampilan sampah)
         $(document).off('click', '.gc-btn-active').on('click', '.gc-btn-active', function (e) {
             e.preventDefault();
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
@@ -1213,13 +1218,13 @@
             refreshList($wrapper);
         });
 
-        // Sub-grid expand/collapse toggle
+        // Toggle perluas/ciutkan sub-grid
         $(document).off('click', '.gc-subgrid-toggle').on('click', '.gc-subgrid-toggle', function (e) {
             e.preventDefault();
             loadSubGrid($(this));
         });
 
-        // Pagination links
+        // Tautan paginasi
         $(document).off('click', '.gc-page-link').on('click', '.gc-page-link', function (e) {
             e.preventDefault();
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
@@ -1228,14 +1233,14 @@
             refreshList($wrapper);
         });
 
-        // Search - realtime on keyup (debounced)
+        // Pencarian - waktu nyata pada keyup (debounced)
         $(document).off('keyup', '.gc-search-input').on('keyup', '.gc-search-input', $.debounce(function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             $wrapper.data('currentPage', 1);
             refreshList($wrapper);
         }, 400));
 
-        // Search - immediate on Enter key
+        // Pencarian - langsung pada tombol Enter
         $(document).off('keydown', '.gc-search-input').on('keydown', '.gc-search-input', function (e) {
             if (e.keyCode === 13) {
                 e.preventDefault();
@@ -1245,7 +1250,7 @@
             }
         });
 
-        // Show/hide clear search button on input change
+        // Tampilkan/sembunyikan tombol hapus pencarian saat input berubah
         $(document).off('input', '.gc-search-input').on('input', '.gc-search-input', function () {
             var $clearBtn = $(this).closest('.input-group').find('.gc-search-clear');
             if ($(this).val()) {
@@ -1255,7 +1260,7 @@
             }
         });
 
-        // Clear search button
+        // Tombol hapus pencarian
         $(document).off('click', '.gc-search-clear').on('click', '.gc-search-clear', function (e) {
             e.preventDefault();
             var $input = $(this).closest('.input-group').find('.gc-search-input');
@@ -1267,7 +1272,7 @@
             refreshList($wrapper);
         });
 
-        // ======== Column Filters ========
+        // ======== Filter Kolom ========
         var filterTimer = null;
         $(document).off('change', '.gc-column-filter').on('change', '.gc-column-filter', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
@@ -1276,7 +1281,7 @@
         });
         $(document).off('input', '.gc-column-filter').on('input', '.gc-column-filter', function () {
             var $self = $(this);
-            // Only debounce text inputs (selects use 'change' above)
+            // Hanya debounce input teks (select menggunakan 'change' di atas)
             if ($self.is('select')) return;
             clearTimeout(filterTimer);
             filterTimer = setTimeout(function () {
@@ -1286,8 +1291,8 @@
             }, 400);
         });
 
-        // ======== Batch Actions ========
-        // Select-all checkbox
+        // ======== Aksi Batch ========
+        // Checkbox pilih semua
         $(document).off('change', '.gc-select-all').on('change', '.gc-select-all', function () {
             var isChecked = $(this).prop('checked');
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
@@ -1295,7 +1300,7 @@
             updateBatchToolbar($wrapper);
         });
 
-        // Row checkbox
+        // Checkbox baris
         $(document).off('change', '.gc-row-checkbox').on('change', '.gc-row-checkbox', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var allChecked = $wrapper.find('.gc-row-checkbox').length === $wrapper.find('.gc-row-checkbox:checked').length;
@@ -1303,7 +1308,7 @@
             updateBatchToolbar($wrapper);
         });
 
-        // Batch action button
+        // Tombol aksi batch
         $(document).off('click', '.gc-batch-action').on('click', '.gc-batch-action', function (e) {
             e.preventDefault();
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
@@ -1314,7 +1319,7 @@
             });
             if (selectedIds.length === 0) return;
 
-            // Detect if we're in trash view (the "Active Records" button only appears there)
+            // Deteksi jika kita dalam tampilan sampah (tombol "Catatan Aktif" hanya muncul di sana)
             var isTrashView = $wrapper.find('.gc-btn-active').length > 0;
 
             if (actionId === 'delete_selected') {
@@ -1334,7 +1339,7 @@
                 ids: selectedIds
             };
 
-            // When in trash view, delete_selected should permanently delete
+            // Saat dalam tampilan sampah, delete_selected harus menghapus permanen
             if (isTrashView && actionId === 'delete_selected') {
                 requestData.permanent_delete = 1;
             }
@@ -1360,7 +1365,7 @@
             });
         });
 
-        // Batch toolbar helper
+        // Pembantu bilah alat batch
         function updateBatchToolbar($wrapper) {
             var $toolbar = $wrapper.find('.gc-batch-toolbar');
             var $num = $toolbar.find('.gc-selected-num');
@@ -1373,7 +1378,7 @@
             }
         }
 
-        // Sortable column headers
+        // Header kolom yang dapat diurutkan
         $(document).off('click', '.gc-sortable').on('click', '.gc-sortable', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var field = $(this).data('sort-field');
@@ -1384,13 +1389,13 @@
             refreshList($wrapper);
         });
 
-        // Export
+        // Ekspor
         $(document).off('click', '[data-export]').on('click', '[data-export]', function (e) {
             e.preventDefault();
             handleExport($(this), $(this).data('export'));
         });
 
-        // ======== Activity Log Viewer ========
+        // ======== Penampil Log Aktivitas ========
         $(document).off('click', '.gc-btn-activity-log').on('click', '.gc-btn-activity-log', function (e) {
             e.preventDefault();
             loadActivityLogViewer($(this));
@@ -1427,7 +1432,7 @@
             }
         });
 
-        // ======== Calendar View ========
+        // ======== Tampilan Kalender ========
         $(document).off('click', '.gc-btn-calendar').on('click', '.gc-btn-calendar', function (e) {
             e.preventDefault();
             loadCalendarView($(this));
@@ -1438,7 +1443,7 @@
             goBackToTableView($(this));
         });
 
-        // ======== Columns Dropdown Toggle ========
+        // ======== Toggle Dropdown Kolom ========
         $(document).off('change', '.gc-columns-menu input[type="checkbox"]').on('change', '.gc-columns-menu input[type="checkbox"]', function () {
             var col = $(this).data('column');
             var $table = $(this).closest('.grocery-crud-wrapper').find('.gc-table');
@@ -1449,15 +1454,15 @@
             }
         });
 
-        // ======== Filter Panel ========
-        // Toggle filter panel
+        // ======== Panel Filter ========
+        // Toggle panel filter
         $(document).off('click', '.gc-filter-btn').on('click', '.gc-filter-btn', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var $panel = $wrapper.find('.gc-filter-panel');
             $panel.toggle();
         });
 
-        // Add filter row
+        // Tambah baris filter
         $(document).off('click', '.gc-filter-add').on('click', '.gc-filter-add', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var $rows = $wrapper.find('.gc-filter-rows');
@@ -1467,12 +1472,12 @@
             $rows.append($template);
         });
 
-        // Remove filter row
+        // Hapus baris filter
         $(document).off('click', '.gc-filter-item-remove').on('click', '.gc-filter-item-remove', function () {
             $(this).closest('.gc-filter-item').remove();
         });
 
-        // Apply filters
+        // Terapkan filter
         $(document).off('click', '.gc-filter-apply').on('click', '.gc-filter-apply', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var filters = [];
@@ -1489,7 +1494,7 @@
             refreshList($wrapper);
         });
 
-        // Clear filters
+        // Hapus filter
         $(document).off('click', '.gc-filter-clear').on('click', '.gc-filter-clear', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             $wrapper.find('.gc-filter-item').remove();
@@ -1499,15 +1504,15 @@
             refreshList($wrapper);
         });
 
-        // ======== Column Reorder via table-dragger ========
-        // Since input/label have pointer-events:none, handle toggle via click on the .form-check div
+        // ======== Urut Ulang Kolom via table-dragger ========
+        // Karena input/label memiliki pointer-events:none, tangani toggle via klik pada div .form-check
         $(document).off('click', '.gc-columns-menu .form-check').on('click', '.gc-columns-menu .form-check', function () {
             var $input = $(this).find('.form-check-input');
             $input.prop('checked', !$input.is(':checked')).trigger('change');
         });
 
-        // ======== Settings Save/Load/Reset ========
-        // Save settings
+        // ======== Simpan/Muat/Atur Ulang Pengaturan ========
+        // Simpan pengaturan
         $(document).off('click', '.gc-settings-save').on('click', '.gc-settings-save', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var url = window.location.href;
@@ -1528,7 +1533,7 @@
             }
         });
 
-        // Load settings
+        // Muat pengaturan
         $(document).off('click', '.gc-settings-load').on('click', '.gc-settings-load', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var url = window.location.href;
@@ -1536,11 +1541,11 @@
                 var raw = localStorage.getItem('gc_settings_' + btoa(url));
                 if (!raw) { showAlert('No saved settings found.', 'warning'); return; }
                 var settings = JSON.parse(raw);
-                // Restore column order
+                // Pulihkan urutan kolom
                 if (settings.columnOrder && settings.columnOrder.length) {
                     applyColumnOrder($wrapper, settings.columnOrder);
                 }
-                // Restore column visibility
+                // Pulihkan visibilitas kolom
                 if (settings.columns) {
                     $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                         var col = $(this).data('column');
@@ -1549,7 +1554,7 @@
                         }
                     });
                 }
-                // Restore filters
+                // Pulihkan filter
                 if (settings.filters && settings.filters.length) {
                     $wrapper.data('gcAdvancedFilters', settings.filters);
                     refreshList($wrapper);
@@ -1560,13 +1565,13 @@
             }
         });
 
-        // Reset settings
+        // Atur ulang pengaturan
         $(document).off('click', '.gc-settings-reset').on('click', '.gc-settings-reset', function () {
             var $wrapper = $(this).closest('.grocery-crud-wrapper');
             var url = window.location.href;
             try {
                 localStorage.removeItem('gc_settings_' + btoa(url));
-                // Reset column order to original (from table headers)
+                // Atur ulang urutan kolom ke aslinya (dari header tabel)
                 var order = [];
                 $wrapper.find('.gc-table th[data-column]').each(function () {
                     order.push($(this).data('column'));
@@ -1584,7 +1589,7 @@
             } catch (e) {}
         });
 
-        // Image viewer - click thumbnail to show enlarged
+        // Penampil gambar - klik thumbnail untuk memperbesar
         $(document).off('click', '.gc-table img.gc-thumb').on('click', '.gc-table img.gc-thumb', function () {
             var $img = $(this);
             var src = $img.attr('src') || $img.data('src');
@@ -1608,34 +1613,34 @@
             $('body').append($modal);
             $modal.modal('show');
 
-            // Adjust dialog to image natural size after load
+            // Sesuaikan dialog dengan ukuran asli gambar setelah dimuat
             $modalImg.on('load', function () {
                 var $dialog = $modal.find('.modal-dialog');
                 var imgW = this.naturalWidth;
                 var imgH = this.naturalHeight;
 
-                // Cap at viewport - some margin
+                // Batasi di viewport - beberapa margin
                 var maxW = window.innerWidth * 0.9;
                 var maxH = window.innerHeight * 0.85;
 
                 if (imgW > maxW || imgH > maxH) {
-                    // Image bigger than viewport — let CSS handle it
+                    // Gambar lebih besar dari viewport — biarkan CSS menanganinya
                     $modalImg.show();
                 } else {
-                    // Image fits — size dialog to image
+                    // Gambar muat — sesuaikan dialog dengan gambar
                     $modalImg.css({display:'block', width: imgW + 'px', height: 'auto'});
                     $dialog.css('max-width', (imgW + 40) + 'px');
                 }
 
-                // Re-center modal after content resize
+                // Pusatkan ulang modal setelah perubahan ukuran konten
                 $modal[0]._isShown && $modal.modal('handleUpdate');
             });
 
-            // If already cached, trigger load manually
+            // Jika sudah di-cache, picu pemuatan secara manual
             if ($modalImg[0].complete) {
                 $modalImg.trigger('load');
             } else {
-                // Ensure img is shown even if load fails
+                // Pastikan img ditampilkan meskipun pemuatan gagal
                 $modalImg.on('error', function () {
                     $modalImg.show();
                 });
@@ -1648,8 +1653,8 @@
             });
         });
 
-        // ======== Repeater Fields ========
-        // Add item
+        // ======== Field Repeater ========
+        // Tambah item
         $(document).off('click', '.gc-repeater-add').on('click', '.gc-repeater-add', function () {
             var $btn = $(this);
             var $container = $btn.closest('.gc-repeater-container');
@@ -1657,24 +1662,24 @@
             var index = $container.find('.gc-repeater-item').not($container.find('.gc-repeater-template .gc-repeater-item')).length;
 
             var html = $template.html().replace(/__INDEX__/g, index);
-            html = html.replace(/ disabled/g, '');  // Remove disabled from cloned items
+            html = html.replace(/ disabled/g, '');  // Hapus disabled dari item yang dikloning
             $btn.before(html);
         });
 
-        // Remove item
+        // Hapus item
         $(document).off('click', '.gc-repeater-remove').on('click', '.gc-repeater-remove', function () {
             $(this).closest('.gc-repeater-item').remove();
         });
 
-        // Populate columns menu and filter selects for existing wrappers
+        // Isi menu kolom dan filter select untuk wrapper yang ada
         $(document).find('.grocery-crud-wrapper').each(function () {
             populateColumnsAndFilters($(this));
             initInlineEditing($(this));
         });
 
-        // GC toolbar dropdown: bypass any framework-native dropdown system (Materialize, Bootstrap, etc.)
-        // Destroy Materialize instances on GC toolbar buttons first (Materialize auto-inits on DOMContentLoaded
-        // and its click handler uses stopPropagation, blocking GC's document-level handlers)
+        // Dropdown bilah alat GC: lewati sistem dropdown bawaan framework (Materialize, Bootstrap, dll.)
+        // Hancurkan instance Materialize pada tombol bilah alat GC terlebih dahulu (Materialize menginisialisasi otomatis pada DOMContentLoaded
+        // dan penangan kliknya menggunakan stopPropagation, memblokir penangan tingkat dokumen GC)
         if (typeof M !== 'undefined' && typeof M.Dropdown !== 'undefined') {
             $('.grocery-crud-wrapper .dropdown-trigger').each(function () {
                 var instance = M.Dropdown.getInstance(this);
@@ -1684,10 +1689,10 @@
             });
         }
 
-        // Initialize all GC dropdowns as hidden (e.g. Materialize CSS doesn't hide .dropdown-content)
+        // Inisialisasi semua dropdown GC sebagai tersembunyi (misal, CSS Materialize tidak menyembunyikan .dropdown-content)
         $('.grocery-crud-wrapper .dropdown-content').hide();
 
-        // Direct click handler for each dropdown trigger (binds directly to elements, avoids delegation issues)
+        // Penangan klik langsung untuk setiap pemicu dropdown (mengikat langsung ke elemen, menghindari masalah delegasi)
         $('.grocery-crud-wrapper a.dropdown-trigger[data-target]').off('click.gc-dd').on('click.gc-dd', function (e) {
             e.preventDefault();
             e.stopPropagation();
@@ -1696,7 +1701,7 @@
             var $target = $('#' + targetId);
             if (!$target.length) return;
 
-            // Debounce: ignore if this dropdown was just interacted with (prevents double-fire)
+            // Debounce: abaikan jika dropdown ini baru saja diinteraksi (mencegah tembakan ganda)
             var now = Date.now();
             var lastToggle = $target.data('gc-last-toggle') || 0;
             if (now - lastToggle < 100) {
@@ -1705,17 +1710,17 @@
             }
             $target.data('gc-last-toggle', now);
 
-            // If this target is already open, close it
+            // Jika target ini sudah terbuka, tutup
             if ($target.is(':visible')) {
                 $target.hide();
                 return;
             }
 
-            // Close all other dropdowns in this wrapper
+            // Tutup semua dropdown lain di wrapper ini
             var $wrapper = $btn.closest('.grocery-crud-wrapper');
             $wrapper.find('.dropdown-content').not($target).hide();
 
-            // Show the target with positioning (override Materialize defaults: opacity, transform, top, left)
+            // Tampilkan target dengan posisi (timpa default Materialize: opacity, transform, top, left)
             var el = $target[0];
             el.style.display = 'block';
             el.style.opacity = '1';
@@ -1725,14 +1730,14 @@
             el.style.zIndex = 9999;
             el.style.marginTop = '0';
 
-            // Position dropdown below the clicked button
+            // Posisikan dropdown di bawah tombol yang diklik
             var btnPos = $btn.position();
             var $toolbar = $btn.closest('.right, .card-tools, .card-header-icon');
             el.style.top = (btnPos.top + $btn.outerHeight() + 4) + 'px';
             el.style.left = btnPos.left + 'px';
             el.style.right = 'auto';
 
-            // Prevent dropdown from overflowing the right edge of the toolbar
+            // Cegah dropdown meluber ke tepi kanan bilah alat
             var dropdownWidth = $target.outerWidth() || 200;
             var toolbarWidth = $toolbar.outerWidth() || 0;
             if (toolbarWidth && (btnPos.left + dropdownWidth > toolbarWidth)) {
@@ -1740,7 +1745,7 @@
             }
         });
 
-        // Close dropdowns on outside click (delegation is safe for document-level)
+        // Tutup dropdown saat klik di luar (delegasi aman untuk tingkat dokumen)
         $(document).off('click.gc-dd-close').on('click.gc-dd-close', function (e) {
             if (!$(e.target).closest('.grocery-crud-wrapper a.dropdown-trigger[data-target]').length
                 && !$(e.target).closest('.grocery-crud-wrapper .dropdown-content:visible').length) {
@@ -1749,11 +1754,11 @@
         });
     }
 
-    // ======== Dynamic Form Conditions (Depends On) ========
+    // ======== Kondisi Formulir Dinamis (Bergantung Pada) ========
     /**
-     * Initialize dependsOn dynamic field visibility/enablement.
-     * Fields with data-depends-on attribute will show/hide or enable/disable
-     * based on the value of their controlling field.
+     * Inisialisasi visibilitas/ pengaktifan field dinamis dependsOn.
+     * Field dengan atribut data-depends-on akan tampil/sembunyi atau aktif/nonaktif
+     * berdasarkan nilai dari field pengontrolnya.
      */
     function initDependsOn($modal) {
         $modal.find('[data-depends-on]').each(function () {
@@ -1764,17 +1769,17 @@
             var $form = $field.closest('.gc-form');
             if (!$form.length) return;
 
-            // Find the controlling field — handle various input types
+            // Temukan field pengontrol — tangani berbagai jenis input
             var $controller = $form.find('[name="' + config.field + '"]');
             if (!$controller.length) {
-                // Try with [] suffix (for checkbox arrays)
+                // Coba dengan akhiran [] (untuk array checkbox)
                 $controller = $form.find('[name="' + config.field + '[]"]');
             }
             if (!$controller.length) return;
 
             function normalizeConfigValue(val) {
-                // Normalize boolean config values to '1'/'0' for checkbox comparison
-                // String(true) = 'true' in JS, but checkbox checked = '1'
+                // Normalisasi nilai konfigurasi boolean ke '1'/'0' untuk perbandingan checkbox
+                // String(true) = 'true' di JS, tetapi checkbox dicentang = '1'
                 if (typeof val === 'boolean') {
                     return val ? '1' : '0';
                 }
@@ -1792,35 +1797,35 @@
                 var match = String(controllerValue) === normalizeConfigValue(config.value);
 
                 if (config.action === 'enable') {
-                    // Enable/disable inputs without hiding
+                    // Aktifkan/nonaktifkan input tanpa menyembunyikan
                     $field.find('input, select, textarea, button').prop('disabled', !match);
-                    // Visual cue: dim the field when disabled
+                    // Isyarat visual: redupkan field saat dinonaktifkan
                     $field.toggleClass('gc-depends-disabled', !match);
                 } else {
-                    // Default 'show': hide/ show the entire field group
+                    // Default 'show': sembunyikan/tampilkan seluruh grup field
                     $field.toggle(match);
-                    // Disable inputs when hidden so they don't submit
+                    // Nonaktifkan input saat tersembunyi agar tidak terkirim
                     $field.find('input, select, textarea, button').prop('disabled', !match);
                 }
             }
 
-            // Listen for changes on the controller
+            // Dengarkan perubahan pada pengontrol
             $controller.on('change.dependsOn', updateDependsOn);
 
-            // For text inputs, also listen on keyup for immediate feedback
+            // Untuk input teks, dengarkan juga keyup untuk umpan balik langsung
             if ($controller.is('input[type="text"], input[type="number"], input[type="email"], input[type="tel"], input[type="url"], input[type="password"]')) {
                 $controller.on('keyup.dependsOn', function () {
-                    // Only trigger if value exactly matches or has a substring
+                    // Hanya picu jika nilai cocok persis atau memiliki substring
                     updateDependsOn();
                 });
             }
 
-            // Initial state
+            // Status awal
             updateDependsOn();
         });
     }
 
-    // ======== Dependent (Cascading) Dropdowns ========
+    // ======== Dropdown Bergantung (Cascading) ========
     function initDependentDropdowns($modal) {
         $modal.find('.gc-dependent-select').each(function () {
             var $childSelect = $(this);
@@ -1864,12 +1869,12 @@
                 });
             }
 
-            // Listen for changes on parent
+            // Dengarkan perubahan pada induk
             $parentSelect.on('change.dependentDropdown', function () {
                 loadDependentOptions($(this).val());
             });
 
-            // Initial load (edit mode: populate based on current parent value)
+            // Muatan awal (mode edit: isi berdasarkan nilai induk saat ini)
             var initialParentValue = $parentSelect.val();
             if (initialParentValue) {
                 loadDependentOptions(initialParentValue);
@@ -1877,7 +1882,7 @@
         });
     }
 
-    // Clean up dependsOn + dependentDropdown listeners when modal is closed
+    // Bersihkan listener dependsOn + dependentDropdown saat modal ditutup
     $(document).on('hidden.bs.modal', '.gc-modal', function () {
         $(this).find('[data-depends-on]').each(function () {
             var config = $(this).data('dependsOn');
@@ -1898,19 +1903,19 @@
     });
 
     function bindFormEvents($modal) {
-        // Form submission
+        // Pengiriman formulir
         $modal.on('submit', '.gc-form', function (e) {
             e.preventDefault();
             submitForm($(this));
         });
 
-        // Close button
+        // Tombol tutup
         $modal.on('click', '.gc-form-close', function (e) {
             e.preventDefault();
             GcModal.hide();
         });
 
-        // Close on backdrop click — also release record lock
+        // Tutup saat backdrop diklik — juga lepaskan kunci catatan
         $modal.on('hidden.bs.modal', function () {
             if (_lockedRecordId) {
                 $.post(window.location.href, {
@@ -1922,20 +1927,20 @@
             GcModal.remove();
         });
 
-        // Initialize dependsOn after form is shown
+        // Inisialisasi dependsOn setelah formulir ditampilkan
         initDependsOn($modal);
 
-        // Initialize dependent (cascading) dropdowns
+        // Inisialisasi dropdown bergantung (cascading)
         initDependentDropdowns($modal);
 
-        // Initialize Bootstrap 5 tabs for field groups
+        // Inisialisasi tab Bootstrap 5 untuk grup field
         $modal.find('[data-bs-toggle="tab"]').each(function () {
             if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
                 new bootstrap.Tab(this);
             }
         });
 
-        // Initialize richtext editors
+        // Inisialisasi editor teks kaya
         initRichtextEditors($modal);
     }
 
@@ -1943,7 +1948,7 @@
         if (typeof Quill === 'undefined') return;
 
         $modal.find('.gc-richtext-editor').each(function () {
-            // Skip if already initialized (Quill adds ql-container class)
+            // Lewati jika sudah diinisialisasi (Quill menambahkan kelas ql-container)
             if ($(this).hasClass('ql-container')) return;
 
             var quill = new Quill(this, {
@@ -1974,7 +1979,7 @@
         });
     }
 
-    // ======== Debounce helper ========
+    // ======== Pembantu Debounce ========
     $.debounce = function (fn, delay) {
         var timer = null;
         return function () {
@@ -1987,16 +1992,16 @@
         };
     };
 
-    // ======== Inline Editing ========
+    // ======== Pengeditan Inline ========
     /**
-     * Initialize inline editing on a wrapper.
+     * Inisialisasi pengeditan inline pada wrapper.
      */
     function initInlineEditing($wrapper) {
         if (!$wrapper.find('[data-inline-edit]').length) {
             return;
         }
 
-        // Close any existing active editor
+        // Tutup editor aktif yang ada
         function closeActiveEditor() {
             var $active = $('.gc-inline-editor-active');
             if ($active.length) {
@@ -2007,12 +2012,12 @@
             }
         }
 
-        // Save inline edit via AJAX
+        // Simpan edit inline via AJAX
         function saveInlineEdit($cell, value) {
             var $wrapper = $cell.closest('.grocery-crud-wrapper');
             var id = $cell.closest('tr').data('parent-id');
             if (id === undefined) {
-                // Fallback: try to find the PK in the row
+                // Fallback: coba temukan PK di baris
                 var pk = $wrapper.data('primaryKey') || 'id';
                 id = $cell.closest('tr').find('[data-column="' + pk + '"]').text().trim();
             }
@@ -2020,7 +2025,7 @@
 
             if (!id || !field) return;
 
-            // Get original value in case we need to revert
+            // Ambil nilai asli untuk berjaga-jaga jika perlu dikembalikan
             var origValue = $cell.data('value') !== undefined ? $cell.data('value') : $cell.text().trim();
 
             $.ajax({
@@ -2035,12 +2040,12 @@
                 dataType: 'json',
                 success: function (response) {
                     if (response.success) {
-                        // Update cell with returned display value
+                        // Perbarui sel dengan nilai tampilan yang dikembalikan
                         $cell.html(response.value);
                         $cell.data('value', value);
                         showAlert(response.message, 'success');
                     } else {
-                        // Revert to original
+                        // Kembalikan ke aslinya
                         var dispValue = $cell.data('value') !== undefined
                             ? ($cell.data('value') === origValue ? origValue : $cell.data('value'))
                             : origValue;
@@ -2049,7 +2054,7 @@
                     }
                 },
                 error: function () {
-                    // Revert on error
+                    // Kembalikan saat error
                     var dispValue = $cell.data('value') !== undefined
                         ? ($cell.data('value') === origValue ? origValue : $cell.data('value'))
                         : origValue;
@@ -2059,7 +2064,7 @@
             });
         }
 
-        // Create inline editor element
+        // Buat elemen editor inline
         function createInlineEditor($cell, fieldType, currentValue, fieldOptions) {
             var $editor;
 
@@ -2077,7 +2082,7 @@
                                 $editor.append($opt);
                             });
                         } catch (e) {
-                            // Fallback to text input
+                            // Fallback ke input teks
                             $editor = $('<input type="text" class="form-control form-control-sm gc-inline-input">');
                         }
                     } else {
@@ -2129,7 +2134,7 @@
                     break;
             }
 
-            // Set value
+            // Atur nilai
             if ($editor.is('input') || $editor.is('textarea')) {
                 $editor.val(currentValue);
             }
@@ -2137,11 +2142,11 @@
             return $editor;
         }
 
-        // Enter edit mode
+        // Masuk mode edit
         function enterEditMode($cell) {
-            // Don't edit if already editing
+            // Jangan edit jika sedang diedit
             if ($cell.find('.gc-inline-editor').length) return;
-            // Don't edit the actions column
+            // Jangan edit kolom aksi
             if ($cell.hasClass('text-center')) return;
 
             closeActiveEditor();
@@ -2150,23 +2155,23 @@
             var currentValue = $cell.data('value') !== undefined ? $cell.data('value') : '';
             var fieldOptions = $cell.data('field-options');
 
-            // Save current display text for cancel
+            // Simpan teks tampilan saat ini untuk pembatalan
             $cell.data('orig-display', $cell.html());
 
-            // Clear cell and create editor
+            // Kosongkan sel dan buat editor
             var $editor = createInlineEditor($cell, fieldType, currentValue, fieldOptions);
             var $editorWrap = $('<div class="gc-inline-editor"></div>').append($editor);
             $cell.addClass('gc-inline-editor-active');
             $cell.empty().append($editorWrap);
 
-            // Focus and select
+            // Fokus dan pilih
             if ($editor.is('input') && !$editor.is('[type="checkbox"]')) {
                 $editor.focus().select();
             } else if ($editor.is('select') || $editor.is('textarea')) {
                 $editor.focus();
             }
 
-            // Handle save
+            // Tangani penyimpanan
             function doSave() {
                 var val;
                 if ($editor.is('select')) {
@@ -2179,14 +2184,14 @@
                 saveInlineEdit($cell, val);
             }
 
-            // Handle cancel
+            // Tangani pembatalan
             function doCancel() {
                 var origDisplay = $cell.data('orig-display') || '';
                 $cell.removeClass('gc-inline-editor-active');
                 $cell.html(origDisplay);
             }
 
-            // Save on blur (with delay to allow click on select option)
+            // Simpan saat blur (dengan penundaan untuk memungkinkan klik pada opsi select)
             var blurTimer = null;
             $editor.on('blur', function () {
                 blurTimer = setTimeout(function () {
@@ -2194,7 +2199,7 @@
                 }, 200);
             });
 
-            // Cancel blur timer on focus
+            // Batalkan timer blur saat fokus
             $editor.on('focus', function () {
                 if (blurTimer) {
                     clearTimeout(blurTimer);
@@ -2202,7 +2207,7 @@
                 }
             });
 
-            // Save on Enter (not for textarea)
+            // Simpan saat Enter (bukan untuk textarea)
             $editor.on('keydown', function (e) {
                 if (e.keyCode === 13 && !$editor.is('textarea')) {
                     e.preventDefault();
@@ -2212,7 +2217,7 @@
                     }
                     doSave();
                 }
-                // Cancel on Escape
+                // Batalkan saat Escape
                 if (e.keyCode === 27) {
                     e.preventDefault();
                     if (blurTimer) {
@@ -2223,14 +2228,14 @@
                 }
             });
 
-            // For select, save on change
+            // Untuk select, simpan saat change
             if ($editor.is('select')) {
                 $editor.on('change', function () {
                     doSave();
                 });
             }
 
-            // For checkbox/switch, save on change
+            // Untuk checkbox/switch, simpan saat change
             if ($editor.is('[type="checkbox"]')) {
                 $editor.on('change', function () {
                     doSave();
@@ -2238,21 +2243,21 @@
             }
         }
 
-        // Handle double-click on editable cells
+        // Tangani klik dua kali pada sel yang dapat diedit
         $wrapper.off('dblclick', '[data-inline-edit]').on('dblclick', '[data-inline-edit]', function (e) {
             e.preventDefault();
             enterEditMode($(this));
         });
     }
 
-    // ======== Init ========
-    // ======== Bootstrap polyfill for non-Bootstrap themes ========
+    // ======== Inisialisasi ========
+    // ======== Polifil Bootstrap untuk tema non-Bootstrap ========
     function bootstrapPolyfill() {
         var bootstrapLoaded = typeof bootstrap !== 'undefined' && typeof bootstrap.Dropdown === 'function';
 
         if (!bootstrapLoaded) {
-            // Dropdown polyfill — handle Bootstrap-style dropdowns for non-Bootstrap themes.
-            // Materialize uses its own dropdown system (.dropdown-trigger), so it is excluded.
+            // Polifil dropdown — tangani dropdown gaya Bootstrap untuk tema non-Bootstrap.
+            // Materialize menggunakan sistem dropdown sendiri (.dropdown-trigger), sehingga dikecualikan.
             if (typeof M === 'undefined') {
                 $(document).on('click.dropdown', '[data-bs-toggle="dropdown"]', function (e) {
                     e.preventDefault();
@@ -2264,7 +2269,7 @@
                         $menu = $btn.next('.dropdown-menu, .dropdown-content, ul');
                     }
 
-                    // Close all other dropdowns
+                    // Tutup semua dropdown lainnya
                     $('[data-bs-toggle="dropdown"]').not($btn).each(function () {
                         var $otherWrapper = $(this).closest('.dropdown, .relative');
                         var $otherMenu = $otherWrapper.find('.dropdown-menu, .dropdown-content, .gc-columns-menu, .gc-settings-menu');
@@ -2277,7 +2282,7 @@
                     $menu.toggle();
                 });
 
-                // Close dropdowns on outside click
+                // Tutup dropdown saat klik di luar
                 $(document).on('click.dropdown', function (e) {
                     if (!$(e.target).closest('[data-bs-toggle="dropdown"]').length
                         && !$(e.target).closest('.dropdown-menu, .dropdown-content').length) {
@@ -2287,14 +2292,14 @@
             }
         }
 
-        // Modal polyfill — always define (Bootstrap 5 is jQuery-free, doesn't define $.fn.modal)
+        // Polifil modal — selalu definisikan (Bootstrap 5 bebas jQuery, tidak mendefinisikan $.fn.modal)
         if (typeof $.fn.modal !== 'function') {
             $.fn.modal = function (action) {
                 if (action === 'show') {
                     return this.each(function () {
                         $(this).addClass('show').css('display', 'block');
                         $('body').addClass('modal-open');
-                        // Backdrop
+                        // Latar belakang
                         if ($('.modal-backdrop').length === 0) {
                             $('body').append('<div class="modal-backdrop" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:1050;background:rgba(0,0,0,0.28)"></div>');
                         }
@@ -2310,7 +2315,7 @@
             };
         }
 
-        // Alert polyfill
+        // Polifil alert
         if (typeof $.fn.alert !== 'function') {
             $.fn.alert = function () {
                 return this.each(function () {
@@ -2328,7 +2333,7 @@
         }
     }
 
-    // ======== Relation Popover (hover tooltip for relations) ========
+    // ======== Popover Relasi (tooltip hover untuk relasi) ========
     function initRelationPopovers() {
         var popoverTimeout = null;
         var $popoverEl = null;
@@ -2338,13 +2343,13 @@
             var id = $el.data('gc-popover-id');
             if (!field || !id) return;
 
-            // Remove any existing popover
+            // Hapus popover yang ada
             $('.gc-popover-tip').remove();
 
             $popoverEl = $('<div class="gc-popover-tip shadow" style="position:fixed;z-index:9999;background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:12px;max-width:360px;font-size:13px;display:none;line-height:1.5;"><div class="text-center text-muted py-2"><small>Loading...</small></div></div>');
             $('body').append($popoverEl);
 
-            // Position below the element
+            // Posisikan di bawah elemen
             var offset = $el.offset();
             var elHeight = $el.outerHeight();
             $popoverEl.css({
@@ -2353,7 +2358,7 @@
             });
             $popoverEl.fadeIn(150);
 
-            // Fetch content via AJAX
+            // Ambil konten via AJAX
             $.ajax({
                 url: window.location.href.split('?')[0],
                 method: 'POST',
@@ -2383,7 +2388,7 @@
             }, delay || 200);
         }
 
-        // Hover on relation cell -> show popover
+        // Hover pada sel relasi -> tampilkan popover
         $(document).on('mouseenter', '[data-gc-popover-field]', function () {
             if (popoverTimeout) clearTimeout(popoverTimeout);
             showPopover($(this));
@@ -2393,7 +2398,7 @@
             hidePopover(300);
         });
 
-        // Keep popover visible when hovering on it
+        // Pertahankan popover tetap terlihat saat di-hover
         $(document).on('mouseenter', '.gc-popover-tip', function () {
             if (popoverTimeout) clearTimeout(popoverTimeout);
         });
@@ -2403,7 +2408,7 @@
         });
     }
 
-    // ======== Activity Log Viewer Functions ========
+    // ======== Fungsi Penampil Log Aktivitas ========
     function getActivityLogFilters($viewer) {
         return {
             table_name: $viewer.find('.gc-alf-table').val(),
@@ -2522,8 +2527,8 @@
         });
     }
 
-    // ======== Calendar View Functions ========
-    var _gcCalendar = null; // FullCalendar instance
+    // ======== Fungsi Tampilan Kalender ========
+    var _gcCalendar = null; // Instance FullCalendar
 
     function loadCalendarView($btn) {
         var $wrapper = $btn.closest('.grocery-crud-wrapper');
@@ -2533,13 +2538,13 @@
 
         if (!calendarEl) return;
 
-        // Hide table, show calendar
+        // Sembunyikan tabel, tampilkan kalender
         $tableContainer.hide();
         $calendarContainer.show();
 
         showLoading();
 
-        // Fetch events via AJAX
+        // Ambil event via AJAX
         $.ajax({
             url: window.location.href,
             method: 'GET',
@@ -2554,13 +2559,13 @@
 
                 var events = response.events || [];
 
-                // Destroy previous instance if any
+                // Hancurkan instance sebelumnya jika ada
                 if (_gcCalendar) {
                     _gcCalendar.destroy();
                     _gcCalendar = null;
                 }
 
-                // Initialize FullCalendar
+                // Inisialisasi FullCalendar
                 _gcCalendar = new FullCalendar.Calendar(calendarEl, {
                     initialView: 'dayGridMonth',
                     headerToolbar: {
@@ -2571,7 +2576,7 @@
                     height: 'auto',
                     events: events,
                     eventClick: function (info) {
-                        // Open edit form when clicking an event
+                        // Buka formulir edit saat mengklik event
                         var id = info.event.id;
                         if (id) {
                             var $editBtn = $wrapper.find('[data-action="edit"][data-id="' + id + '"]');
@@ -2602,7 +2607,7 @@
         var $tableContainer = $wrapper.find('.table-responsive');
         var $calendarContainer = $wrapper.find('.gc-calendar-container');
 
-        // Destroy FullCalendar instance
+        // Hancurkan instance FullCalendar
         if (_gcCalendar) {
             _gcCalendar.destroy();
             _gcCalendar = null;
@@ -2617,7 +2622,7 @@
         bindEvents();
         initRelationPopovers();
 
-        // Auto-load saved column visibility from localStorage
+        // Muat otomatis visibilitas kolom yang disimpan dari localStorage
         $('.grocery-crud-wrapper').each(function () {
             var $wrapper = $(this);
             var url = window.location.href;
@@ -2645,11 +2650,11 @@
             } catch (e) {
                 console.log('[GC_AUTO] error', e);
             }
-            // Initialize table-dragger after settings are restored
+            // Inisialisasi table-dragger setelah pengaturan dipulihkan
             initTableDragger($wrapper);
         });
 
-        // Store confirmation messages
+        // Simpan pesan konfirmasi
         $('.grocery-crud-wrapper').each(function () {
             var $wrapper = $(this);
             var deleteMsg = $wrapper.find('[data-confirm-delete]').data('confirm-delete');
@@ -2658,7 +2663,7 @@
             }
         });
 
-        // ======== Preview Action (btn-preview) ========
+        // ======== Aksi Pratinjau (btn-preview) ========
         $(document).on('click', '.btn-preview', function (e) {
             e.preventDefault();
             var $wrapper = $(this).closest('.grocery-crud-wrapper');

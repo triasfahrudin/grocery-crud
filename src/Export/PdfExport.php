@@ -7,14 +7,14 @@ namespace GroceryCrud\Export;
 class PdfExport
 {
     /**
-     * Export data as PDF string.
+     * Mengekspor data sebagai string PDF.
      *
      * @param array<int, array<string, mixed>> $data
      * @param array<string, string>            $columnLabels
      * @param array<int, string>               $columns
      * @param string                           $title
-     * @return string PDF binary content
-     * @throws \RuntimeException If DomPDF is not installed
+     * @return string Konten biner PDF
+     * @throws \RuntimeException Jika DomPDF tidak terinstal
      */
     public function export(
         array $data,
@@ -45,7 +45,7 @@ class PdfExport
     }
 
     /**
-     * Get PDF filename.
+     * Mendapatkan nama file PDF.
      */
     public function getFilename(string $table): string
     {
@@ -53,7 +53,7 @@ class PdfExport
     }
 
     /**
-     * Get the Content-Type header for PDF.
+     * Mendapatkan header Content-Type untuk PDF.
      */
     public function getContentType(): string
     {
@@ -61,7 +61,7 @@ class PdfExport
     }
 
     /**
-     * Build HTML table for PDF output.
+     * Membangun tabel HTML untuk output PDF.
      */
     public function buildHtml(array $data, array $columnLabels, array $columns, string $title = ''): string
     {

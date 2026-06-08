@@ -7,7 +7,7 @@ namespace GroceryCrud\Export;
 class CsvExport
 {
     /**
-     * Export data as CSV string.
+     * Mengekspor data sebagai string CSV.
      *
      * @param array<int, array<string, mixed>> $data
      * @param array<string, string>            $columnLabels
@@ -21,17 +21,17 @@ class CsvExport
         array $columns,
         string $delimiter = ','
     ): string {
-        // Open output stream
+        // Buka stream output
         $output = fopen('php://temp', 'r+');
 
-        // Write header
+        // Tulis header
         $header = [];
         foreach ($columns as $col) {
             $header[] = $columnLabels[$col] ?? ucfirst(str_replace('_', ' ', $col));
         }
         fputcsv($output, $header, $delimiter);
 
-        // Write data
+        // Tulis data
         foreach ($data as $row) {
             $line = [];
             foreach ($columns as $col) {
@@ -48,7 +48,7 @@ class CsvExport
     }
 
     /**
-     * Get CSV filename.
+     * Mendapatkan nama file CSV.
      */
     public function getFilename(string $table): string
     {
@@ -56,7 +56,7 @@ class CsvExport
     }
 
     /**
-     * Get the Content-Type header for CSV.
+     * Mendapatkan header Content-Type untuk CSV.
      */
     public function getContentType(): string
     {

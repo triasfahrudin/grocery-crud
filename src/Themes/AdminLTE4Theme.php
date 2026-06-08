@@ -10,7 +10,7 @@ class AdminLTE4Theme implements ThemeInterface
     private array $languageStrings = [];
 
     /**
-     * Set language strings for the theme.
+     * Mengatur string bahasa untuk tema.
      *
      * @param array<string, string> $strings
      */

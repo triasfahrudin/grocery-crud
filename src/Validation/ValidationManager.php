@@ -29,10 +29,10 @@ class ValidationManager
     }
 
     /**
-     * Set validation rules for a field.
+     * Mengatur aturan validasi untuk sebuah field.
      *
      * @param string   $field
-     * @param string   $rules  CI4 validation rules string
+     * @param string   $rules  String aturan validasi CI4
      * @param string|null $label
      */
     public function setRules(string $field, string $rules, ?string $label = null): void
@@ -51,7 +51,7 @@ class ValidationManager
     }
 
     /**
-     * Add a single rule for a field.
+     * Menambahkan satu aturan untuk sebuah field.
      */
     public function setRule(string $field, string $rule, ?string $label = null): void
     {
@@ -66,7 +66,7 @@ class ValidationManager
     }
 
     /**
-     * Mark a field as required.
+     * Menandai sebuah field sebagai wajib diisi.
      */
     public function required(string $field, ?string $label = null): void
     {
@@ -74,7 +74,7 @@ class ValidationManager
     }
 
     /**
-     * Mark a field as unique.
+     * Menandai sebuah field sebagai unik.
      */
     public function unique(string $field, ?string $label = null): void
     {
@@ -82,15 +82,14 @@ class ValidationManager
     }
 
     /**
-     * Mark a field as unique (ignoring a specific record for updates).
+     * Menandai sebuah field sebagai unik (mengabaikan record tertentu untuk update).
      *
-     * Replaces any existing is_unique rule for the same field to avoid
-     * duplicate is_unique checks (the bare one would reject the current
-     * record's own value).
+     * Mengganti aturan is_unique yang ada untuk field yang sama untuk menghindari
+     * pemeriksaan is_unique duplikat (yang biasa akan menolak nilai record saat ini).
      */
     public function uniqueExcept(string $field, mixed $primaryKeyValue, ?string $label = null): void
     {
-        // Remove existing is_unique rules for this field
+        // Hapus aturan is_unique yang ada untuk field ini
         if (isset($this->fieldRules[$field])) {
             $this->fieldRules[$field] = array_values(
                 array_filter(
@@ -108,7 +107,7 @@ class ValidationManager
     }
 
     /**
-     * Get validation rules for all registered fields.
+     * Mendapatkan aturan validasi untuk semua field yang terdaftar.
      *
      * @return array<string, string>
      */
@@ -129,10 +128,10 @@ class ValidationManager
     }
 
     /**
-     * Validate data against registered rules.
+     * Memvalidasi data terhadap aturan yang terdaftar.
      *
      * @param  array<string, mixed> $data
-     * @return array<string, string> Errors keyed by field
+     * @return array<string, string> Error berdasarkan field
      */
     public function validate(array $data): array
     {
@@ -152,7 +151,7 @@ class ValidationManager
     }
 
     /**
-     * Remove all validation rules for a field.
+     * Menghapus semua aturan validasi untuk sebuah field.
      */
     public function removeRules(string $field): void
     {
@@ -161,7 +160,7 @@ class ValidationManager
     }
 
     /**
-     * Check if a field has validation rules.
+     * Memeriksa apakah sebuah field memiliki aturan validasi.
      */
     public function hasRules(string $field): bool
     {
@@ -169,14 +168,14 @@ class ValidationManager
     }
 
     /**
-     * Validate a single field's value against its own rules only.
-     * Useful for inline editing where other fields are not submitted.
+     * Memvalidasi nilai satu field terhadap aturannya sendiri saja.
+     * Berguna untuk pengeditan inline di mana field lain tidak dikirim.
      *
-     * @param string       $field            Field name
-     * @param mixed        $value            Field value
-     * @param string|int|null $primaryKeyValue  Current record PK value (to exclude in is_unique)
+     * @param string       $field            Nama field
+     * @param mixed        $value            Nilai field
+     * @param string|int|null $primaryKeyValue  Nilai PK record saat ini (untuk dikecualikan dalam is_unique)
      *
-     * @return array<string, string> Errors keyed by field
+     * @return array<string, string> Error berdasarkan field
      */
     public function validateField(string $field, mixed $value, string|int|null $primaryKeyValue = null): array
     {

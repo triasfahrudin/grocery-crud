@@ -7,7 +7,7 @@ namespace GroceryCrud\Export;
 class ExcelExport
 {
     /**
-     * Export data as basic HTML table (Excel-compatible).
+     * Mengekspor data sebagai tabel HTML dasar (kompatibel dengan Excel).
      *
      * @param array<int, array<string, mixed>> $data
      * @param array<string, string>            $columnLabels
@@ -38,7 +38,7 @@ class ExcelExport
     }
 
     /**
-     * Get Excel filename.
+     * Mendapatkan nama file Excel.
      */
     public function getFilename(string $table): string
     {
@@ -46,7 +46,7 @@ class ExcelExport
     }
 
     /**
-     * Get the Content-Type header for Excel.
+     * Mendapatkan header Content-Type untuk Excel.
      */
     public function getContentType(): string
     {

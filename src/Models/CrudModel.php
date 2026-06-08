@@ -66,7 +66,7 @@ class CrudModel
     }
 
     /**
-     * Get primary key name.
+     * Mendapatkan nama primary key.
      */
     public function getPrimaryKey(): string
     {
@@ -74,7 +74,7 @@ class CrudModel
     }
 
     /**
-     * Load field metadata: types, enum values.
+     * Memuat metadata field: tipe, nilai enum.
      */
     private function loadFieldMetadata(): void
     {
@@ -90,7 +90,7 @@ class CrudModel
     }
 
     /**
-     * Parse ENUM values from type definition.
+     * Mem-parsing nilai ENUM dari definisi tipe.
      */
     private function parseEnumValues(string $field, string $typeStr): void
     {
@@ -102,7 +102,7 @@ class CrudModel
     }
 
     /**
-     * Get all column names for the table.
+     * Mendapatkan semua nama kolom untuk tabel.
      *
      * @return array<int, string>
      */
@@ -112,7 +112,7 @@ class CrudModel
     }
 
     /**
-     * Get field type for a specific column.
+     * Mendapatkan tipe field untuk kolom tertentu.
      */
     public function getFieldType(string $field): ?string
     {
@@ -120,7 +120,7 @@ class CrudModel
     }
 
     /**
-     * Get all field types.
+     * Mendapatkan semua tipe field.
      *
      * @return array<string, string>
      */
@@ -130,7 +130,7 @@ class CrudModel
     }
 
     /**
-     * Get enum values for a field.
+     * Mendapatkan nilai enum untuk sebuah field.
      *
      * @return array<int, string>
      */
@@ -140,7 +140,7 @@ class CrudModel
     }
 
     /**
-     * Set relation configuration for a field (belongs_to).
+     * Mengatur konfigurasi relasi untuk field (belongs_to).
      */
     public function setRelationField(string $field, array $config): void
     {
@@ -148,7 +148,7 @@ class CrudModel
     }
 
     /**
-     * Set NtoN relation configuration.
+     * Mengatur konfigurasi relasi NtoN.
      */
     public function setRelationNtoN(string $field, array $config): void
     {
@@ -156,7 +156,7 @@ class CrudModel
     }
 
     /**
-     * Get relation config for a field.
+     * Mendapatkan konfigurasi relasi untuk sebuah field.
      */
     public function getRelationConfig(string $field): ?array
     {
@@ -166,9 +166,9 @@ class CrudModel
     // ======== Sub-Grid ========
 
     /**
-     * Register a sub-grid configuration.
+     * Mendaftarkan konfigurasi sub-grid.
      *
-     * @param string $field      Virtual field name (identifier)
+     * @param string $field      Nama field virtual (identifier)
      * @param array  $config     ['relatedTable', 'foreignKey', 'columns', 'columnLabels', 'primaryKey']
      */
     public function setSubGrid(string $field, array $config): void
@@ -177,7 +177,7 @@ class CrudModel
     }
 
     /**
-     * Get sub-grid configs.
+     * Mendapatkan konfigurasi sub-grid.
      *
      * @return array<string, array<string, mixed>>
      */
@@ -187,7 +187,7 @@ class CrudModel
     }
 
     /**
-     * Fetch sub-grid data for a parent record.
+     * Mengambil data sub-grid untuk record induk.
      *
      * @return array<int, array<string, mixed>>
      */
@@ -231,7 +231,7 @@ class CrudModel
     // ======== Soft Delete ========
 
     /**
-     * Enable or disable soft delete.
+     * Mengaktifkan atau menonaktifkan soft delete.
      */
     public function setSoftDelete(bool $enabled = true): self
     {
@@ -240,7 +240,7 @@ class CrudModel
     }
 
     /**
-     * Include soft-deleted records in queries (no filter).
+     * Menyertakan record yang di-soft-delete dalam query (tanpa filter).
      */
     public function withTrashed(): self
     {
@@ -249,7 +249,7 @@ class CrudModel
     }
 
     /**
-     * Only show soft-deleted records.
+     * Hanya menampilkan record yang di-soft-delete.
      */
     public function onlyTrashed(): self
     {
@@ -258,7 +258,7 @@ class CrudModel
     }
 
     /**
-     * Restore a soft-deleted record by primary key.
+     * Mengembalikan record yang di-soft-delete berdasarkan primary key.
      */
     public function restore(mixed $id): bool
     {
@@ -268,7 +268,7 @@ class CrudModel
     }
 
     /**
-     * Permanently delete a record (hard delete regardless of soft delete setting).
+     * Menghapus permanen sebuah record (hard delete terlepas dari pengaturan soft delete).
      */
     public function forceDelete(mixed $id): bool
     {
@@ -278,7 +278,7 @@ class CrudModel
     }
 
     /**
-     * Apply soft delete filter to a query builder.
+     * Menerapkan filter soft delete ke query builder.
      */
     private function applySoftDeleteFilter($builder): void
     {
@@ -290,13 +290,13 @@ class CrudModel
         } elseif ($this->trashedFilter === 'only') {
             $builder->where($this->softDeleteField . ' IS NOT NULL');
         }
-        // 'with' = no filter
+        // 'with' = tanpa filter
     }
 
     // ======== CRUD Operations ========
 
     /**
-     * Apply column filters to a builder.
+     * Menerapkan filter kolom ke builder.
      */
     private array $filterTypes = [];
 
@@ -329,7 +329,7 @@ class CrudModel
     }
 
     /**
-     * Get paginated, filtered, sorted list of records.
+     * Mendapatkan daftar record yang dipaginasi, difilter, dan diurutkan.
      *
      * @param array<int, string>   $columns
      * @param int                  $limit

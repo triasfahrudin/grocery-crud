@@ -30,25 +30,25 @@ enum FieldType: string
     case RELATION   = 'relation';
 
     /**
-     * Detect field type from database column info.
+     * Mendeteksi tipe field dari informasi kolom database.
      */
     public static function detect(string $dbType, ?array $values = null): self
     {
         $type = strtolower($dbType);
 
-        // Integer types
+        // Tipe integer
         if (in_array($type, ['tinyint', 'smallint', 'mediumint', 'int', 'bigint', 'integer', 'serial'], true)) {
             return $type === 'tinyint' && $values !== null && count($values) <= 2
                 ? self::TRUE_FALSE
                 : self::INTEGER;
         }
 
-        // Decimal / float types
+        // Tipe desimal / float
         if (in_array($type, ['float', 'double', 'decimal', 'real', 'numeric'], true)) {
             return self::NUMERIC;
         }
 
-        // Text types
+        // Tipe teks
         if (in_array($type, ['char', 'varchar'], true)) {
             return self::TEXT;
         }
@@ -57,7 +57,7 @@ enum FieldType: string
             return self::TEXTAREA;
         }
 
-        // Date/Time types
+        // Tipe Tanggal/Waktu
         if ($type === 'date') {
             return self::DATE;
         }

@@ -61,17 +61,17 @@ class English
         'batch_success'     => 'Batch action completed successfully.',
         'batch_fail'        => 'Batch action failed.',
 
-        // Soft Delete
+        // Soft Delete (lanjutan)
         'restore'           => 'Restore',
         'restore_success'   => 'Record restored successfully.',
         'restore_fail'      => 'Failed to restore record.',
         'trash_list'        => 'Trash',
         'active_list'       => 'Active Records',
 
-        // RBAC / Permissions
+        // RBAC / Izin
         'permission_denied' => 'You do not have permission to perform this action.',
 
-        // Import
+        // Impor
         'import'                => 'Import',
         'import_csv_excel'      => 'Import from CSV / Excel',
         'import_upload'         => 'Upload File',
@@ -88,7 +88,7 @@ class English
         'import_file_required'  => 'Please select a file to import.',
         'import_confirm'        => 'Are you sure you want to import {total} records?',
 
-        // Activity Log / Audit Trail
+        // Log Aktivitas / Audit Trail
         'activity_log'          => 'Activity Log',
         'activity_logs'         => 'Activity Logs',
         'activity_log_empty'    => 'No activities recorded yet.',
@@ -108,20 +108,20 @@ class English
         'activity_log_no_changes' => 'No changes',
         'activity_log_detail'   => 'Detail',
 
-        // Export Selected Columns
+        // Ekspor Kolom yang Dipilih
         'export_select_columns'     => 'Select Columns to Export',
         'export_selected'           => 'Export Selected',
         'select_columns_hint'       => 'Choose which columns to include in the export.',
         'export_no_column_selected' => 'Please select at least one column.',
 
-        // Field Groups
+        // Grup Field
         'general'                   => 'General',
 
-        // Calendar View
+        // Tampilan Kalender
         'calendar_view'             => 'Calendar View',
         'table_view'                => 'Table View',
 
-        // Record Locking
+        // Penguncian Record
         'record_locked_by'          => 'This record is currently being edited by %s.',
         'lock_expired'              => 'The record lock has expired. Please try again.',
     ];

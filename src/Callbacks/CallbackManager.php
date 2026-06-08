@@ -24,7 +24,7 @@ class CallbackManager
     ];
 
     /**
-     * Register a callback.
+     * Daftarkan callback.
      *
      * @throws GroceryCrudException
      */
@@ -38,7 +38,7 @@ class CallbackManager
     }
 
     /**
-     * Get a registered callback.
+     * Dapatkan callback yang terdaftar.
      */
     public function get(string $hook): ?callable
     {
@@ -46,10 +46,10 @@ class CallbackManager
     }
 
     /**
-     * Execute a before-hook callback.
+     * Jalankan callback before-hook.
      *
      * @param  array<string, mixed> $data
-     * @return array<string, mixed> Modified data
+     * @return array<string, mixed> Data yang telah dimodifikasi
      */
     public function executeBefore(string $hook, array $data): array
     {
@@ -64,10 +64,10 @@ class CallbackManager
     }
 
     /**
-     * Execute an after-hook callback.
+     * Jalankan callback after-hook.
      *
      * @param  array<string, mixed> $data
-     * @return mixed Callback return value
+     * @return mixed Nilai kembalian callback
      */
     public function executeAfter(string $hook, array $data): mixed
     {
@@ -79,7 +79,7 @@ class CallbackManager
     }
 
     /**
-     * Execute a column value callback.
+     * Jalankan callback nilai kolom.
      *
      * @param  array<string, mixed> $row
      */
@@ -87,7 +87,7 @@ class CallbackManager
     {
         $callback = $this->get('column');
         if ($callback !== null) {
-            // Column callbacks can be registered per-field
+            // Callback kolom dapat didaftarkan per-field
             $columnCallbacks = $this->callbacks['columnCallbacks'] ?? [];
             if (isset($columnCallbacks[$field])) {
                 return (string) $columnCallbacks[$field]($value, $row);
@@ -97,7 +97,7 @@ class CallbackManager
     }
 
     /**
-     * Register a per-field column callback.
+     * Daftarkan callback kolom per-field.
      *
      * @param string   $field
      * @param callable $callback function($value, $row): string
@@ -111,7 +111,7 @@ class CallbackManager
     }
 
     /**
-     * Register a per-field form callback (both add and edit).
+     * Daftarkan callback form per-field (add dan edit).
      *
      * @param string   $field
      * @param callable $callback function($value, $row): string
@@ -123,7 +123,7 @@ class CallbackManager
     }
 
     /**
-     * Register a per-field add form callback.
+     * Daftarkan callback form add per-field.
      *
      * @param string   $field
      * @param callable $callback function($value, $row): string
@@ -137,7 +137,7 @@ class CallbackManager
     }
 
     /**
-     * Register a per-field edit form callback.
+     * Daftarkan callback form edit per-field.
      *
      * @param string   $field
      * @param callable $callback function($value, $row): string
@@ -151,7 +151,7 @@ class CallbackManager
     }
 
     /**
-     * Get column callbacks.
+     * Dapatkan callback kolom.
      *
      * @return array<string, callable>
      */
@@ -161,7 +161,7 @@ class CallbackManager
     }
 
     /**
-     * Get add field callbacks.
+     * Dapatkan callback field add.
      *
      * @return array<string, callable>
      */
@@ -171,7 +171,7 @@ class CallbackManager
     }
 
     /**
-     * Get edit field callbacks.
+     * Dapatkan callback field edit.
      *
      * @return array<string, callable>
      */
@@ -181,7 +181,7 @@ class CallbackManager
     }
 
     /**
-     * Check if any callback exists for a hook.
+     * Periksa apakah ada callback untuk suatu hook.
      */
     public function has(string $hook): bool
     {
