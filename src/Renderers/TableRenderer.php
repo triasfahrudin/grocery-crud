@@ -78,22 +78,26 @@ class TableRenderer
 
     /**
      * Render full page response.
+     *
+     * @param string $headerHtml Optional HTML to inject after <body> tag.
      */
-    public function renderPage(ThemeInterface $theme, array $data): ResponseInterface
+    public function renderPage(ThemeInterface $theme, array $data, string $headerHtml = ''): ResponseInterface
     {
         $html = $theme->renderList($data);
 
         $response = service('response');
         $response->setContentType('text/html');
-        $response->setBody($this->wrapInPage($html, $theme));
+        $response->setBody($this->wrapInPage($html, $theme, $headerHtml));
 
         return $response;
     }
 
     /**
      * Wrap content in a full HTML page (for non-AJAX).
+     *
+     * @param string $headerHtml Optional HTML to inject after <body> tag.
      */
-    private function wrapInPage(string $content, ThemeInterface $theme): string
+    private function wrapInPage(string $content, ThemeInterface $theme, string $headerHtml = ''): string
     {
         $cssLinks = '';
         foreach ($theme->getCssFiles() as $css) {
@@ -120,6 +124,7 @@ class TableRenderer
     <link rel="stylesheet" href="/assets/grocery-crud/css/grocery-crud.css?v={$cssV}">
 </head>
 <body>
+{$headerHtml}
     <div class="container-fluid py-4">
         {$content}
     </div>

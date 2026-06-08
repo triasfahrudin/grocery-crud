@@ -156,6 +156,23 @@ class GroceryCrud
     /** @var ?ActivityLogManager Activity Log / Audit Trail manager */
     private ?ActivityLogManager $activityLog = null;
 
+    /** @var string Optional HTML to inject at the top of the page (inside <body>) */
+    private string $headerHtml = '';
+
+    /**
+     * Set additional HTML content to inject at the top of the rendered page,
+     * immediately after the <body> tag. Useful for navigation bars, banners, etc.
+     *
+     * @param string $html
+     * @return $this
+     */
+    public function setPageHeader(string $html): self
+    {
+        $this->headerHtml = $html;
+
+        return $this;
+    }
+
     public function __construct(?GCConfig $config = null, ?BaseConnection $db = null)
     {
         $this->config = $config ?? new GCConfig();
@@ -1138,7 +1155,7 @@ class GroceryCrud
         }
 
         // Full page render
-        return $this->renderer->renderPage($this->theme, $listData);
+        return $this->renderer->renderPage($this->theme, $listData, $this->headerHtml);
     }
 
     /**
