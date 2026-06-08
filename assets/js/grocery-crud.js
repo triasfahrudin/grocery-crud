@@ -1533,14 +1533,29 @@
             var $wrapper = $btn.closest('.grocery-crud-wrapper');
             $wrapper.find('.dropdown-content').not($target).hide();
 
-            // Show the target with positioning
+            // Show the target with positioning (override Materialize defaults: opacity, transform, top, left)
             var el = $target[0];
             el.style.display = 'block';
+            el.style.opacity = '1';
+            el.style.transform = 'none';
+            el.style.pointerEvents = 'auto';
             el.style.position = 'absolute';
-            el.style.top = '100%';
-            el.style.right = '0';
-            el.style.zIndex = 1000;
-            el.style.marginTop = '4px';
+            el.style.zIndex = 9999;
+            el.style.marginTop = '0';
+
+            // Position dropdown below the clicked button
+            var btnPos = $btn.position();
+            var $toolbar = $btn.closest('.right, .card-tools, .card-header-icon');
+            el.style.top = (btnPos.top + $btn.outerHeight() + 4) + 'px';
+            el.style.left = btnPos.left + 'px';
+            el.style.right = 'auto';
+
+            // Prevent dropdown from overflowing the right edge of the toolbar
+            var dropdownWidth = $target.outerWidth() || 200;
+            var toolbarWidth = $toolbar.outerWidth() || 0;
+            if (toolbarWidth && (btnPos.left + dropdownWidth > toolbarWidth)) {
+                el.style.left = Math.max(0, toolbarWidth - dropdownWidth) + 'px';
+            }
         });
 
         // Close dropdowns on outside click (delegation is safe for document-level)

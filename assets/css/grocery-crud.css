@@ -739,6 +739,22 @@ td.gc-inline-editor-active::after {
     word-break: break-word;
 }
 
+/* ======== Materialize Theme Overrides ======== */
+
+/* Materialize CSS sets opacity:0, transform:scaleY(0) on .dropdown-content on init.
+   Our custom JS sets display:block but these properties keep it invisible.
+   @see assets/js/grocery-crud.js — bindEvents() */
+.grocery-crud-wrapper .dropdown-content {
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+}
+
+/* Anchor the toolbar's dropdowns so position:absolute dropdowns appear below the buttons */
+.grocery-crud-wrapper .card-title > .right {
+    position: relative;
+}
+
 /* Alert fallback */
 .alert {
     position: fixed;
