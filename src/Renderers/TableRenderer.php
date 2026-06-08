@@ -121,6 +121,17 @@ class TableRenderer
         $cssV = filemtime(__DIR__ . '/../../assets/css/grocery-crud.css');
         $jsV  = filemtime(__DIR__ . '/../../assets/js/grocery-crud.js');
 
+        $navbarFixCss = <<<'CSS'
+<style>
+/* Navbar overrides: protect Bootstrap navbar from non-Bootstrap themes (Materialize, etc.) */
+body nav.navbar { height: auto !important; line-height: normal !important; }
+body nav.navbar .navbar-brand { color: #fff !important; text-decoration: none !important; }
+body nav.navbar .btn { text-transform: none !important; letter-spacing: normal !important; height: auto !important; line-height: 1.5 !important; }
+body nav.navbar .badge { font-weight: 700 !important; line-height: 1 !important; }
+body nav.navbar .vr { opacity: .25 !important; }
+</style>
+CSS;
+
         return <<<HTML
 <!DOCTYPE html>
 <html lang="en">
@@ -130,6 +141,7 @@ class TableRenderer
     <title>{$themeName} - Grocery CRUD</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    {$navbarFixCss}
     {$cssLinks}
     <link rel="stylesheet" href="/assets/grocery-crud/css/grocery-crud.css?v={$cssV}">
 </head>
