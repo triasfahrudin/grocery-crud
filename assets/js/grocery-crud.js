@@ -1490,14 +1490,44 @@
             initInlineEditing($(this));
         });
 
-        // Initialize Materialize dropdowns after wrapper render
-        if (typeof M !== 'undefined') {
+        // GC toolbar dropdown: bypass any framework-native dropdown system (Materialize, Bootstrap, etc.)
+        // Destroy Materialize instances on GC toolbar buttons first (Materialize auto-inits on DOMContentLoaded
+        // and its click handler uses stopPropagation, blocking GC's document-level handlers)
+        if (typeof M !== 'undefined' && typeof M.Dropdown !== 'undefined') {
             $('.grocery-crud-wrapper .dropdown-trigger').each(function () {
-                if (!M.Dropdown.getInstance(this)) {
-                    $(this).dropdown();
+                var instance = M.Dropdown.getInstance(this);
+                if (instance) {
+                    instance.destroy();
                 }
             });
         }
+
+        // Custom dropdown toggle: find target by data-target, toggle visibility
+        $(document).off('click.gc-dropdown', '.grocery-crud-wrapper a[data-target]').on('click.gc-dropdown', '.grocery-crud-wrapper a[data-target]', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var $btn = $(this);
+            var targetId = $btn.data('target');
+            var $target = $('#' + targetId);
+
+            if (!$target.length) return;
+
+            // Close all other dropdowns in this wrapper
+            var $wrapper = $btn.closest('.grocery-crud-wrapper');
+            $wrapper.find('.dropdown-content').not($target).hide();
+
+            // Toggle the target dropdown
+            var isVisible = $target.is(':visible');
+            $target.toggle(!isVisible);
+        });
+
+        // Close dropdowns on outside click
+        $(document).off('click.gc-dropdown-close').on('click.gc-dropdown-close', function (e) {
+            if (!$(e.target).closest('.grocery-crud-wrapper a[data-target]').length
+                && !$(e.target).closest('.dropdown-content').length) {
+                $('.grocery-crud-wrapper .dropdown-content').hide();
+            }
+        });
     }
 
     // ======== Dynamic Form Conditions (Depends On) ========
