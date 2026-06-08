@@ -147,6 +147,9 @@ class GroceryCrud
     /** @var array<string, array{dependsOnField: string, relatedTable: string, foreignKey: string, titleField: string, keyField: string, where: ?string, orderBy: ?string}> */
     private array $dependentRelations = [];
 
+    /** @var array<string, array{displayFields: array<int, string>}> */
+    private array $relationPopovers = [];
+
     private bool $enableFilters = true;
     private bool $enableColumns = true;
     private bool $enableSettings = true;
@@ -869,6 +872,27 @@ class GroceryCrud
             'keyField'       => $keyField,
             'where'          => $where,
             'orderBy'        => $orderBy,
+        ];
+        return $this;
+    }
+
+    /**
+     * Enable a relation popover for a field in the list view.
+     *
+     * When hovering over a relation field value, a tooltip/popover
+     * shows related record details fetched via AJAX.
+     *
+     * Example:
+     *   $crud->setRelation('category_id', 'categories', 'name');
+     *   $crud->setRelationPopover('category_id', ['name', 'description', 'created_at']);
+     *
+     * @param string $field         The relation field name
+     * @param array<int, string> $displayFields Fields from related table to show in the popover (default: [])
+     */
+    public function setRelationPopover(string $field, array $displayFields = []): self
+    {
+        $this->relationPopovers[$field] = [
+            'displayFields' => $displayFields,
         ];
         return $this;
     }
@@ -1760,6 +1784,65 @@ class GroceryCrud
     }
 
     /**
+     * AJAX handler for relation popover data.
+     *
+     * POST parameters:
+     *   - field: The relation field name
+     *   - id:    The related record ID
+     */
+    public function ajaxRelationPopover(): ResponseInterface
+    {
+        $this->ensureInitialized();
+        $request = Services::request();
+
+        $field = $request->getPost('field') ?? $request->getGet('field');
+        $recordId = $request->getPost('id') ?? $request->getGet('id');
+
+        if (!isset($this->relationPopovers[$field])) {
+            return $this->jsonResponse(false, ['message' => 'Popover not configured for this field.']);
+        }
+
+        $relInfo = $this->relationManager->getRelationInfo($field);
+        if ($relInfo === null) {
+            return $this->jsonResponse(false, ['message' => 'Relation not found for this field.']);
+        }
+
+        $config = $this->relationPopovers[$field];
+        $relatedTable = $relInfo['relatedTable'];
+        $keyField = $relInfo['keyField'] ?? 'id';
+
+        $displayFields = $config['displayFields'];
+        if (empty($displayFields)) {
+            // Auto-detect: default to key field + title field
+            $displayFields = [$keyField, $relInfo['relatedTitleField']];
+        }
+
+        // Ensure key field is included
+        if (!in_array($keyField, $displayFields, true)) {
+            array_unshift($displayFields, $keyField);
+        }
+
+        $record = $this->model->getTableRecord($relatedTable, $keyField, $recordId, $displayFields);
+
+        if ($record === null) {
+            return $this->jsonResponse(false, ['message' => 'Record not found.']);
+        }
+
+        // Build HTML for popover
+        $html = '<div class="gc-popover-body" style="font-size:0.8125rem;min-width:180px;">';
+        foreach ($record as $col => $val) {
+            $label = $this->columnLabels[$col] ?? ucfirst(str_replace('_', ' ', (string) $col));
+            $html .= '<div class="d-flex justify-content-between mb-1 gap-3">';
+            $html .= '<strong>' . htmlspecialchars((string) $label) . ':</strong>';
+            $html .= '<span class="text-end">' . htmlspecialchars((string) ($val ?? '-')) . '</span>';
+            $html .= '</div>';
+        }
+        $html .= '</div>';
+
+        return $this->jsonResponse(true, ['html' => $html]);
+    }
+
+    /**
      * Export data.
      */
     public function ajaxExport(string $format): ResponseInterface
@@ -2301,6 +2384,7 @@ class GroceryCrud
             'enableInlineEditing'  => $this->enableInlineEditing && !$trashedView,
             'inlineEditFieldTypes' => $inlineEditFieldTypes,
             'inlineFieldInfo'      => $inlineFieldInfo,
+            'relationPopovers'     => $this->relationPopovers,
         ]);
     }
 
@@ -2756,6 +2840,7 @@ class GroceryCrud
             'sub_grid'      => $this->ajaxSubGrid(),
             'inline_save'         => $this->ajaxInlineSave(),
             'dependent_options'   => $this->ajaxDependentOptions(),
+            'relation_popover'    => $this->ajaxRelationPopover(),
             default               => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
     }

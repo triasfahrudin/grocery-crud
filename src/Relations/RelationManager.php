@@ -246,6 +246,27 @@ class RelationManager
     }
 
     /**
+     * Get full relation info for a belongs_to field.
+     *
+     * @return array{relatedTable: string, relatedTitleField: string, keyField: string, foreignKey: string}|null
+     */
+    public function getRelationInfo(string $field): ?array
+    {
+        if (!isset($this->relations[$field])) {
+            return null;
+        }
+
+        $rel = $this->relations[$field];
+
+        return [
+            'relatedTable'      => $rel['relatedTable'],
+            'relatedTitleField' => $rel['relatedTitleField'],
+            'foreignKey'        => $rel['foreignKey'],
+            'keyField'          => $this->getPrimaryKeyOfTable($rel['relatedTable']),
+        ];
+    }
+
+    /**
      * Clean table name (remove prefix if any).
      */
     private function cleanTableName(string $table): string

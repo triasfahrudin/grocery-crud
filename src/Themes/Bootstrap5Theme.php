@@ -74,6 +74,8 @@ class Bootstrap5Theme implements ThemeInterface
         $sortField    = $data['sortField'] ?? null;
         $sortDir      = $data['sortDir'] ?? 'ASC';
         $exportFormats = $data['exportFormats'] ?? [];
+        $relationPopovers = $data['relationPopovers'] ?? [];
+        $recordsRaw = $data['records'] ?? [];
         $enableExport = (bool) ($data['enableExport'] ?? false);
         $enableImport = (bool) ($data['enableImport'] ?? false);
         $columnFilters = $data['columnFilters'] ?? [];
@@ -367,6 +369,15 @@ class Bootstrap5Theme implements ThemeInterface
                         $inlineAttrs .= ' data-value="' . htmlspecialchars((string) $rawValue) . '"';
                         if (!empty($inlineFieldInfo[$col])) {
                             $inlineAttrs .= ' data-field-options=\'' . htmlspecialchars(json_encode($inlineFieldInfo[$col])) . '\'';
+                        }
+                    }
+
+                    // Relation popover data attributes
+                    if (isset($relationPopovers[$col])) {
+                        $popoverId = $rawValue;
+                        if (!empty($popoverId)) {
+                            $inlineAttrs .= ' data-gc-popover-field="' . htmlspecialchars($col) . '"';
+                            $inlineAttrs .= ' data-gc-popover-id="' . htmlspecialchars((string) $popoverId) . '"';
                         }
                     }
 

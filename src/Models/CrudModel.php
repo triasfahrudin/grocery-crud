@@ -922,4 +922,24 @@ class CrudModel
         return $this->db->table($relatedTable)
             ->insert($data);
     }
+
+    // ======== Relation Popover Helpers ========
+
+    /**
+     * Fetch a single record from any table by primary key.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function getTableRecord(string $table, string $keyField, mixed $id, array $fields = []): ?array
+    {
+        $builder = $this->db->table($table);
+
+        if (!empty($fields)) {
+            $builder->select($fields);
+        }
+
+        $row = $builder->where($keyField, $id)->get()->getRowArray();
+
+        return $row !== null ? $row : null;
+    }
 }

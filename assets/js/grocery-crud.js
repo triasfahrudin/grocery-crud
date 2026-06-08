@@ -2223,9 +2223,85 @@
         }
     }
 
+    // ======== Relation Popover (hover tooltip for relations) ========
+    function initRelationPopovers() {
+        var popoverTimeout = null;
+        var $popoverEl = null;
+
+        function showPopover($el) {
+            var field = $el.data('gc-popover-field');
+            var id = $el.data('gc-popover-id');
+            if (!field || !id) return;
+
+            // Remove any existing popover
+            $('.gc-popover-tip').remove();
+
+            $popoverEl = $('<div class="gc-popover-tip shadow" style="position:fixed;z-index:9999;background:#fff;border:1px solid #dee2e6;border-radius:6px;padding:12px;max-width:360px;font-size:13px;display:none;line-height:1.5;"><div class="text-center text-muted py-2"><small>Loading...</small></div></div>');
+            $('body').append($popoverEl);
+
+            // Position below the element
+            var offset = $el.offset();
+            var elHeight = $el.outerHeight();
+            $popoverEl.css({
+                left: Math.max(10, offset.left),
+                top: offset.top + elHeight + 6
+            });
+            $popoverEl.fadeIn(150);
+
+            // Fetch content via AJAX
+            $.ajax({
+                url: window.location.href.split('?')[0],
+                method: 'POST',
+                data: {
+                    gc_action: 'relation_popover',
+                    field: field,
+                    id: id
+                },
+                dataType: 'json',
+                success: function (response) {
+                    if (response.success && response.html) {
+                        $popoverEl.html(response.html);
+                    } else {
+                        $popoverEl.html('<div class="text-muted text-center py-1"><small>No data available</small></div>');
+                    }
+                },
+                error: function () {
+                    $popoverEl.html('<div class="text-muted text-center py-1"><small>Error loading data</small></div>');
+                }
+            });
+        }
+
+        function hidePopover(delay) {
+            if (popoverTimeout) clearTimeout(popoverTimeout);
+            popoverTimeout = setTimeout(function () {
+                $('.gc-popover-tip').fadeOut(100, function () { $(this).remove(); });
+            }, delay || 200);
+        }
+
+        // Hover on relation cell -> show popover
+        $(document).on('mouseenter', '[data-gc-popover-field]', function () {
+            if (popoverTimeout) clearTimeout(popoverTimeout);
+            showPopover($(this));
+        });
+
+        $(document).on('mouseleave', '[data-gc-popover-field]', function () {
+            hidePopover(300);
+        });
+
+        // Keep popover visible when hovering on it
+        $(document).on('mouseenter', '.gc-popover-tip', function () {
+            if (popoverTimeout) clearTimeout(popoverTimeout);
+        });
+
+        $(document).on('mouseleave', '.gc-popover-tip', function () {
+            hidePopover(200);
+        });
+    }
+
     $(document).ready(function () {
         bootstrapPolyfill();
         bindEvents();
+        initRelationPopovers();
 
         // Auto-load saved column visibility from localStorage
         $('.grocery-crud-wrapper').each(function () {
