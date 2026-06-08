@@ -2043,12 +2043,46 @@ class GroceryCrud
             }
         }
 
+        // Apply filters if export scope is "filtered"
+        $exportScope = $request->getPost('export_scope') ?? 'all';
+        $filters = [];
+        if ($exportScope === 'filtered') {
+            // Simple column filters
+            $exportFilters = $request->getPost('export_filters');
+            if (!empty($exportFilters)) {
+                $decoded = json_decode($exportFilters, true);
+                if (is_array($decoded)) {
+                    $filters = $decoded;
+                }
+                $this->model->setFilterTypes(array_fill_keys(array_keys($filters), 'text'));
+            }
+            // Advanced filters from filter panel
+            $exportAdvanced = $request->getPost('export_advanced_filters');
+            if (!empty($exportAdvanced)) {
+                $decoded = json_decode($exportAdvanced, true);
+                if (is_array($decoded)) {
+                    foreach ($decoded as $af) {
+                        if (!empty($af['field']) && !empty($af['value'])) {
+                            $this->model->addAdvancedFilter(
+                                $af['field'],
+                                $af['operator'] ?? 'contains',
+                                $af['value']
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
         $records = $this->model->getList(
             $columns,
             0, // no limit
             0,
             $this->orderBy,
-            $this->where
+            $this->where,
+            null, // no search
+            [],   // no searchable columns
+            $filters
         );
 
         // Note: column callbacks NOT applied to export (raw data only)

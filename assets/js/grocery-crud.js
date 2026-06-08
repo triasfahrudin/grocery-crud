@@ -824,7 +824,22 @@
             html += '<label class="form-check-label" for="expcol_' + i + '">' + col.label + '</label>';
             html += '</div>';
         }
-        html += '</div></div>';
+        html += '</div>';
+
+        // Export scope: All records vs Filtered only
+        var hasFilters = $wrapper.find('.gc-filter-item').length > 0
+            || ($wrapper.data('gcAdvancedFilters') && $wrapper.data('gcAdvancedFilters').length > 0);
+        html += '<div class="mb-3 border-top pt-3">';
+        html += '<label class="fw-bold small mb-2"><i class="bi bi-funnel me-1"></i>Export Scope</label>';
+        html += '<div class="form-check">';
+        html += '<input class="form-check-input" type="radio" name="export_scope" id="exp_scope_all" value="all" checked>';
+        html += '<label class="form-check-label" for="exp_scope_all">All Records</label>';
+        html += '</div>';
+        html += '<div class="form-check">';
+        html += '<input class="form-check-input" type="radio" name="export_scope" id="exp_scope_filtered" value="filtered"' + (hasFilters ? '' : ' disabled') + '>';
+        html += '<label class="form-check-label' + (hasFilters ? '' : ' text-muted') + '" for="exp_scope_filtered">Only Filtered Records' + (hasFilters ? '' : ' (no active filters)') + '</label>';
+        html += '</div>';
+        html += '</div>';
 
         // Footer buttons
         html += '<div class="d-flex justify-content-end gap-2 border-top pt-3">';
@@ -867,6 +882,29 @@
             $form.append('<input type="hidden" name="format" value="' + selectedFormat + '">');
             for (var j = 0; j < selectedColumns.length; j++) {
                 $form.append('<input type="hidden" name="columns[]" value="' + selectedColumns[j] + '">');
+            }
+            // Pass export scope
+            var exportScope = $modal.find('input[name="export_scope"]:checked').val() || 'all';
+            $form.append('<input type="hidden" name="export_scope" value="' + exportScope + '">');
+            // If filtered, pass current filters
+            if (exportScope === 'filtered') {
+                // Column filters (from filter inputs above table columns)
+                var filters = {};
+                $wrapper.find('.gc-filter-input').each(function () {
+                    var field = $(this).data('field');
+                    var val = $(this).val();
+                    if (field && val) {
+                        filters[field] = val;
+                    }
+                });
+                if (Object.keys(filters).length > 0) {
+                    $form.append('<input type="hidden" name="export_filters" value=\'' + JSON.stringify(filters) + '\'>');
+                }
+                // Advanced filters (from filter panel)
+                var advancedFilters = $wrapper.data('gcAdvancedFilters') || [];
+                if (advancedFilters.length > 0) {
+                    $form.append('<input type="hidden" name="export_advanced_filters" value=\'' + JSON.stringify(advancedFilters) + '\'>');
+                }
             }
             $('body').append($form);
             $form.submit();
