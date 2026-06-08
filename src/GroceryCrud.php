@@ -157,6 +157,9 @@ class GroceryCrud
     private bool $enableColumns = true;
     private bool $enableSettings = true;
 
+    /** @var bool Show Activity Log viewer button in the list toolbar */
+    private bool $enableActivityLogViewer = false;
+
     private string $crudId;
 
     /** @var bool Enable REST API mode (returns JSON, no HTML) */
@@ -178,6 +181,23 @@ class GroceryCrud
     public function setPageHeader(string $html): self
     {
         $this->headerHtml = $html;
+
+        return $this;
+    }
+
+    /**
+     * Enable the built-in Activity Log viewer UI.
+     *
+     * Requires enableActivityLog() to be called first.
+     * Adds an "Activity Log" button to the list toolbar and renders
+     * a full viewer with filters, pagination, and detail diffs.
+     *
+     * @param bool $enable
+     * @return $this
+     */
+    public function enableActivityLogViewer(bool $enable = true): self
+    {
+        $this->enableActivityLogViewer = $enable;
 
         return $this;
     }
@@ -2408,6 +2428,7 @@ class GroceryCrud
             'inlineEditFieldTypes' => $inlineEditFieldTypes,
             'inlineFieldInfo'      => $inlineFieldInfo,
             'relationPopovers'     => $this->relationPopovers,
+            'enableActivityLogViewer' => $this->enableActivityLogViewer && $this->activityLog !== null,
         ]);
     }
 
@@ -2865,6 +2886,9 @@ class GroceryCrud
             'inline_save'         => $this->ajaxInlineSave(),
             'dependent_options'   => $this->ajaxDependentOptions(),
             'relation_popover'    => $this->ajaxRelationPopover(),
+            'activity_log_viewer' => $this->ajaxActivityLogViewer(),
+            'activity_log_data'   => $this->ajaxActivityLogData(),
+            'activity_log_detail' => $this->ajaxActivityLogDetail(),
             default               => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
     }
@@ -3671,6 +3695,141 @@ class GroceryCrud
                 $this->activityLog->logRestore($this->table, $id);
             }
         }
+    }
+
+    // ======== Activity Log Viewer Handlers ========
+
+    /**
+     * Render the Activity Log viewer page.
+     *
+     * Replaces the main CRUD list view with a browsable, filterable
+     * activity log viewer showing all logged operations.
+     */
+    public function ajaxActivityLogViewer(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->activityLog === null) {
+            return $this->jsonResponse(false, ['message' => 'Activity log is not enabled.']);
+        }
+
+        $logManager = $this->activityLog;
+        $loggedTables = $logManager->getLoggedTables();
+        $tables = array_column($loggedTables, 'table_name');
+
+        $result = $logManager->getLogs([], 1, 50);
+
+        $data = [
+            'crudId'    => $this->crudId,
+            'logs'      => $result['logs'],
+            'total'     => $result['total'],
+            'page'      => 1,
+            'perPage'   => 50,
+            'tables'    => $tables,
+            'actions'   => ['insert', 'update', 'delete', 'restore', 'import'],
+            'sortField' => 'created_at',
+            'sortDir'   => 'DESC',
+        ];
+
+        $html = $this->theme->renderActivityLogViewer($data);
+
+        return $this->jsonResponse(true, ['html' => $html]);
+    }
+
+    /**
+     * AJAX: Return paginated & filtered activity log table HTML.
+     *
+     * Called when user changes page, applies filters, or changes sort.
+     */
+    public function ajaxActivityLogData(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->activityLog === null) {
+            return $this->jsonResponse(false, ['message' => 'Activity log is not enabled.']);
+        }
+
+        $request = Services::request();
+
+        $filters = [];
+        $tableName = $request->getPost('table_name');
+        if (!empty($tableName)) {
+            $filters['table_name'] = $tableName;
+        }
+        $action = $request->getPost('action');
+        if (!empty($action)) {
+            $filters['action'] = $action;
+        }
+        $dateFrom = $request->getPost('date_from');
+        if (!empty($dateFrom)) {
+            $filters['date_from'] = $dateFrom;
+        }
+        $dateTo = $request->getPost('date_to');
+        if (!empty($dateTo)) {
+            $filters['date_to'] = $dateTo;
+        }
+
+        $page = (int) ($request->getPost('page') ?? 1);
+        $perPage = (int) ($request->getPost('perPage') ?? 50);
+        $sortField = $request->getPost('sort_field') ?? 'created_at';
+        $sortDir = $request->getPost('sort_dir') ?? 'DESC';
+
+        $result = $this->activityLog->getLogs(
+            $filters,
+            max(1, $page),
+            max(10, min(100, $perPage)),
+            $sortField,
+            $sortDir
+        );
+
+        $data = [
+            'crudId'    => $this->crudId,
+            'logs'      => $result['logs'],
+            'total'     => $result['total'],
+            'page'      => $page,
+            'perPage'   => $perPage,
+            'sortField' => $sortField,
+            'sortDir'   => $sortDir,
+        ];
+
+        $html = $this->theme->renderActivityLogTable($data);
+
+        return $this->jsonResponse(true, [
+            'html'  => $html,
+            'total' => $result['total'],
+            'page'  => $page,
+        ]);
+    }
+
+    /**
+     * AJAX: Return activity log detail modal HTML.
+     *
+     * Shows old vs new values diff for a specific log entry.
+     */
+    public function ajaxActivityLogDetail(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->activityLog === null) {
+            return $this->jsonResponse(false, ['message' => 'Activity log is not enabled.']);
+        }
+
+        $request = Services::request();
+        $logId = $request->getPost('log_id');
+
+        if (empty($logId)) {
+            return $this->jsonResponse(false, ['message' => 'Log ID is required.']);
+        }
+
+        $log = $this->activityLog->getLogById((int) $logId);
+
+        if ($log === null) {
+            return $this->jsonResponse(false, ['message' => 'Log not found.']);
+        }
+
+        $html = $this->theme->renderActivityLogDetail($log);
+
+        return $this->jsonResponse(true, ['html' => $html]);
     }
 
     /**

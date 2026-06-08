@@ -1347,6 +1347,43 @@
             handleExport($(this), $(this).data('export'));
         });
 
+        // ======== Activity Log Viewer ========
+        $(document).off('click', '.gc-btn-activity-log').on('click', '.gc-btn-activity-log', function (e) {
+            e.preventDefault();
+            loadActivityLogViewer($(this));
+        });
+
+        $(document).off('click', '.gc-btn-back-to-list').on('click', '.gc-btn-back-to-list', function (e) {
+            e.preventDefault();
+            goBackToCrudList($(this));
+        });
+
+        $(document).off('click', '.gc-alf-apply').on('click', '.gc-alf-apply', function (e) {
+            e.preventDefault();
+            applyActivityLogFilter($(this));
+        });
+
+        $(document).off('click', '.gc-log-page-link').on('click', '.gc-log-page-link', function (e) {
+            e.preventDefault();
+            var page = parseInt($(this).data('page'), 10);
+            if (page > 0) {
+                loadActivityLogPage($(this), page);
+            }
+        });
+
+        $(document).off('click', '.gc-log-sortable').on('click', '.gc-log-sortable', function (e) {
+            e.preventDefault();
+            sortActivityLog($(this));
+        });
+
+        $(document).off('click', '.gc-log-detail').on('click', '.gc-log-detail', function (e) {
+            e.preventDefault();
+            var logId = $(this).data('log-id');
+            if (logId) {
+                showActivityLogDetail($(this), logId);
+            }
+        });
+
         // ======== Columns Dropdown Toggle ========
         $(document).off('change', '.gc-columns-menu input[type="checkbox"]').on('change', '.gc-columns-menu input[type="checkbox"]', function () {
             var col = $(this).data('column');
@@ -2302,6 +2339,125 @@
 
         $(document).on('mouseleave', '.gc-popover-tip', function () {
             hidePopover(200);
+        });
+    }
+
+    // ======== Activity Log Viewer Functions ========
+    function getActivityLogFilters($viewer) {
+        return {
+            table_name: $viewer.find('.gc-alf-table').val(),
+            action: $viewer.find('.gc-alf-action').val(),
+            date_from: $viewer.find('.gc-alf-date-from').val(),
+            date_to: $viewer.find('.gc-alf-date-to').val()
+        };
+    }
+
+    function loadActivityLogData($viewer, extraParams) {
+        var filters = getActivityLogFilters($viewer);
+        var params = $.extend({
+            gc_action: 'activity_log_data',
+            page: 1,
+            perPage: 50,
+            sort_field: $viewer.data('sort-field') || 'created_at',
+            sort_dir: $viewer.data('sort-dir') || 'DESC'
+        }, filters, extraParams);
+
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: params,
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success && response.html) {
+                    $viewer.find('.activity-log-table-wrapper').html(response.html);
+                } else {
+                    showAlert(response.message || 'Failed to load log data.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred while loading log data.', 'danger');
+            }
+        });
+    }
+
+    function loadActivityLogViewer($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        if (!$wrapper.length) return;
+        if ($wrapper.find('.activity-log-viewer').length) return;
+
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: { gc_action: 'activity_log_viewer' },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success && response.html) {
+                    $wrapper.find('.card').first().hide();
+                    $wrapper.append(response.html);
+                } else {
+                    showAlert(response.message || 'Failed to load activity logs.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred while loading activity logs.', 'danger');
+            }
+        });
+    }
+
+    function goBackToCrudList($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        $wrapper.find('.activity-log-viewer').remove();
+        $wrapper.find('.card').first().show();
+    }
+
+    function applyActivityLogFilter($btn) {
+        var $viewer = $btn.closest('.activity-log-viewer');
+        if (!$viewer.length) return;
+        loadActivityLogData($viewer, { page: 1 });
+    }
+
+    function loadActivityLogPage($link, page) {
+        var $viewer = $link.closest('.activity-log-viewer');
+        if (!$viewer.length) return;
+        loadActivityLogData($viewer, { page: page });
+    }
+
+    function sortActivityLog($th) {
+        var $viewer = $th.closest('.activity-log-viewer');
+        if (!$viewer.length) return;
+        $viewer.data('sort-field', $th.data('sort-field') || 'created_at');
+        $viewer.data('sort-dir', $th.data('sort-dir') || 'DESC');
+        loadActivityLogData($viewer, { page: 1 });
+    }
+
+    function showActivityLogDetail($btn, logId) {
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'activity_log_detail',
+                log_id: logId
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success && response.html) {
+                    GcModal.show(response.html);
+                } else {
+                    showAlert(response.message || 'Failed to load log detail.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred while loading log detail.', 'danger');
+            }
         });
     }
 

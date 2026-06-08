@@ -329,6 +329,34 @@ class ActivityLogManager
     }
 
     /**
+     * Get a single log entry by its ID.
+     *
+     * @param int $id
+     * @return array<string, mixed>|null
+     */
+    public function getLogById(int $id): ?array
+    {
+        $row = $this->db->table($this->tableName)
+            ->where('id', $id)
+            ->get()
+            ->getRowArray();
+
+        if ($row === null) {
+            return null;
+        }
+
+        // Decode JSON data
+        if (isset($row['old_data']) && is_string($row['old_data'])) {
+            $row['old_data'] = json_decode($row['old_data'], true);
+        }
+        if (isset($row['new_data']) && is_string($row['new_data'])) {
+            $row['new_data'] = json_decode($row['new_data'], true);
+        }
+
+        return $row;
+    }
+
+    /**
      * Get distinct table names that have logs.
      *
      * @return array<int, string>

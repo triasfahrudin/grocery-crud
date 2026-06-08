@@ -85,6 +85,7 @@ class Bootstrap5Theme implements ThemeInterface
         $enableFilters  = (bool) ($data['enableFilters'] ?? true);
         $enableColumns  = (bool) ($data['enableColumns'] ?? true);
         $enableSettings = (bool) ($data['enableSettings'] ?? true);
+        $enableActivityLogViewer = (bool) ($data['enableActivityLogViewer'] ?? false);
         $softDelete     = (bool) ($data['softDelete'] ?? false);
         $trashedView    = (bool) ($data['trashedView'] ?? false);
         $subGrids       = $data['subGrids'] ?? [];
@@ -184,6 +185,13 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<li><a class="dropdown-item gc-settings-reset" href="#"><i class="bi bi-trash me-2"></i>' . ($lang['reset_settings'] ?? 'Reset') . '</a></li>';
             $html .= '</ul>';
             $html .= '</div>';
+        }
+
+        // Activity Log viewer button
+        if ($enableActivityLogViewer) {
+            $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-tool-btn gc-btn-activity-log" title="' . ($lang['activity_logs'] ?? 'Activity Logs') . '">';
+            $html .= '<i class="bi bi-clock-history me-1"></i>' . ($lang['activity_log'] ?? 'Activity Log');
+            $html .= '</button>';
         }
 
         // Trash / Active toggle button (soft delete)
@@ -1097,6 +1105,398 @@ class Bootstrap5Theme implements ThemeInterface
         $html .= '</div>';
 
         $html .= '</div></div></div></div>';
+
+        return $html;
+    }
+
+    // ======== Activity Log Viewer ========
+
+    /**
+     * Render the full Activity Log viewer page.
+     *
+     * Includes header, filter bar, log table, and pagination.
+     *
+     * @param array<string, mixed> $data
+     * @return string
+     */
+    public function renderActivityLogViewer(array $data): string
+    {
+        $lang = $this->languageStrings;
+
+        $logs      = $data['logs'] ?? [];
+        $total     = (int) ($data['total'] ?? 0);
+        $page      = (int) ($data['page'] ?? 1);
+        $perPage   = (int) ($data['perPage'] ?? 50);
+        $tables    = $data['tables'] ?? [];
+        $actions   = $data['actions'] ?? [];
+        $crudId    = $data['crudId'] ?? 'crud_' . uniqid();
+        $sortField = $data['sortField'] ?? 'created_at';
+        $sortDir   = $data['sortDir'] ?? 'DESC';
+
+        // Language strings
+        $lblActivityLogs  = $lang['activity_logs'] ?? 'Activity Logs';
+        $lblBack          = $lang['back'] ?? 'Back';
+        $lblActivityLogTable = $lang['activity_log_table'] ?? 'Table';
+        $lblActivityLogAction = $lang['activity_log_action'] ?? 'Action';
+        $lblActivityLogUser   = $lang['activity_log_user'] ?? 'User';
+        $lblActivityLogDate   = $lang['activity_log_date'] ?? 'Date';
+        $lblActivityLogRecord = $lang['activity_log_record'] ?? 'Record';
+        $lblActivityLogIp     = $lang['activity_log_ip'] ?? 'IP Address';
+        $lblActivityLogDetail = $lang['activity_log_detail'] ?? 'Detail';
+        $lblApply        = $lang['apply'] ?? 'Apply';
+        $lblAll          = $lang['all'] ?? 'All';
+        $lblDateFrom     = $lang['date_from'] ?? 'From';
+        $lblDateTo       = $lang['date_to'] ?? 'To';
+        $lblRecords      = $lang['records'] ?? 'records';
+        $lblOf           = $lang['of'] ?? 'of';
+        $lblPrevious     = $lang['previous'] ?? 'Previous';
+        $lblNext         = $lang['next'] ?? 'Next';
+        $lblNoRecords    = $lang['no_records'] ?? 'No records found.';
+
+        $html = '<div class="activity-log-viewer" id="' . $crudId . '_log_viewer">';
+        $html .= '<div class="card shadow-sm">';
+        $html .= '<div class="card-header bg-white d-flex justify-content-between align-items-center py-3">';
+        $html .= '<h5 class="mb-0 fw-bold"><i class="bi bi-clock-history me-2"></i>' . $lblActivityLogs . '</h5>';
+        $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-btn-back-to-list">';
+        $html .= '<i class="bi bi-arrow-left me-1"></i>' . $lblBack . '</button>';
+        $html .= '</div>';
+        $html .= '<div class="card-body">';
+
+        // Filter bar
+        $html .= '<div class="row g-2 mb-3 align-items-end">';
+
+        // Table filter
+        $html .= '<div class="col-auto">';
+        $html .= '<label class="form-label small mb-1">' . $lblActivityLogTable . '</label>';
+        $html .= '<select class="form-select form-select-sm gc-alf-table">';
+        $html .= '<option value="">' . $lblAll . '</option>';
+        foreach ($tables as $table) {
+            $html .= '<option value="' . htmlspecialchars($table) . '">' . htmlspecialchars($table) . '</option>';
+        }
+        $html .= '</select></div>';
+
+        // Action filter
+        $html .= '<div class="col-auto">';
+        $html .= '<label class="form-label small mb-1">' . $lblActivityLogAction . '</label>';
+        $html .= '<select class="form-select form-select-sm gc-alf-action">';
+        $html .= '<option value="">' . $lblAll . '</option>';
+        $actionLabels = [
+            'insert'  => $lang['activity_log_action_insert'] ?? 'Created',
+            'update'  => $lang['activity_log_action_update'] ?? 'Updated',
+            'delete'  => $lang['activity_log_action_delete'] ?? 'Deleted',
+            'restore' => $lang['activity_log_action_restore'] ?? 'Restored',
+            'import'  => $lang['activity_log_action_import'] ?? 'Imported',
+        ];
+        foreach ($actions as $act) {
+            $label = $actionLabels[$act] ?? ucfirst($act);
+            $html .= '<option value="' . $act . '">' . $label . '</option>';
+        }
+        $html .= '</select></div>';
+
+        // Date from
+        $html .= '<div class="col-auto">';
+        $html .= '<label class="form-label small mb-1">' . $lblDateFrom . '</label>';
+        $html .= '<input type="date" class="form-control form-control-sm gc-alf-date-from">';
+        $html .= '</div>';
+
+        // Date to
+        $html .= '<div class="col-auto">';
+        $html .= '<label class="form-label small mb-1">' . $lblDateTo . '</label>';
+        $html .= '<input type="date" class="form-control form-control-sm gc-alf-date-to">';
+        $html .= '</div>';
+
+        // Apply button
+        $html .= '<div class="col-auto">';
+        $html .= '<button type="button" class="btn btn-primary btn-sm gc-alf-apply">';
+        $html .= '<i class="bi bi-funnel me-1"></i>' . $lblApply . '</button>';
+        $html .= '</div>';
+
+        $html .= '</div>';
+
+        // Table
+        $html .= '<div class="activity-log-table-wrapper">';
+        $html .= $this->renderActivityLogTable($data);
+        $html .= '</div>';
+
+        $html .= '</div></div></div>';
+
+        return $html;
+    }
+
+    /**
+     * Render just the activity log table + pagination (for AJAX refresh).
+     *
+     * @param array<string, mixed> $data
+     * @return string
+     */
+    public function renderActivityLogTable(array $data): string
+    {
+        $lang = $this->languageStrings;
+
+        $logs      = $data['logs'] ?? [];
+        $total     = (int) ($data['total'] ?? 0);
+        $page      = (int) ($data['page'] ?? 1);
+        $perPage   = (int) ($data['perPage'] ?? 50);
+        $sortField = $data['sortField'] ?? 'created_at';
+        $sortDir   = $data['sortDir'] ?? 'DESC';
+
+        $lblActivityLogUser   = $lang['activity_log_user'] ?? 'User';
+        $lblActivityLogTable  = $lang['activity_log_table'] ?? 'Table';
+        $lblActivityLogAction = $lang['activity_log_action'] ?? 'Action';
+        $lblActivityLogDate   = $lang['activity_log_date'] ?? 'Date';
+        $lblActivityLogRecord = $lang['activity_log_record'] ?? 'Record';
+        $lblActivityLogIp     = $lang['activity_log_ip'] ?? 'IP Address';
+        $lblActivityLogDetail = $lang['activity_log_detail'] ?? 'Detail';
+        $lblNoRecords         = $lang['activity_log_empty'] ?? 'No activities recorded yet.';
+        $lblRecords           = $lang['records'] ?? 'records';
+        $lblOf                = $lang['of'] ?? 'of';
+        $lblPrevious          = $lang['previous'] ?? 'Previous';
+        $lblNext              = $lang['next'] ?? 'Next';
+
+        $totalPages = $perPage > 0 ? (int) ceil($total / $perPage) : 1;
+
+        $actionLabels = [
+            'insert'  => $lang['activity_log_action_insert'] ?? 'Created',
+            'update'  => $lang['activity_log_action_update'] ?? 'Updated',
+            'delete'  => $lang['activity_log_action_delete'] ?? 'Deleted',
+            'restore' => $lang['activity_log_action_restore'] ?? 'Restored',
+            'import'  => $lang['activity_log_action_import'] ?? 'Imported',
+        ];
+
+        $actionBadges = [
+            'insert'  => 'bg-success',
+            'update'  => 'bg-info',
+            'delete'  => 'bg-danger',
+            'restore' => 'bg-warning text-dark',
+            'import'  => 'bg-primary',
+        ];
+
+        $html = '<div class="table-responsive">';
+        $html .= '<table class="table table-hover table-bordered align-middle mb-0 gc-log-table">';
+        $html .= '<thead class="table-light"><tr>';
+
+        // Sortable date column
+        $dateSortDir = $sortField === 'created_at' ? ($sortDir === 'ASC' ? 'DESC' : 'ASC') : 'DESC';
+        $dateArrow   = $sortField === 'created_at' ? ($sortDir === 'ASC' ? ' &#9650;' : ' &#9660;') : '';
+        $html .= '<th class="text-nowrap gc-log-sortable" data-sort-field="created_at" data-sort-dir="' . $dateSortDir . '" style="cursor:pointer;min-width:160px">';
+        $html .= $lblActivityLogDate . $dateArrow . '</th>';
+
+        $html .= '<th class="text-nowrap" style="min-width:140px">' . $lblActivityLogUser . '</th>';
+        $html .= '<th class="text-nowrap" style="min-width:120px">' . $lblActivityLogTable . '</th>';
+        $html .= '<th class="text-nowrap" style="min-width:100px">' . $lblActivityLogAction . '</th>';
+        $html .= '<th class="text-nowrap" style="min-width:100px">' . $lblActivityLogRecord . '</th>';
+        $html .= '<th class="text-nowrap d-none d-md-table-cell" style="min-width:120px">' . $lblActivityLogIp . '</th>';
+        $html .= '<th class="text-center text-nowrap" style="width:80px">' . $lblActivityLogDetail . '</th>';
+        $html .= '</tr></thead><tbody>';
+
+        if (empty($logs)) {
+            $html .= '<tr><td colspan="7" class="text-center text-muted py-4">' . $lblNoRecords . '</td></tr>';
+        } else {
+            foreach ($logs as $log) {
+                $logId     = htmlspecialchars((string) ($log['id'] ?? ''));
+                $createdAt = htmlspecialchars((string) ($log['created_at'] ?? ''));
+                $userName  = htmlspecialchars((string) ($log['user_name'] ?? '-'));
+                $tableName = htmlspecialchars((string) ($log['table_name'] ?? ''));
+                $action    = $log['action'] ?? '';
+                $recordPk  = htmlspecialchars((string) ($log['record_pk'] ?? '-'));
+                $ipAddress = htmlspecialchars((string) ($log['ip_address'] ?? '-'));
+
+                $actionLabel = $actionLabels[$action] ?? ucfirst($action);
+                $badgeClass  = $actionBadges[$action] ?? 'bg-secondary';
+
+                $html .= '<tr>';
+                $html .= '<td class="text-nowrap small">' . $createdAt . '</td>';
+                $html .= '<td class="small">' . $userName . '</td>';
+                $html .= '<td class="small">' . $tableName . '</td>';
+                $html .= '<td><span class="badge ' . $badgeClass . '">' . $actionLabel . '</span></td>';
+                $html .= '<td class="small">' . $recordPk . '</td>';
+                $html .= '<td class="small d-none d-md-table-cell text-muted">' . $ipAddress . '</td>';
+                $html .= '<td class="text-center">';
+                $html .= '<button type="button" class="btn btn-sm btn-outline-secondary gc-log-detail" data-log-id="' . $logId . '" title="' . $lblActivityLogDetail . '">';
+                $html .= '<i class="bi bi-eye"></i></button></td>';
+                $html .= '</tr>';
+            }
+        }
+
+        $html .= '</tbody></table></div>';
+
+        // Pagination
+        if ($totalPages > 1) {
+            $from = ($page - 1) * $perPage + 1;
+            $to   = min($page * $perPage, $total);
+
+            $html .= '<div class="d-flex justify-content-between align-items-center mt-3">';
+            $html .= '<div class="text-muted small">' . $from . '&ndash;' . $to . ' ' . $lblOf . ' ' . $total . ' ' . $lblRecords . '</div>';
+            $html .= '<nav><ul class="pagination pagination-sm mb-0">';
+
+            // Previous
+            $prevDisabled = $page <= 1 ? ' disabled' : '';
+            $html .= '<li class="page-item' . $prevDisabled . '">';
+            $html .= '<a class="page-link gc-log-page-link" href="#" data-page="' . ($page - 1) . '">' . $lblPrevious . '</a></li>';
+
+            // Page numbers
+            $startPage = max(1, $page - 2);
+            $endPage   = min($totalPages, $page + 2);
+
+            if ($startPage > 1) {
+                $html .= '<li class="page-item"><a class="page-link gc-log-page-link" href="#" data-page="1">1</a></li>';
+                if ($startPage > 2) {
+                    $html .= '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+                }
+            }
+
+            for ($i = $startPage; $i <= $endPage; $i++) {
+                $active = $i === $page ? ' active' : '';
+                $html .= '<li class="page-item' . $active . '"><a class="page-link gc-log-page-link" href="#" data-page="' . $i . '">' . $i . '</a></li>';
+            }
+
+            if ($endPage < $totalPages) {
+                if ($endPage < $totalPages - 1) {
+                    $html .= '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
+                }
+                $html .= '<li class="page-item"><a class="page-link gc-log-page-link" href="#" data-page="' . $totalPages . '">' . $totalPages . '</a></li>';
+            }
+
+            // Next
+            $nextDisabled = $page >= $totalPages ? ' disabled' : '';
+            $html .= '<li class="page-item' . $nextDisabled . '">';
+            $html .= '<a class="page-link gc-log-page-link" href="#" data-page="' . ($page + 1) . '">' . $lblNext . '</a></li>';
+
+            $html .= '</ul></nav></div>';
+        }
+
+        return $html;
+    }
+
+    /**
+     * Render the Activity Log detail modal HTML.
+     *
+     * Shows old vs new values diff for update actions,
+     * or new/old values for insert/delete actions.
+     *
+     * @param array<string, mixed> $log
+     * @return string
+     */
+    public function renderActivityLogDetail(array $log): string
+    {
+        $lang = $this->languageStrings;
+
+        $logId      = $log['id'] ?? '';
+        $tableName  = htmlspecialchars((string) ($log['table_name'] ?? ''));
+        $action     = $log['action'] ?? '';
+        $userName   = htmlspecialchars((string) ($log['user_name'] ?? '-'));
+        $createdAt  = htmlspecialchars((string) ($log['created_at'] ?? ''));
+        $ipAddress  = htmlspecialchars((string) ($log['ip_address'] ?? '-'));
+        $recordPk   = htmlspecialchars((string) ($log['record_pk'] ?? '-'));
+        $oldData    = $log['old_data'] ?? null;
+        $newData    = $log['new_data'] ?? null;
+
+        $actionLabels = [
+            'insert'  => $lang['activity_log_action_insert'] ?? 'Created',
+            'update'  => $lang['activity_log_action_update'] ?? 'Updated',
+            'delete'  => $lang['activity_log_action_delete'] ?? 'Deleted',
+            'restore' => $lang['activity_log_action_restore'] ?? 'Restored',
+            'import'  => $lang['activity_log_action_import'] ?? 'Imported',
+        ];
+        $actionLabel = $actionLabels[$action] ?? ucfirst($action);
+
+        $lblActivityLogTable  = $lang['activity_log_table'] ?? 'Table';
+        $lblActivityLogAction = $lang['activity_log_action'] ?? 'Action';
+        $lblActivityLogUser   = $lang['activity_log_user'] ?? 'User';
+        $lblActivityLogDate   = $lang['activity_log_date'] ?? 'Date';
+        $lblActivityLogRecord = $lang['activity_log_record'] ?? 'Record';
+        $lblActivityLogIp     = $lang['activity_log_ip'] ?? 'IP Address';
+        $lblField      = $lang['field'] ?? 'Field';
+        $lblOldValue   = $lang['activity_log_old_value'] ?? 'Old Value';
+        $lblNewValue   = $lang['activity_log_new_value'] ?? 'New Value';
+        $lblNoChanges  = $lang['activity_log_no_changes'] ?? 'No changes';
+        $lblClose      = $lang['close'] ?? 'Close';
+
+        $html = '<div class="gc-log-detail-wrapper">';
+
+        // Log metadata
+        $html .= '<table class="table table-sm table-borderless mb-3">';
+        $html .= '<tr><td class="text-muted small" style="width:120px">' . $lblActivityLogTable . '</td><td>' . $tableName . '</td></tr>';
+        $html .= '<tr><td class="text-muted small">' . $lblActivityLogAction . '</td><td><span class="badge bg-secondary">' . $actionLabel . '</span></td></tr>';
+        if (!empty($recordPk) && $recordPk !== '-') {
+            $html .= '<tr><td class="text-muted small">' . $lblActivityLogRecord . '</td><td>' . $recordPk . '</td></tr>';
+        }
+        $html .= '<tr><td class="text-muted small">' . $lblActivityLogUser . '</td><td>' . $userName . '</td></tr>';
+        $html .= '<tr><td class="text-muted small">' . $lblActivityLogDate . '</td><td>' . $createdAt . '</td></tr>';
+        $html .= '<tr><td class="text-muted small">' . $lblActivityLogIp . '</td><td class="text-muted">' . $ipAddress . '</td></tr>';
+        $html .= '</table>';
+
+        // Diff table for update actions
+        if ($action === 'update' && is_array($oldData) && is_array($newData)) {
+            // Find changed fields
+            $changes = [];
+            $allKeys = array_unique(array_merge(array_keys($oldData), array_keys($newData)));
+            foreach ($allKeys as $key) {
+                $oldVal = $oldData[$key] ?? null;
+                $newVal = $newData[$key] ?? null;
+                if ($oldVal !== $newVal) {
+                    $changes[] = [
+                        'field' => $key,
+                        'old'   => $oldVal,
+                        'new'   => $newVal,
+                    ];
+                }
+            }
+
+            if (!empty($changes)) {
+                $html .= '<h6 class="fw-bold mb-2">' . ($lang['changes'] ?? 'Changes') . '</h6>';
+                $html .= '<div class="table-responsive"><table class="table table-sm table-bordered gc-log-diff-table">';
+                $html .= '<thead class="table-light"><tr>';
+                $html .= '<th>' . $lblField . '</th>';
+                $html .= '<th>' . $lblOldValue . '</th>';
+                $html .= '<th>' . $lblNewValue . '</th>';
+                $html .= '</tr></thead><tbody>';
+                foreach ($changes as $change) {
+                    $field = htmlspecialchars((string) $change['field']);
+                    $old   = htmlspecialchars((string) ($change['old'] ?? ''));
+                    $new   = htmlspecialchars((string) ($change['new'] ?? ''));
+                    $html .= '<tr>';
+                    $html .= '<td class="fw-semibold small">' . $field . '</td>';
+                    $html .= '<td class="small text-danger"><s>' . ($old !== '' ? $old : '<span class="text-muted fst-italic">' . ($lang['empty'] ?? '(empty)') . '</span>') . '</s></td>';
+                    $html .= '<td class="small text-success">' . ($new !== '' ? $new : '<span class="text-muted fst-italic">' . ($lang['empty'] ?? '(empty)') . '</span>') . '</td>';
+                    $html .= '</tr>';
+                }
+                $html .= '</tbody></table></div>';
+            } else {
+                $html .= '<p class="text-muted fst-italic mb-0">' . $lblNoChanges . '</p>';
+            }
+        } elseif ($action === 'insert' && is_array($newData)) {
+            // Insert: show new values
+            $html .= '<h6 class="fw-bold mb-2">' . ($lang['activity_log_new_value'] ?? 'New Values') . '</h6>';
+            $html .= '<div class="table-responsive"><table class="table table-sm table-bordered gc-log-diff-table">';
+            $html .= '<thead class="table-light"><tr><th>' . $lblField . '</th><th>' . ($lang['value'] ?? 'Value') . '</th></tr></thead><tbody>';
+            foreach ($newData as $field => $value) {
+                $f = htmlspecialchars((string) $field);
+                $v = htmlspecialchars((string) ($value ?? ''));
+                $html .= '<tr><td class="fw-semibold small">' . $f . '</td><td class="small">' . $v . '</td></tr>';
+            }
+            $html .= '</tbody></table></div>';
+        } elseif (in_array($action, ['delete', 'restore'], true) && is_array($oldData)) {
+            // Delete: show old values
+            $html .= '<h6 class="fw-bold mb-2">' . ($lang['activity_log_old_value'] ?? 'Old Values') . '</h6>';
+            $html .= '<div class="table-responsive"><table class="table table-sm table-bordered gc-log-diff-table">';
+            $html .= '<thead class="table-light"><tr><th>' . $lblField . '</th><th>' . ($lang['value'] ?? 'Value') . '</th></tr></thead><tbody>';
+            foreach ($oldData as $field => $value) {
+                $f = htmlspecialchars((string) $field);
+                $v = htmlspecialchars((string) ($value ?? ''));
+                $html .= '<tr><td class="fw-semibold small">' . $f . '</td><td class="small">' . $v . '</td></tr>';
+            }
+            $html .= '</tbody></table></div>';
+        } elseif ($action === 'import' && is_array($newData)) {
+            // Import: show summary
+            $imported = $newData['imported'] ?? 0;
+            $total    = $newData['total'] ?? 0;
+            $lblRecs = $lang['records'] ?? 'records';
+            $html .= '<p><strong>' . ($lang['import_result'] ?? 'Import Result') . ':</strong> ';
+            $html .= $imported . ' / ' . $total . ' ' . $lblRecs . '</p>';
+        }
+
+        $html .= '</div>';
 
         return $html;
     }
