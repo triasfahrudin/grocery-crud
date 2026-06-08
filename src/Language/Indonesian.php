@@ -115,5 +115,9 @@ class Indonesian
 
         // Field Groups
         'general'                   => 'Umum',
+
+        // Calendar View
+        'calendar_view'             => 'Tampilan Kalender',
+        'table_view'                => 'Tampilan Tabel',
     ];
 }

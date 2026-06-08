@@ -160,6 +160,12 @@ class GroceryCrud
     /** @var bool Show Activity Log viewer button in the list toolbar */
     private bool $enableActivityLogViewer = false;
 
+    /** @var string|null Date/datetime field name for Calendar View */
+    private ?string $calendarField = null;
+
+    /** @var string|null Field name to use as event title in Calendar View */
+    private ?string $calendarTitleField = null;
+
     private string $crudId;
 
     /** @var bool Enable REST API mode (returns JSON, no HTML) */
@@ -198,6 +204,26 @@ class GroceryCrud
     public function enableActivityLogViewer(bool $enable = true): self
     {
         $this->enableActivityLogViewer = $enable;
+
+        return $this;
+    }
+
+    /**
+     * Enable Calendar View using FullCalendar.
+     *
+     * Adds a toggle button to switch between the table list view
+     * and a calendar view. Records are displayed as events based on
+     * the specified date/datetime field.
+     *
+     * @param string $dateField   The date/datetime column name for event dates.
+     * @param string|null $titleField Optional field to use as the event title.
+     *                                Falls back to the primary key if null.
+     * @return $this
+     */
+    public function setCalendarView(string $dateField, ?string $titleField = null): self
+    {
+        $this->calendarField = $dateField;
+        $this->calendarTitleField = $titleField;
 
         return $this;
     }
@@ -2429,6 +2455,8 @@ class GroceryCrud
             'inlineFieldInfo'      => $inlineFieldInfo,
             'relationPopovers'     => $this->relationPopovers,
             'enableActivityLogViewer' => $this->enableActivityLogViewer && $this->activityLog !== null,
+            'calendarField'       => $this->calendarField,
+            'calendarTitleField'  => $this->calendarTitleField,
         ]);
     }
 
@@ -2889,6 +2917,7 @@ class GroceryCrud
             'activity_log_viewer' => $this->ajaxActivityLogViewer(),
             'activity_log_data'   => $this->ajaxActivityLogData(),
             'activity_log_detail' => $this->ajaxActivityLogDetail(),
+            'calendar_data'       => $this->ajaxCalendarData(),
             default               => $this->jsonResponse(false, ['message' => 'Invalid action.']),
         };
     }
@@ -3830,6 +3859,63 @@ class GroceryCrud
         $html = $this->theme->renderActivityLogDetail($log);
 
         return $this->jsonResponse(true, ['html' => $html]);
+    }
+
+    /**
+     * AJAX handler: Return records formatted as FullCalendar events.
+     *
+     * GET /?gc_action=calendar_data
+     * Returns JSON with events array compatible with FullCalendar.
+     */
+    private function ajaxCalendarData(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->calendarField === null) {
+            return $this->jsonResponse(false, ['message' => 'Calendar view is not enabled.']);
+        }
+
+        $request = Services::request();
+
+        $search    = $request->getGet('search') ?? $request->getPost('search') ?? null;
+        $filtersJson = $request->getGet('filters') ?? $request->getPost('filters') ?? '{}';
+        $filters   = json_decode($filtersJson, true) ?? [];
+        $advancedFilters = json_decode($request->getGet('advanced_filters') ?? '[]', true) ?: [];
+
+        // Resolve columns using the same logic as the table
+        $columns = $this->resolveColumns();
+
+        // Determine the title field
+        $titleField = $this->calendarTitleField ?? $this->primaryKey;
+
+        // Build list data with all records (no pagination limit for calendar)
+        $listData = $this->buildListData(1, $search, 999999, null, null, $filters, $advancedFilters, $columns);
+
+        $events = [];
+        foreach ($listData['records'] as $record) {
+            $dateValue = $record[$this->calendarField] ?? null;
+            if ($dateValue === null || $dateValue === '') {
+                continue;
+            }
+
+            $title = $record[$titleField] ?? ('#' . ($record[$this->primaryKey] ?? ''));
+
+            $event = [
+                'id'    => (string) ($record[$this->primaryKey] ?? ''),
+                'title' => $title,
+                'start' => $dateValue,
+            ];
+
+            // Try to detect if it includes time (not just a date)
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateValue)) {
+                // Date only — mark as all-day
+                $event['allDay'] = true;
+            }
+
+            $events[] = $event;
+        }
+
+        return $this->jsonResponse(true, ['events' => $events]);
     }
 
     /**

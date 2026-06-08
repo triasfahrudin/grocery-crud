@@ -86,6 +86,9 @@ class Bootstrap5Theme implements ThemeInterface
         $enableColumns  = (bool) ($data['enableColumns'] ?? true);
         $enableSettings = (bool) ($data['enableSettings'] ?? true);
         $enableActivityLogViewer = (bool) ($data['enableActivityLogViewer'] ?? false);
+        $calendarField  = $data['calendarField'] ?? null;
+        $calendarTitleField = $data['calendarTitleField'] ?? null;
+        $hasCalendar    = $calendarField !== null;
         $softDelete     = (bool) ($data['softDelete'] ?? false);
         $trashedView    = (bool) ($data['trashedView'] ?? false);
         $subGrids       = $data['subGrids'] ?? [];
@@ -185,6 +188,13 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<li><a class="dropdown-item gc-settings-reset" href="#"><i class="bi bi-trash me-2"></i>' . ($lang['reset_settings'] ?? 'Reset') . '</a></li>';
             $html .= '</ul>';
             $html .= '</div>';
+        }
+
+        // Calendar View toggle button
+        if ($hasCalendar) {
+            $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-tool-btn gc-btn-calendar" title="' . ($lang['calendar_view'] ?? 'Calendar View') . '">';
+            $html .= '<i class="bi bi-calendar3 me-1"></i>' . ($lang['calendar_view'] ?? 'Calendar');
+            $html .= '</button>';
         }
 
         // Activity Log viewer button
@@ -491,6 +501,22 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<a class="page-link gc-page-link" href="#" data-page="' . ($currentPage + 1) . '">' . $lblNext . '</a></li>';
 
             $html .= '</ul></nav></div>';
+        }
+
+        // Calendar View container (hidden by default, shown via JS)
+        if ($hasCalendar) {
+            $html .= '<div class="gc-calendar-container" style="display:none">';
+            $html .= '<div class="gc-calendar-toolbar d-flex justify-content-between align-items-center p-2 border-bottom bg-light">';
+            $html .= '<span class="fw-bold small"><i class="bi bi-calendar3 me-1"></i>' . ($lang['calendar_view'] ?? 'Calendar View') . '</span>';
+            $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-btn-table-view">';
+            $html .= '<i class="bi bi-table me-1"></i>' . ($lang['table_view'] ?? 'Table View');
+            $html .= '</button>';
+            $html .= '</div>';
+            $html .= '<div id="gc-calendar-' . $crudId . '" class="gc-calendar p-3"></div>';
+            $html .= '</div>';
+
+            // Inject FullCalendar JS (v6 includes CSS in JS bundle)
+            $html .= '<script src="/assets/grocery-crud/fullcalendar/fullcalendar.min.js"></script>';
         }
 
         $html .= '</div></div></div>';

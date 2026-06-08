@@ -1384,6 +1384,17 @@
             }
         });
 
+        // ======== Calendar View ========
+        $(document).off('click', '.gc-btn-calendar').on('click', '.gc-btn-calendar', function (e) {
+            e.preventDefault();
+            loadCalendarView($(this));
+        });
+
+        $(document).off('click', '.gc-btn-table-view').on('click', '.gc-btn-table-view', function (e) {
+            e.preventDefault();
+            goBackToTableView($(this));
+        });
+
         // ======== Columns Dropdown Toggle ========
         $(document).off('change', '.gc-columns-menu input[type="checkbox"]').on('change', '.gc-columns-menu input[type="checkbox"]', function () {
             var col = $(this).data('column');
@@ -2459,6 +2470,96 @@
                 showAlert('An error occurred while loading log detail.', 'danger');
             }
         });
+    }
+
+    // ======== Calendar View Functions ========
+    var _gcCalendar = null; // FullCalendar instance
+
+    function loadCalendarView($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        var $tableContainer = $wrapper.find('.table-responsive');
+        var $calendarContainer = $wrapper.find('.gc-calendar-container');
+        var calendarEl = document.getElementById($calendarContainer.find('.gc-calendar').attr('id'));
+
+        if (!calendarEl) return;
+
+        // Hide table, show calendar
+        $tableContainer.hide();
+        $calendarContainer.show();
+
+        showLoading();
+
+        // Fetch events via AJAX
+        $.ajax({
+            url: window.location.href,
+            method: 'GET',
+            data: { gc_action: 'calendar_data' },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (!response.success) {
+                    showAlert(response.message || 'Failed to load calendar data.', 'danger');
+                    return;
+                }
+
+                var events = response.events || [];
+
+                // Destroy previous instance if any
+                if (_gcCalendar) {
+                    _gcCalendar.destroy();
+                    _gcCalendar = null;
+                }
+
+                // Initialize FullCalendar
+                _gcCalendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: 'dayGridMonth,dayGridWeek,dayGridDay'
+                    },
+                    height: 'auto',
+                    events: events,
+                    eventClick: function (info) {
+                        // Open edit form when clicking an event
+                        var id = info.event.id;
+                        if (id) {
+                            var $editBtn = $wrapper.find('[data-action="edit"][data-id="' + id + '"]');
+                            if ($editBtn.length) {
+                                $editBtn.trigger('click');
+                            }
+                        }
+                        info.jsEvent.preventDefault();
+                    },
+                    noEventsText: 'No events found.',
+                    loading: function (isLoading) {
+                        if (isLoading) showLoading();
+                        else hideLoading();
+                    }
+                });
+
+                _gcCalendar.render();
+            },
+            error: function () {
+                hideLoading();
+                showAlert('Failed to load calendar data.', 'danger');
+            }
+        });
+    }
+
+    function goBackToTableView($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        var $tableContainer = $wrapper.find('.table-responsive');
+        var $calendarContainer = $wrapper.find('.gc-calendar-container');
+
+        // Destroy FullCalendar instance
+        if (_gcCalendar) {
+            _gcCalendar.destroy();
+            _gcCalendar = null;
+        }
+
+        $calendarContainer.hide();
+        $tableContainer.show();
     }
 
     $(document).ready(function () {

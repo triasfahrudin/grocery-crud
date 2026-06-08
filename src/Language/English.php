@@ -116,5 +116,9 @@ class English
 
         // Field Groups
         'general'                   => 'General',
+
+        // Calendar View
+        'calendar_view'             => 'Calendar View',
+        'table_view'                => 'Table View',
     ];
 }
