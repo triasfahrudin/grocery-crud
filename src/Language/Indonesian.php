@@ -112,5 +112,8 @@ class Indonesian
         'export_selected'           => 'Ekspor yang Dipilih',
         'select_columns_hint'       => 'Pilih kolom yang akan dimasukkan ke dalam ekspor.',
         'export_no_column_selected' => 'Silakan pilih setidaknya satu kolom.',
+
+        // Field Groups
+        'general'                   => 'Umum',
     ];
 }

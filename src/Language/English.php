@@ -113,5 +113,8 @@ class English
         'export_selected'           => 'Export Selected',
         'select_columns_hint'       => 'Choose which columns to include in the export.',
         'export_no_column_selected' => 'Please select at least one column.',
+
+        // Field Groups
+        'general'                   => 'General',
     ];
 }

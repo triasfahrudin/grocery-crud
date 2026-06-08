@@ -150,6 +150,9 @@ class GroceryCrud
     /** @var array<string, array{displayFields: array<int, string>}> */
     private array $relationPopovers = [];
 
+    /** @var array<int, array{label: string, fields: array<int, string>, type: string}> */
+    private array $fieldGroups = [];
+
     private bool $enableFilters = true;
     private bool $enableColumns = true;
     private bool $enableSettings = true;
@@ -893,6 +896,26 @@ class GroceryCrud
     {
         $this->relationPopovers[$field] = [
             'displayFields' => $displayFields,
+        ];
+        return $this;
+    }
+
+    /**
+     * Group fields into tabs or sections in add/edit forms.
+     *
+     * Fields not assigned to any group will appear in a default "General" tab.
+     *
+     * @param string $label  Group label (tab title or section heading)
+     * @param array<int, string> $fields List of field names in this group
+     * @param string $type   Group type: 'tab' (default) or 'section'
+     * @return $this
+     */
+    public function setFieldGroup(string $label, array $fields, string $type = 'tab'): self
+    {
+        $this->fieldGroups[] = [
+            'label'  => $label,
+            'fields' => $fields,
+            'type'   => $type,
         ];
         return $this;
     }
@@ -2588,8 +2611,9 @@ class GroceryCrud
             'crudId'         => $this->crudId,
             'repeaterFields' => $this->repeaterFields,
             'repeaterData'   => $repeaterData,
-            'dependsOn'      => $this->dependsOn,
+            'dependsOn'          => $this->dependsOn,
             'dependentRelations' => $this->dependentRelations,
+            'fieldGroups'        => $this->fieldGroups,
         ];
     }
 

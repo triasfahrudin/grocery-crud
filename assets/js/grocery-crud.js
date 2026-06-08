@@ -1830,6 +1830,13 @@
         // Initialize dependent (cascading) dropdowns
         initDependentDropdowns($modal);
 
+        // Initialize Bootstrap 5 tabs for field groups
+        $modal.find('[data-bs-toggle="tab"]').each(function () {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                new bootstrap.Tab(this);
+            }
+        });
+
         // Initialize richtext editors
         initRichtextEditors($modal);
     }

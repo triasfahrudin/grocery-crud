@@ -513,15 +513,9 @@ class Bootstrap5Theme implements ThemeInterface
         $lang = $this->languageStrings;
 
         $fields      = $data['fields'] ?? [];
-        $fieldLabels = $data['fieldLabels'] ?? [];
-        $fieldTypes  = $data['fieldTypes'] ?? [];
-        $fieldValues = $data['fieldValues'] ?? [];
-        $fieldOptions = $data['fieldOptions'] ?? [];
-        $dependsOn   = $data['dependsOn'] ?? [];
-        $dependentRelations = $data['dependentRelations'] ?? [];
+        $fieldGroups = $data['fieldGroups'] ?? [];
         $primaryKey  = $data['primaryKey'] ?? 'id';
         $recordId    = $data['recordId'] ?? null;
-        $errors      = $data['errors'] ?? [];
         $subject     = $data['subject'] ?? 'Records';
         $crudId      = $data['crudId'] ?? 'crud_' . uniqid();
 
@@ -547,35 +541,12 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<input type="hidden" name="' . $primaryKey . '" value="' . htmlspecialchars((string) $recordId) . '">';
         }
 
-        foreach ($fields as $field) {
-            $label      = $fieldLabels[$field] ?? ucfirst(str_replace('_', ' ', $field));
-            $value      = $fieldValues[$field] ?? '';
-            $type       = $fieldTypes[$field] ?? 'text';
-            $fieldError = $errors[$field] ?? '';
-            $isRequired = !empty($data['requiredFields'][$field]);
-            $isReadonly = in_array($field, $data['readOnlyFields'] ?? [], true);
-            $options    = $fieldOptions[$field] ?? [];
-            $isUpload   = !empty($data['uploadFields'][$field]);
-
-            $depAttrs = '';
-            if (isset($dependsOn[$field])) {
-                $depAttrs = ' data-depends-on=\'' . htmlspecialchars(json_encode($dependsOn[$field])) . '\'';
+        if (!empty($fieldGroups)) {
+            $html .= $this->renderFormWithGroups($fields, $fieldGroups, $data, $crudId);
+        } else {
+            foreach ($fields as $field) {
+                $html .= $this->renderFormFieldWrapper($field, $data);
             }
-            $html .= '<div class="mb-3' . ($fieldError ? ' has-error' : '') . '"' . $depAttrs . '>';
-            $html .= '<label for="gc_field_' . $field . '" class="form-label">';
-            $html .= htmlspecialchars($label);
-            if ($isRequired) {
-                $html .= ' <span class="text-danger">*</span>';
-            }
-            $html .= '</label>';
-
-            $html .= $this->renderFormField($field, $type, $value, $options, $isReadonly, $isUpload, $data);
-
-            if ($fieldError) {
-                $html .= '<div class="invalid-feedback d-block">' . htmlspecialchars($fieldError) . '</div>';
-            }
-
-            $html .= '</div>';
         }
 
         $html .= '<div class="d-flex gap-2 border-top pt-3">';
@@ -584,6 +555,133 @@ class Bootstrap5Theme implements ThemeInterface
         $html .= '</div>';
 
         $html .= '</form></div></div></div>';
+
+        return $html;
+    }
+
+    /**
+     * Render form fields grouped into tabs/sections.
+     */
+    private function renderFormWithGroups(array $allFields, array $fieldGroups, array $data, string $crudId): string
+    {
+        $lang = $this->languageStrings;
+
+        // Collect all explicitly grouped field names
+        $groupedFieldNames = [];
+        foreach ($fieldGroups as $group) {
+            foreach ($group['fields'] as $f) {
+                $groupedFieldNames[] = $f;
+            }
+        }
+
+        // Find ungrouped fields — prepend a "General" group for them
+        $ungrouped = array_values(array_diff($allFields, $groupedFieldNames));
+        if (!empty($ungrouped)) {
+            array_unshift($fieldGroups, [
+                'label'  => $lang['general'] ?? 'General',
+                'fields' => $ungrouped,
+                'type'   => 'tab',
+            ]);
+        }
+
+        $html = '';
+
+        // Check if any group is type 'tab' — use tabbed layout
+        $hasTabs = false;
+        foreach ($fieldGroups as $group) {
+            if ($group['type'] === 'tab') {
+                $hasTabs = true;
+                break;
+            }
+        }
+
+        if ($hasTabs) {
+            // Tab navigation
+            $html .= '<ul class="nav nav-tabs mb-3" role="tablist">';
+            foreach ($fieldGroups as $i => $group) {
+                $active = $i === 0 ? ' active' : '';
+                $tabId = 'gc_tab_' . $crudId . '_' . $i;
+                $html .= '<li class="nav-item" role="presentation">';
+                $html .= '<button class="nav-link' . $active . '" id="' . $tabId . '-tab" data-bs-toggle="tab" data-bs-target="#' . $tabId . '" type="button" role="tab" aria-controls="' . $tabId . '" aria-selected="' . ($i === 0 ? 'true' : 'false') . '">';
+                $html .= htmlspecialchars($group['label']);
+                $html .= '</button></li>';
+            }
+            $html .= '</ul>';
+
+            // Tab content panels
+            $html .= '<div class="tab-content">';
+            foreach ($fieldGroups as $i => $group) {
+                $tabId = 'gc_tab_' . $crudId . '_' . $i;
+                $active = $i === 0 ? ' show active' : '';
+                $html .= '<div class="tab-pane fade' . $active . '" id="' . $tabId . '" role="tabpanel" aria-labelledby="' . $tabId . '-tab">';
+                foreach ($group['fields'] as $field) {
+                    if (in_array($field, $allFields, true)) {
+                        $html .= $this->renderFormFieldWrapper($field, $data);
+                    }
+                }
+                $html .= '</div>';
+            }
+            $html .= '</div>';
+        } else {
+            // Sections only (no tabs)
+            foreach ($fieldGroups as $i => $group) {
+                if ($i > 0) {
+                    $html .= '<hr>';
+                }
+                $html .= '<h6 class="fw-bold text-secondary mb-3">' . htmlspecialchars($group['label']) . '</h6>';
+                foreach ($group['fields'] as $field) {
+                    if (in_array($field, $allFields, true)) {
+                        $html .= $this->renderFormFieldWrapper($field, $data);
+                    }
+                }
+            }
+        }
+
+        return $html;
+    }
+
+    /**
+     * Render a single form field with label, errors, and input.
+     */
+    private function renderFormFieldWrapper(string $field, array $data): string
+    {
+        $lang = $this->languageStrings;
+        $fieldLabels = $data['fieldLabels'] ?? [];
+        $fieldValues = $data['fieldValues'] ?? [];
+        $fieldTypes  = $data['fieldTypes'] ?? [];
+        $fieldOptions = $data['fieldOptions'] ?? [];
+        $errors      = $data['errors'] ?? [];
+        $dependsOn   = $data['dependsOn'] ?? [];
+
+        $label      = $fieldLabels[$field] ?? ucfirst(str_replace('_', ' ', $field));
+        $value      = $fieldValues[$field] ?? '';
+        $type       = $fieldTypes[$field] ?? 'text';
+        $fieldError = $errors[$field] ?? '';
+        $isRequired = !empty($data['requiredFields'][$field]);
+        $isReadonly = in_array($field, $data['readOnlyFields'] ?? [], true);
+        $options    = $fieldOptions[$field] ?? [];
+        $isUpload   = !empty($data['uploadFields'][$field]);
+
+        $depAttrs = '';
+        if (isset($dependsOn[$field])) {
+            $depAttrs = ' data-depends-on=\'' . htmlspecialchars(json_encode($dependsOn[$field])) . '\'';
+        }
+
+        $html = '<div class="mb-3' . ($fieldError ? ' has-error' : '') . '"' . $depAttrs . '>';
+        $html .= '<label for="gc_field_' . $field . '" class="form-label">';
+        $html .= htmlspecialchars($label);
+        if ($isRequired) {
+            $html .= ' <span class="text-danger">*</span>';
+        }
+        $html .= '</label>';
+
+        $html .= $this->renderFormField($field, $type, $value, $options, $isReadonly, $isUpload, $data);
+
+        if ($fieldError) {
+            $html .= '<div class="invalid-feedback d-block">' . htmlspecialchars($fieldError) . '</div>';
+        }
+
+        $html .= '</div>';
 
         return $html;
     }
