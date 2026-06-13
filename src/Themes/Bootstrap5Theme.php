@@ -1531,4 +1531,346 @@ class Bootstrap5Theme implements ThemeInterface
 
         return $html;
     }
+
+    // ======== File Manager ========
+
+    /**
+     * Merender tampilan File Manager lengkap dengan sidebar dan toolbar.
+     *
+     * Layout: sidebar kiri (folder tree) + konten kanan (breadcrumb, toolbar, daftar file).
+     *
+     * @param array<string, mixed> $data          Data direktori saat ini
+     * @param array<int, array<string, mixed>> $tree Pohon direktori
+     * @param array<string, mixed> $config        Konfigurasi file manager
+     * @param array<string, string> $languageStrings String bahasa (override)
+     * @return string
+     */
+    public function renderFileManager(
+        array $data,
+        array $tree,
+        array $config,
+        array $languageStrings = []
+    ): string {
+        $lang = !empty($languageStrings) ? $languageStrings : $this->languageStrings;
+
+        $crudId      = $data['crudId'] ?? 'crud_' . uniqid();
+        $subject     = $data['subject'] ?? 'File Manager';
+        $currentPath = $data['currentPath'] ?? '';
+        $writable    = (bool) ($data['writable'] ?? false);
+        $breadcrumb  = $data['breadcrumb'] ?? [];
+
+        $lblFileManager   = $lang['file_manager'] ?? 'File Manager';
+        $lblNewFolder     = $lang['file_manager_new_folder'] ?? 'New Folder';
+        $lblUpload        = $lang['file_manager_upload'] ?? 'Upload';
+        $lblSearch        = $lang['file_manager_search'] ?? 'Search files...';
+        $lblRefresh       = $lang['file_manager_refresh'] ?? 'Refresh';
+        $lblNoFolders     = $lang['no_records'] ?? 'No records found.';
+        $lblBack          = $lang['back'] ?? 'Back';
+
+        $html = '<div class="gc-file-manager" id="' . $crudId . '_fm">';
+        $html .= '<div class="card shadow-sm">';
+        $html .= '<div class="card-header bg-white d-flex justify-content-between align-items-center py-3">';
+        $html .= '<h5 class="mb-0 fw-bold"><i class="bi bi-folder2-open me-2"></i>' . $lblFileManager . '</h5>';
+        $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-fm-back-to-list">';
+        $html .= '<i class="bi bi-arrow-left me-1"></i>' . $lblBack . '</button>';
+        $html .= '</div>';
+        $html .= '<div class="card-body p-0">';
+        $html .= '<div class="gc-fm-layout d-flex">';
+
+        // === Sidebar: Folder Tree ===
+        $html .= '<div class="gc-fm-sidebar border-end p-3" style="min-width:220px;max-width:260px;overflow-y:auto;">';
+        $html .= '<div class="d-flex justify-content-between align-items-center mb-2">';
+        $html .= '<span class="fw-semibold small text-uppercase text-muted"><i class="bi bi-folder me-1"></i>' . ($lang['file_manager_folders'] ?? 'Folders') . '</span>';
+        $html .= '<button type="button" class="btn btn-sm btn-outline-secondary gc-fm-refresh-tree" title="' . $lblRefresh . '"><i class="bi bi-arrow-clockwise"></i></button>';
+        $html .= '</div>';
+        $html .= '<ul class="gc-fm-tree list-unstyled mb-0">';
+        $html .= '<li class="gc-fm-tree-item gc-fm-tree-root" data-path="">';
+        $html .= '<a href="#" class="text-decoration-none d-flex align-items-center py-1 px-2 rounded' . ($currentPath === '' ? ' active' : '') . '">';
+        $html .= '<i class="bi bi-folder2-open text-warning me-2"></i><span>' . htmlspecialchars($subject) . '</span>';
+        $html .= '</a>';
+        $html .= $this->renderFolderTree($tree, [], $currentPath, 1);
+        $html .= '</li>';
+        $html .= '</ul>';
+        $html .= '</div>';
+
+        // === Main Content ===
+        $html .= '<div class="gc-fm-content flex-grow-1 d-flex flex-column" style="min-width:0;">';
+
+        // Breadcrumb
+        $html .= '<div class="gc-fm-breadcrumb border-bottom px-3 py-2 bg-light d-flex align-items-center gap-1 small">';
+        $html .= $this->renderBreadcrumb($breadcrumb, $lang);
+        $html .= '</div>';
+
+        // Toolbar
+        $html .= '<div class="gc-fm-toolbar border-bottom px-3 py-2 d-flex align-items-center gap-2 flex-wrap">';
+        if ($writable) {
+            $html .= '<button type="button" class="btn btn-primary btn-sm gc-fm-new-folder"><i class="bi bi-folder-plus me-1"></i>' . $lblNewFolder . '</button>';
+            $html .= '<button type="button" class="btn btn-success btn-sm gc-fm-upload-btn"><i class="bi bi-cloud-arrow-up me-1"></i>' . $lblUpload . '</button>';
+            $html .= '<form class="gc-fm-upload-form d-none" method="post" enctype="multipart/form-data">';
+            $html .= '<input type="file" class="gc-fm-upload-input" multiple accept="' . htmlspecialchars($data['allowedTypes'] ?? '*') . '">';
+            $html .= '</form>';
+        }
+        $html .= '<div class="ms-auto d-flex gap-2">';
+        $html .= '<div class="input-group input-group-sm" style="max-width:220px;">';
+        $html .= '<input type="text" class="form-control gc-fm-search" placeholder="' . $lblSearch . '">';
+        $html .= '<button class="btn btn-outline-secondary gc-fm-search-btn" type="button"><i class="bi bi-search"></i></button>';
+        $html .= '<button class="btn btn-outline-secondary gc-fm-search-clear" type="button" style="display:none"><i class="bi bi-x-lg"></i></button>';
+        $html .= '</div>';
+        $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-fm-refresh" title="' . $lblRefresh . '"><i class="bi bi-arrow-clockwise"></i></button>';
+        $html .= '</div>';
+        $html .= '</div>';
+
+        // File list container (diisi via AJAX)
+        $html .= '<div class="gc-fm-list-container p-3 flex-grow-1" style="overflow-y:auto;min-height:350px;">';
+        $html .= $this->renderFileManagerList($data);
+        $html .= '</div>';
+
+        // Status bar
+        $html .= '<div class="gc-fm-status border-top px-3 py-1 text-muted small d-flex justify-content-between">';
+        $html .= '<span class="gc-fm-status-path" data-path="' . htmlspecialchars($currentPath) . '">' . ($lang['file_manager_current_dir'] ?? 'Current directory') . ': <strong>' . ($currentPath ?: '/') . '</strong></span>';
+        $html .= '<span class="gc-fm-status-count"></span>';
+        $html .= '</div>';
+
+        $html .= '</div>'; // .gc-fm-content
+        $html .= '</div>'; // .gc-fm-layout
+        $html .= '</div>'; // .card-body
+        $html .= '</div>'; // .card
+        $html .= '</div>'; // .gc-file-manager
+
+        return $html;
+    }
+
+    /**
+     * Merender daftar file/folder untuk muatan AJAX.
+     *
+     * @param array<string, mixed> $data
+     * @param array<string, string> $languageStrings
+     * @return string
+     */
+    public function renderFileManagerList(
+        array $data,
+        array $languageStrings = []
+    ): string {
+        $lang = !empty($languageStrings) ? $languageStrings : $this->languageStrings;
+
+        $folders     = $data['folders'] ?? [];
+        $files       = $data['files'] ?? [];
+        $currentPath = $data['currentPath'] ?? '';
+        $writable    = (bool) ($data['writable'] ?? false);
+        $parentPath  = $data['parentPath'] ?? null;
+
+        $lblName       = $lang['file_manager_name'] ?? 'Name';
+        $lblSize       = $lang['file_manager_size'] ?? 'Size';
+        $lblModified   = $lang['file_manager_modified'] ?? 'Modified';
+        $lblActions    = $lang['actions'] ?? 'Actions';
+        $lblNoFiles    = $lang['file_manager_empty'] ?? 'This folder is empty.';
+        $lblParent     = $lang['file_manager_parent'] ?? '.. (Parent)';
+
+        $html = '';
+
+        if ($parentPath !== null) {
+            $html .= '<div class="gc-fm-item gc-fm-item-folder gc-fm-item-parent d-flex align-items-center px-3 py-2 border-bottom" data-path="' . htmlspecialchars($parentPath) . '">';
+            $html .= '<i class="bi bi-arrow-return-left text-secondary me-3" style="font-size:1.2rem;"></i>';
+            $html .= '<div class="flex-grow-1"><span class="fw-medium text-primary">' . $lblParent . '</span></div>';
+            $html .= '<div class="text-muted small" style="min-width:80px;text-align:right;">-</div>';
+            $html .= '<div class="text-muted small" style="min-width:150px;text-align:right;">-</div>';
+            $html .= '<div style="min-width:100px;text-align:right;"></div>';
+            $html .= '</div>';
+        }
+
+        // Header
+        $html .= '<div class="gc-fm-item gc-fm-header d-flex align-items-center px-3 py-2 border-bottom bg-light fw-semibold small text-uppercase text-muted">';
+        $html .= '<div class="gc-fm-col-icon" style="width:32px;"></div>';
+        $html .= '<div class="flex-grow-1">' . $lblName . '</div>';
+        $html .= '<div class="text-end" style="min-width:80px;">' . $lblSize . '</div>';
+        $html .= '<div class="text-end" style="min-width:150px;">' . $lblModified . '</div>';
+        $html .= '<div class="text-center" style="min-width:100px;">' . $lblActions . '</div>';
+        $html .= '</div>';
+
+        if (empty($folders) && empty($files)) {
+            $html .= '<div class="text-center text-muted py-5"><i class="bi bi-folder2-open d-block mb-2" style="font-size:2.5rem;opacity:0.3;"></i>' . $lblNoFiles . '</div>';
+        } else {
+            foreach ($folders as $folder) {
+                $folder['writable'] = $writable;
+                $folder['isDir'] = true;
+                $html .= $this->renderFileManagerItem($folder);
+            }
+            foreach ($files as $file) {
+                $file['writable'] = $writable;
+                $file['isDir'] = false;
+                $html .= $this->renderFileManagerItem($file);
+            }
+        }
+
+        return $html;
+    }
+
+    /**
+     * Render satu item file/folder di daftar.
+     *
+     * @param array<string, mixed> $item
+     * @param array<string, string> $languageStrings
+     * @return string
+     */
+    public function renderFileManagerItem(
+        array $item,
+        array $languageStrings = []
+    ): string {
+        $lang = !empty($languageStrings) ? $languageStrings : $this->languageStrings;
+        $writable = (bool) ($item['writable'] ?? false);
+        $isDir = (bool) ($item['isDir'] ?? false);
+        $name = htmlspecialchars($item['name']);
+        $path = htmlspecialchars($item['path']);
+        $icon = $item['icon'] ?? ($isDir ? 'bi-folder' : 'bi-file-earmark');
+        $size = htmlspecialchars($item['sizeHuman'] ?? '-');
+        $modified = htmlspecialchars($item['modified'] ?? '-');
+        $isImage = (bool) ($item['isImage'] ?? false);
+        $url = htmlspecialchars($item['url'] ?? '');
+        $ext = htmlspecialchars($item['ext'] ?? '');
+
+        $iconColor = $isDir ? 'text-warning' : 'text-secondary';
+        $itemClass = $isDir ? 'gc-fm-item-folder' : 'gc-fm-item-file';
+        $clickable = $isDir ? ' gc-fm-item-clickable' : '';
+
+        $lblRename  = $lang['file_manager_rename'] ?? 'Rename';
+        $lblDelete  = $lang['file_manager_delete'] ?? 'Delete';
+        $lblMove    = $lang['file_manager_move'] ?? 'Move';
+        $lblCopy    = $lang['file_manager_copy'] ?? 'Copy';
+        $lblDownload = $lang['file_manager_download'] ?? 'Download';
+        $lblPreview = $lang['file_manager_preview'] ?? 'Preview';
+
+        $html = '<div class="gc-fm-item d-flex align-items-center px-3 py-2 border-bottom' . $itemClass . $clickable . '" data-path="' . $path . '" data-name="' . $name . '" data-isdir="' . ($isDir ? '1' : '0') . '" data-ext="' . $ext . '">';
+
+        // Icon
+        $html .= '<div class="gc-fm-col-icon text-center me-3 ' . $iconColor . '" style="width:24px;"><i class="bi ' . $icon . '"></i></div>';
+
+        // Name
+        $html .= '<div class="flex-grow-1 text-truncate">';
+        if ($isDir) {
+            $html .= '<a href="#" class="text-decoration-none text-body fw-medium gc-fm-folder-link">' . $name . '</a>';
+        } else {
+            if ($isImage) {
+                $html .= '<a href="' . $url . '" class="text-decoration-none text-body gc-fm-image-link" target="_blank" data-url="' . $url . '">' . $name . '</a>';
+            } else {
+                $html .= '<span class="text-body">' . $name . '</span>';
+            }
+        }
+        $html .= '</div>';
+
+        // Size
+        $html .= '<div class="text-muted small text-end text-nowrap" style="min-width:80px;">' . $size . '</div>';
+
+        // Modified
+        $html .= '<div class="text-muted small text-end text-nowrap" style="min-width:150px;">' . $modified . '</div>';
+
+        // Actions dropdown
+        $html .= '<div class="text-center" style="min-width:100px;">';
+        if ($writable) {
+            $html .= '<div class="dropdown d-inline-block">';
+            $html .= '<button class="btn btn-sm btn-outline-secondary dropdown-toggle py-0 px-1" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>';
+            $html .= '<ul class="dropdown-menu dropdown-menu-end small">';
+
+            if ($isDir) {
+                $html .= '<li><a class="dropdown-item gc-fm-action-rename" href="#"><i class="bi bi-pencil me-2"></i>' . $lblRename . '</a></li>';
+                $html .= '<li><a class="dropdown-item gc-fm-action-delete" href="#"><i class="bi bi-trash me-2 text-danger"></i>' . $lblDelete . '</a></li>';
+            } else {
+                $html .= '<li><a class="dropdown-item gc-fm-action-download" href="' . $url . '" download><i class="bi bi-download me-2"></i>' . $lblDownload . '</a></li>';
+                if ($isImage) {
+                    $html .= '<li><a class="dropdown-item gc-fm-action-preview" href="#" data-url="' . $url . '"><i class="bi bi-eye me-2"></i>' . $lblPreview . '</a></li>';
+                }
+                $html .= '<li><hr class="dropdown-divider"></li>';
+                $html .= '<li><a class="dropdown-item gc-fm-action-rename" href="#"><i class="bi bi-pencil me-2"></i>' . $lblRename . '</a></li>';
+                $html .= '<li><a class="dropdown-item gc-fm-action-move" href="#"><i class="bi bi-arrows-move me-2"></i>' . $lblMove . '</a></li>';
+                $html .= '<li><a class="dropdown-item gc-fm-action-copy" href="#"><i class="bi bi-files me-2"></i>' . $lblCopy . '</a></li>';
+                $html .= '<li><hr class="dropdown-divider"></li>';
+                $html .= '<li><a class="dropdown-item gc-fm-action-delete" href="#"><i class="bi bi-trash me-2 text-danger"></i>' . $lblDelete . '</a></li>';
+            }
+
+            $html .= '</ul></div>';
+        } else {
+            if (!$isDir) {
+                $html .= '<a href="' . $url . '" class="btn btn-sm btn-outline-secondary py-0 px-1" download><i class="bi bi-download"></i></a>';
+            }
+        }
+        $html .= '</div>';
+
+        $html .= '</div>';
+
+        return $html;
+    }
+
+    /**
+     * Render folder tree (rekursif).
+     *
+     * @param array<int, array<string, mixed>> $tree
+     * @param array<string, string> $languageStrings
+     * @param string $currentPath
+     * @param int    $depth
+     * @return string
+     */
+    public function renderFolderTree(
+        array $tree,
+        array $languageStrings = [],
+        string $currentPath = '',
+        int $depth = 1
+    ): string
+    {
+        if (empty($tree)) {
+            return '';
+        }
+
+        $html = '<ul class="gc-fm-tree-children list-unstyled" style="padding-left:' . ($depth * 16) . 'px;">';
+        foreach ($tree as $node) {
+            $name = htmlspecialchars($node['name']);
+            $path = htmlspecialchars($node['path']);
+            $hasChildren = !empty($node['children']);
+            $isActive = $path === $currentPath;
+
+            $html .= '<li class="gc-fm-tree-item" data-path="' . $path . '">';
+            $html .= '<a href="#" class="text-decoration-none d-flex align-items-center py-1 px-2 rounded small' . ($isActive ? ' active' : '') . '">';
+            if ($hasChildren) {
+                $html .= '<i class="bi bi-chevron-right gc-fm-tree-toggle me-1" style="font-size:0.65rem;"></i>';
+            } else {
+                $html .= '<span class="me-1" style="width:0.65rem;"></span>';
+            }
+            $html .= '<i class="bi bi-folder text-warning me-1"></i>';
+            $html .= '<span class="text-truncate">' . $name . '</span>';
+            $html .= '</a>';
+            if ($hasChildren) {
+                $html .= $this->renderFolderTree($node['children'], [], $currentPath, $depth + 1);
+            }
+            $html .= '</li>';
+        }
+        $html .= '</ul>';
+
+        return $html;
+    }
+
+    /**
+     * Render breadcrumb navigasi.
+     *
+     * @param array<int, array{name: string, path: string}> $crumbs
+     * @param array<string, string> $lang
+     * @return string
+     */
+    private function renderBreadcrumb(array $crumbs, array $lang): string
+    {
+        $html = '';
+        $total = count($crumbs);
+        $lblRoot = $lang['file_manager_root'] ?? 'Root';
+
+        foreach ($crumbs as $i => $crumb) {
+            $name = $i === 0 ? $lblRoot : htmlspecialchars($crumb['name']);
+            $path = htmlspecialchars($crumb['path']);
+
+            if ($i < $total - 1) {
+                $html .= '<a href="#" class="text-decoration-none text-muted gc-fm-breadcrumb-link" data-path="' . $path . '">' . $name . '</a>';
+                $html .= '<span class="text-muted">&rsaquo;</span>';
+            } else {
+                $html .= '<span class="fw-semibold text-dark">' . $name . '</span>';
+            }
+        }
+
+        return $html;
+    }
 }

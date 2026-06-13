@@ -1752,6 +1752,12 @@
                 $('.grocery-crud-wrapper .dropdown-content').hide();
             }
         });
+
+        // ======== File Manager ========
+        $(document).off('click', '.gc-btn-file-manager').on('click', '.gc-btn-file-manager', function (e) {
+            e.preventDefault();
+            loadFileManager($(this));
+        });
     }
 
     // ======== Kondisi Formulir Dinamis (Bergantung Pada) ========
@@ -2663,7 +2669,562 @@
             }
         });
 
-        // ======== Aksi Pratinjau (btn-preview) ========
+        // ======== File Manager Helpers ========
+
+    /**
+     * Memuat panel File Manager.
+     */
+    function loadFileManager($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'file_manager',
+                path: '',
+                view: 'list'
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success && response.html) {
+                    $wrapper.find('.gc-list-content').html(response.html);
+                    $wrapper.find('.gc-list-content').data('fm-path', '');
+                } else {
+                    showAlert(response.message || 'Failed to load file manager.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred while loading file manager.', 'danger');
+            }
+        });
+    }
+
+    /**
+     * Navigasi ke folder di file manager.
+     */
+    function fmNavigateTo($container, path) {
+        var $wrapper = $container.closest('.grocery-crud-wrapper');
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'file_manager_list',
+                path: path,
+                view: $container.data('fm-view') || 'list'
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success) {
+                    $container.find('.gc-fm-list-container').html(response.html);
+                    $container.data('fm-path', path);
+                    // Update status bar
+                    $container.find('.gc-fm-status-path strong').text(path || '/');
+                } else {
+                    showAlert(response.message || 'Failed to load directory.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred.', 'danger');
+            }
+        });
+    }
+
+    /**
+     * Muat ulang daftar file di direktori saat ini.
+     */
+    function fmRefreshList($container) {
+        var path = $container.data('fm-path') || '';
+        fmNavigateTo($container, path);
+    }
+
+    /**
+     * Upload file.
+     */
+    function fmUpload($container, files) {
+        var $wrapper = $container.closest('.grocery-crud-wrapper');
+        var path = $container.data('fm-path') || '';
+        var formData = new FormData();
+        formData.append('gc_action', 'file_manager_upload');
+        formData.append('path', path);
+
+        for (var i = 0; i < files.length; i++) {
+            formData.append('files[]', files[i]);
+        }
+
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success) {
+                    showAlert(response.message || 'Upload successful.', 'success');
+                    fmRefreshList($container);
+                } else {
+                    showAlert(response.message || 'Upload failed.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('Upload failed.', 'danger');
+            }
+        });
+    }
+
+    /**
+     * Buat folder baru.
+     */
+    function fmCreateFolder($container) {
+        var $wrapper = $container.closest('.grocery-crud-wrapper');
+        var path = $container.data('fm-path') || '';
+        var folderName = prompt(
+            $container.find('.gc-fm-new-folder').data('prompt') || 'Enter folder name:'
+        );
+
+        if (!folderName || folderName.trim() === '') return;
+
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'file_manager_create_folder',
+                path: path,
+                name: folderName.trim()
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success) {
+                    showAlert(response.message || 'Folder created.', 'success');
+                    fmRefreshList($container);
+                    fmRefreshTree($container);
+                } else {
+                    showAlert(response.message || 'Failed to create folder.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred.', 'danger');
+            }
+        });
+    }
+
+    /**
+     * Ganti nama file/folder.
+     */
+    function fmRename($container, path, currentName) {
+        var newName = prompt('Rename to:', currentName);
+        if (!newName || newName.trim() === '' || newName.trim() === currentName) return;
+
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'file_manager_rename',
+                path: path,
+                name: newName.trim()
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success) {
+                    showAlert(response.message || 'Renamed successfully.', 'success');
+                    fmRefreshList($container);
+                    fmRefreshTree($container);
+                } else {
+                    showAlert(response.message || 'Failed to rename.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred.', 'danger');
+            }
+        });
+    }
+
+    /**
+     * Hapus file/folder dengan konfirmasi.
+     */
+    function fmDelete($container, path, name, isDir) {
+        var msg = 'Are you sure you want to delete "' + name + '"?';
+        if (isDir) {
+            msg += ' All contents inside will also be deleted.';
+        }
+        if (!confirm(msg)) return;
+
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'file_manager_delete',
+                path: path
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success) {
+                    showAlert(response.message || 'Deleted successfully.', 'success');
+                    fmRefreshList($container);
+                    fmRefreshTree($container);
+                } else {
+                    showAlert(response.message || 'Failed to delete.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred.', 'danger');
+            }
+        });
+    }
+
+    /**
+     * Search files.
+     */
+    function fmSearch($container, query) {
+        var $wrapper = $container.closest('.grocery-crud-wrapper');
+        var path = $container.data('fm-path') || '';
+
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'file_manager_search',
+                query: query,
+                path: path
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success) {
+                    var results = response.results || [];
+                    var html = '';
+
+                    if (results.length === 0) {
+                        html = '<div class="text-center text-muted py-5"><i class="bi bi-search d-block mb-2" style="font-size:2.5rem;opacity:0.3;"></i>No files found.</div>';
+                    } else {
+                        results.forEach(function (item) {
+                            html += '<div class="gc-fm-item d-flex align-items-center px-3 py-2 border-bottom" data-path="' + item.path + '" data-name="' + item.name + '" data-isdir="' + (item.isDir ? '1' : '0') + '">';
+                            html += '<div class="gc-fm-col-icon text-center me-3 ' + (item.isDir ? 'text-warning' : 'text-secondary') + '" style="width:24px;"><i class="bi ' + (item.icon || 'bi-file-earmark') + '"></i></div>';
+                            html += '<div class="flex-grow-1 text-truncate"><span class="text-body">' + item.name + '</span></div>';
+                            html += '<div class="text-muted small text-end text-nowrap" style="min-width:80px;">' + (item.sizeHuman || '-') + '</div>';
+                            html += '<div class="text-muted small text-end text-nowrap" style="min-width:150px;">' + (item.modified || '-') + '</div>';
+                            html += '<div style="min-width:100px;"></div>';
+                            html += '</div>';
+                        });
+                    }
+
+                    $container.find('.gc-fm-list-container').html(html);
+                } else {
+                    showAlert(response.message || 'Search failed.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred during search.', 'danger');
+            }
+        });
+    }
+
+    /**
+     * Memuat ulang folder tree di sidebar.
+     */
+    function fmRefreshTree($container) {
+        var $wrapper = $container.closest('.grocery-crud-wrapper');
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: { gc_action: 'file_manager_tree' },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success && response.html) {
+                    $container.find('.gc-fm-tree').html(response.html);
+                }
+            }
+        });
+    }
+
+    // ======== File Manager Event Handlers ========
+
+    // Klik item folder di daftar
+    $(document).on('click', '.gc-fm-item-folder.gc-fm-item-clickable', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        var path = $(this).data('path');
+        if (path !== undefined) {
+            fmNavigateTo($container, path);
+        }
+    });
+
+    // Klik link folder
+    $(document).on('click', '.gc-fm-folder-link', function (e) {
+        e.preventDefault();
+        var $item = $(this).closest('.gc-fm-item-folder');
+        var $container = $(this).closest('.gc-fm-content');
+        var path = $item.data('path');
+        if (path !== undefined) {
+            fmNavigateTo($container, path);
+        }
+    });
+
+    // Klik item parent (..)
+    $(document).on('click', '.gc-fm-item-parent', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        var path = $(this).data('path');
+        if (path !== undefined) {
+            fmNavigateTo($container, path);
+        }
+    });
+
+    // Klik breadcrumb
+    $(document).on('click', '.gc-fm-breadcrumb-link', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        var path = $(this).data('path');
+        fmNavigateTo($container, path);
+    });
+
+    // Klik folder tree (sidebar)
+    $(document).on('click', '.gc-fm-tree-item > a', function (e) {
+        e.preventDefault();
+        var $item = $(this).parent();
+        var $container = $(this).closest('.gc-fm-content');
+        var path = $item.data('path');
+        if (path !== undefined) {
+            fmNavigateTo($container, path);
+        }
+    });
+
+    // Tree toggle expand
+    $(document).on('click', '.gc-fm-tree-toggle', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var $icon = $(this);
+        var $childList = $icon.closest('li').find('> .gc-fm-tree-children');
+        if ($childList.length) {
+            $childList.toggle();
+            $icon.toggleClass('bi-chevron-right bi-chevron-down');
+        }
+    });
+
+    // Tombol refresh
+    $(document).on('click', '.gc-fm-refresh', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        fmRefreshList($container);
+    });
+
+    // Refresh tree
+    $(document).on('click', '.gc-fm-refresh-tree', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        fmRefreshTree($container);
+    });
+
+    // Tombol folder baru
+    $(document).on('click', '.gc-fm-new-folder', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        fmCreateFolder($container);
+    });
+
+    // Upload button -> trigger file input
+    $(document).on('click', '.gc-fm-upload-btn', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        $container.find('.gc-fm-upload-input').click();
+    });
+
+    // Upload input change -> upload
+    $(document).on('change', '.gc-fm-upload-input', function () {
+        var $container = $(this).closest('.gc-fm-content');
+        var files = this.files;
+        if (files && files.length > 0) {
+            fmUpload($container, files);
+        }
+        this.value = ''; // reset supaya file yang sama bisa dipilih ulang
+    });
+
+    // Search
+    $(document).on('click', '.gc-fm-search-btn', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        var $input = $container.find('.gc-fm-search');
+        var query = $input.val().trim();
+        if (query) {
+            fmSearch($container, query);
+            $container.find('.gc-fm-search-clear').show();
+        }
+    });
+
+    // Search on enter
+    $(document).on('keydown', '.gc-fm-search', function (e) {
+        if (e.keyCode === 13) {
+            e.preventDefault();
+            $(this).closest('.gc-fm-content').find('.gc-fm-search-btn').click();
+        }
+    });
+
+    // Clear search
+    $(document).on('click', '.gc-fm-search-clear', function () {
+        var $container = $(this).closest('.gc-fm-content');
+        $container.find('.gc-fm-search').val('');
+        $(this).hide();
+        fmRefreshList($container);
+    });
+
+    // Action: Rename
+    $(document).on('click', '.gc-fm-action-rename', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        var $item = $(this).closest('.gc-fm-item');
+        var path = $item.data('path');
+        var name = $item.data('name');
+        fmRename($container, path, name);
+    });
+
+    // Action: Delete
+    $(document).on('click', '.gc-fm-action-delete', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        var $item = $(this).closest('.gc-fm-item');
+        var path = $item.data('path');
+        var name = $item.data('name');
+        var isDir = $item.data('isdir') === '1';
+        fmDelete($container, path, name, isDir);
+    });
+
+    // Action: Move - pilih tujuan via prompt
+    $(document).on('click', '.gc-fm-action-move', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        var $item = $(this).closest('.gc-fm-item');
+        var source = $item.data('path');
+        var name = $item.data('name');
+        var dest = prompt('Destination path (relative to upload root):', '');
+        if (dest === null) return;
+
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'file_manager_move',
+                source: source,
+                destination: dest
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success) {
+                    showAlert(response.message || 'Moved successfully.', 'success');
+                    fmRefreshList($container);
+                    fmRefreshTree($container);
+                } else {
+                    showAlert(response.message || 'Failed to move.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred.', 'danger');
+            }
+        });
+    });
+
+    // Action: Copy - pilih tujuan via prompt
+    $(document).on('click', '.gc-fm-action-copy', function (e) {
+        e.preventDefault();
+        var $container = $(this).closest('.gc-fm-content');
+        var $item = $(this).closest('.gc-fm-item');
+        var source = $item.data('path');
+        var name = $item.data('name');
+        var dest = prompt('Destination path (relative to upload root):', '');
+        if (dest === null) return;
+
+        showLoading();
+
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: {
+                gc_action: 'file_manager_copy',
+                source: source,
+                destination: dest
+            },
+            dataType: 'json',
+            success: function (response) {
+                hideLoading();
+                if (response.success) {
+                    showAlert(response.message || 'Copied successfully.', 'success');
+                    fmRefreshList($container);
+                    fmRefreshTree($container);
+                } else {
+                    showAlert(response.message || 'Failed to copy.', 'danger');
+                }
+            },
+            error: function () {
+                hideLoading();
+                showAlert('An error occurred.', 'danger');
+            }
+        });
+    });
+
+    // Action: Preview gambar (modal)
+    $(document).on('click', '.gc-fm-action-preview', function (e) {
+        e.preventDefault();
+        var url = $(this).data('url');
+        if (!url) return;
+
+        var modalHtml = '<div class="modal fade" tabindex="-1">'
+            + '<div class="modal-dialog modal-lg modal-dialog-centered">'
+            + '<div class="modal-content">'
+            + '<div class="modal-header border-0 pb-0">'
+            + '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>'
+            + '</div>'
+            + '<div class="modal-body text-center">'
+            + '<img src="' + url + '" alt="" class="img-fluid">'
+            + '</div>'
+            + '</div></div></div>';
+
+        var $modal = $(modalHtml);
+        $('body').append($modal);
+        $modal.modal('show');
+        $modal.on('hidden.bs.modal', function () {
+            $modal.remove();
+        });
+    });
+
+    // File Manager back to CRUD list
+    $(document).on('click', '.gc-fm-back-to-list', function (e) {
+        e.preventDefault();
+        var $wrapper = $(this).closest('.grocery-crud-wrapper');
+        refreshList($wrapper);
+    });
+
+    // ======== Aksi Pratinjau (btn-preview) ========
         $(document).on('click', '.btn-preview', function (e) {
             e.preventDefault();
             var $wrapper = $(this).closest('.grocery-crud-wrapper');

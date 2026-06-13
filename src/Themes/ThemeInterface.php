@@ -65,4 +65,56 @@ interface ThemeInterface
      * @return string
      */
     public function renderImportForm(array $data): string;
+
+    /**
+     * Merender tampilan File Manager lengkap.
+     *
+     * @param array<string, mixed> $data          Data direktori saat ini
+     * @param array<int, array<string, mixed>> $tree Pohon direktori
+     * @param array<string, mixed> $config        Konfigurasi file manager
+     * @param array<string, string> $languageStrings String bahasa
+     * @return string HTML output
+     */
+    public function renderFileManager(
+        array $data,
+        array $tree,
+        array $config,
+        array $languageStrings = []
+    ): string;
+
+    /**
+     * Merender daftar file/folder untuk muatan AJAX.
+     *
+     * @param array<string, mixed> $data
+     * @param array<string, string> $languageStrings
+     * @return string HTML output
+     */
+    public function renderFileManagerList(
+        array $data,
+        array $languageStrings = []
+    ): string;
+
+    /**
+     * Merender item file/folder individual.
+     *
+     * @param array<string, mixed> $item
+     * @param array<string, string> $languageStrings
+     * @return string HTML output
+     */
+    public function renderFileManagerItem(
+        array $item,
+        array $languageStrings = []
+    ): string;
+
+    /**
+     * Merender pohon direktori untuk sidebar.
+     *
+     * @param array<int, array<string, mixed>> $tree
+     * @param array<string, string> $languageStrings
+     * @return string HTML output
+     */
+    public function renderFolderTree(
+        array $tree,
+        array $languageStrings = []
+    ): string;
 }

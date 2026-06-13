@@ -967,3 +967,162 @@ td.gc-inline-editor-active::after {
     width: 2rem;
     height: 2rem;
 }
+
+/* ============================================================
+   File Manager
+   ============================================================ */
+.gc-file-manager .card {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.gc-file-manager .card-header {
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+.gc-fm-layout {
+    min-height: 400px;
+}
+
+.gc-fm-sidebar {
+    background: #fafbfc;
+    overflow-y: auto;
+}
+
+.gc-fm-sidebar .gc-fm-tree {
+    font-size: 0.8125rem;
+}
+
+.gc-fm-sidebar .gc-fm-tree a:hover {
+    background-color: rgba(13, 110, 253, 0.06);
+}
+
+.gc-fm-sidebar .gc-fm-tree a.active {
+    background-color: rgba(13, 110, 253, 0.1);
+    color: #0d6efd !important;
+    font-weight: 500;
+}
+
+.gc-fm-tree-children {
+    display: none;
+}
+
+.gc-fm-tree-children > li > a {
+    padding-left: 0 !important;
+}
+
+.gc-fm-tree-toggle {
+    cursor: pointer;
+    transition: transform 0.15s ease;
+    font-size: 0.65rem;
+    flex-shrink: 0;
+}
+
+.gc-fm-tree-item > a {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+/* File list items */
+.gc-fm-item {
+    transition: background-color 0.12s ease;
+}
+
+.gc-fm-item:hover {
+    background-color: #f8f9fa;
+}
+
+.gc-fm-item-folder.gc-fm-item-clickable {
+    cursor: pointer;
+}
+
+.gc-fm-item-folder.gc-fm-item-clickable:hover {
+    background-color: #eaf3ff;
+}
+
+.gc-fm-item-parent {
+    cursor: pointer;
+    opacity: 0.8;
+}
+
+.gc-fm-item-parent:hover {
+    opacity: 1;
+    background-color: #f0f0f0;
+}
+
+.gc-fm-header {
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+}
+
+/* Breadcrumb */
+.gc-fm-breadcrumb {
+    font-size: 0.8125rem;
+}
+
+.gc-fm-breadcrumb-link:hover {
+    text-decoration: underline !important;
+    color: #0d6efd !important;
+}
+
+/* Toolbar */
+.gc-fm-toolbar {
+    background: #fff;
+}
+
+.gc-fm-toolbar .btn-sm {
+    font-size: 0.8125rem;
+}
+
+/* Status bar */
+.gc-fm-status {
+    font-size: 0.75rem;
+}
+
+/* Search */
+.gc-fm-search:focus {
+    box-shadow: none;
+    border-color: #86b7fe;
+}
+
+/* Grid view */
+.gc-fm-grid-view .gc-fm-item {
+    display: inline-flex !important;
+    flex-direction: column;
+    align-items: center;
+    width: 120px;
+    padding: 0.75rem 0.5rem !important;
+    margin: 0.25rem;
+    border: 1px solid #eee !important;
+    border-radius: 0.375rem;
+    text-align: center;
+    cursor: pointer;
+}
+
+.gc-fm-grid-view .gc-fm-item:hover {
+    background-color: #f0f7ff;
+    border-color: #b6d4fe !important;
+}
+
+.gc-fm-grid-view .gc-fm-col-icon {
+    width: auto !important;
+    margin: 0 0 0.5rem 0 !important;
+    font-size: 2rem;
+}
+
+.gc-fm-grid-view .gc-fm-item > div:not(.gc-fm-col-icon) {
+    display: none;
+}
+
+/* Loading state untuk file manager */
+.gc-fm-loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .gc-fm-sidebar {
+        display: none;
+    }
+}

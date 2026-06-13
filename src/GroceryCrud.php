@@ -14,6 +14,7 @@ use GroceryCrud\Callbacks\CallbackManager;
 use GroceryCrud\Config\Config as GCConfig;
 use GroceryCrud\Exceptions\GroceryCrudException;
 use GroceryCrud\Export\CsvExport;
+use GroceryCrud\FileManager\FileManager;
 use GroceryCrud\Export\ExcelExport;
 use GroceryCrud\Export\PdfExport;
 use GroceryCrud\Import\ImportManager;
@@ -37,6 +38,7 @@ class GroceryCrud
     private ValidationManager $validationManager;
     private UploadManager $uploadManager;
     private ?ImportManager $importManager = null;
+    private ?FileManager $fileManager = null;
     private TableRenderer $renderer;
     private ThemeInterface $theme;
 
@@ -726,6 +728,404 @@ class GroceryCrud
     {
         $this->enableImport = $importable;
         return $this;
+    }
+
+    // ======== File Manager ========
+
+    /**
+     * Mengaktifkan File Manager.
+     *
+     * Menambahkan tombol "File Manager" ke toolbar yang membuka panel
+     * pengelola file untuk mengunggah, membuat folder, mengganti nama,
+     * menghapus, menyalin, dan memindahkan file.
+     *
+     * @param array<string, mixed> $config Konfigurasi opsional:
+     *   - basePath: Path absolut ke direktori file (default: FCPATH . 'uploads/')
+     *   - baseUrl: URL publik untuk mengakses file (default: base_url('uploads'))
+     *   - allowedTypes: Tipe file yang diizinkan dipisahkan | (default: '*')
+     *   - maxSize: Ukuran maksimum dalam KB (default: 10240 = 10MB)
+     * @return $this
+     */
+    public function setFileManager(array $config = []): self
+    {
+        // Override konfigurasi default jika ada
+        if (!empty($config)) {
+            foreach ($config as $key => $value) {
+                if (isset($this->config->fileManagerConfig[$key])) {
+                    $this->config->fileManagerConfig[$key] = $value;
+                }
+            }
+        }
+
+        $this->fileManager = new FileManager($this->config);
+
+        return $this;
+    }
+
+    /**
+     * Mendapatkan instance FileManager.
+     */
+    public function getFileManager(): ?FileManager
+    {
+        return $this->fileManager;
+    }
+
+    /**
+     * AJAX: Menampilkan daftar file/folder di direktori.
+     */
+    public function ajaxFileManager(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $path = $request->getPost('path') ?? $request->getGet('path') ?? '';
+        $view = $request->getPost('view') ?? 'list'; // 'list' atau 'grid'
+
+        try {
+            $fmData = $this->fileManager->listFiles($path);
+            $tree = $this->fileManager->getDirectoryTree();
+            $config = $this->config->fileManagerConfig;
+
+            // Tambahkan data tambahan yang dibutuhkan theme
+            $fmData['crudId'] = $this->crudId;
+            $fmData['subject'] = $this->subject;
+            $fmData['view'] = $view;
+            $fmData['allowedTypes'] = $config['allowedTypes'] ?? '*';
+
+            $html = $this->theme->renderFileManager(
+                $fmData,
+                $tree,
+                $config,
+                $this->languageStrings
+            );
+
+            return $this->jsonResponse(true, [
+                'html' => $html,
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Mengembalikan HTML daftar file untuk panel file manager.
+     */
+    public function ajaxFileManagerList(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $path = $request->getPost('path') ?? $request->getGet('path') ?? '';
+        $view = $request->getPost('view') ?? 'list';
+
+        try {
+            $fmData = $this->fileManager->listFiles($path);
+            $fmData['view'] = $view;
+
+            $html = $this->theme->renderFileManagerList(
+                $fmData,
+                $this->languageStrings
+            );
+
+            return $this->jsonResponse(true, [
+                'html' => $html,
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Upload file.
+     */
+    public function ajaxFileManagerUpload(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $path = $request->getPost('path') ?? '';
+        $files = $request->getFiles();
+
+        if (empty($files)) {
+            return $this->jsonResponse(false, [
+                'message' => $this->getLang('file_manager_upload_error') ?? 'No files uploaded.',
+            ]);
+        }
+
+        $uploaded = 0;
+        $errors = [];
+
+        foreach ($files as $file) {
+            if (is_array($file)) {
+                // Multiple files
+                foreach ($file as $singleFile) {
+                    try {
+                        $this->fileManager->upload($path, $singleFile);
+                        $uploaded++;
+                    } catch (GroceryCrudException $e) {
+                        $errors[] = $e->getMessage();
+                    }
+                }
+            } else {
+                try {
+                    $this->fileManager->upload($path, $file);
+                    $uploaded++;
+                } catch (GroceryCrudException $e) {
+                    $errors[] = $e->getMessage();
+                }
+            }
+        }
+
+        $message = $uploaded > 0
+            ? str_replace('{count}', (string) $uploaded, $this->getLang('file_manager_upload_success') ?? '{count} file(s) uploaded successfully.')
+            : ($this->getLang('file_manager_upload_error') ?? 'Upload failed.');
+
+        return $this->jsonResponse($uploaded > 0, [
+            'message' => $message,
+            'uploaded' => $uploaded,
+            'errors' => $errors,
+        ]);
+    }
+
+    /**
+     * AJAX: Membuat folder baru.
+     */
+    public function ajaxFileManagerCreateFolder(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $path = $request->getPost('path') ?? '';
+        $folderName = $request->getPost('name') ?? '';
+
+        try {
+            $this->fileManager->createFolder($path, $folderName);
+
+            return $this->jsonResponse(true, [
+                'message' => $this->getLang('file_manager_create_success') ?? 'Folder created successfully.',
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Mengganti nama file/folder.
+     */
+    public function ajaxFileManagerRename(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $path = $request->getPost('path') ?? '';
+        $newName = $request->getPost('name') ?? '';
+
+        try {
+            $this->fileManager->rename($path, $newName);
+
+            return $this->jsonResponse(true, [
+                'message' => $this->getLang('file_manager_rename_success') ?? 'Renamed successfully.',
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Menghapus file/folder.
+     */
+    public function ajaxFileManagerDelete(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $path = $request->getPost('path') ?? '';
+
+        try {
+            $this->fileManager->delete($path);
+
+            return $this->jsonResponse(true, [
+                'message' => $this->getLang('file_manager_delete_success') ?? 'Deleted successfully.',
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Mendapatkan tree direktori untuk sidebar.
+     */
+    public function ajaxFileManagerTree(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        try {
+            $tree = $this->fileManager->getDirectoryTree();
+
+            $html = $this->theme->renderFolderTree($tree, $this->languageStrings);
+
+            return $this->jsonResponse(true, [
+                'html' => $html,
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Mencari file.
+     */
+    public function ajaxFileManagerSearch(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $query = $request->getPost('query') ?? $request->getGet('query') ?? '';
+        $path = $request->getPost('path') ?? '';
+
+        try {
+            $results = $this->fileManager->search($query, $path);
+
+            return $this->jsonResponse(true, [
+                'results' => $results,
+                'total'   => count($results),
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Memindahkan file/folder.
+     */
+    public function ajaxFileManagerMove(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $source = $request->getPost('source') ?? '';
+        $destination = $request->getPost('destination') ?? '';
+
+        try {
+            $this->fileManager->move($source, $destination);
+
+            return $this->jsonResponse(true, [
+                'message' => $this->getLang('file_manager_move_success') ?? 'Moved successfully.',
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Menyalin file/folder.
+     */
+    public function ajaxFileManagerCopy(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $source = $request->getPost('source') ?? '';
+        $destination = $request->getPost('destination') ?? '';
+
+        try {
+            $this->fileManager->copy($source, $destination);
+
+            return $this->jsonResponse(true, [
+                'message' => $this->getLang('file_manager_copy_success') ?? 'Copied successfully.',
+            ]);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * AJAX: Mendapatkan info detail file/folder.
+     */
+    public function ajaxFileManagerFileInfo(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->fileManager === null) {
+            return $this->jsonResponse(false, ['message' => 'File manager is not enabled.']);
+        }
+
+        $request = Services::request();
+        $path = $request->getPost('path') ?? '';
+
+        try {
+            $info = $this->fileManager->getFileInfo($path);
+
+            if ($info === null) {
+                return $this->jsonResponse(false, [
+                    'message' => 'File or folder not found.',
+                ]);
+            }
+
+            return $this->jsonResponse(true, $info);
+        } catch (GroceryCrudException $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 
     /**
@@ -3027,6 +3427,11 @@ class GroceryCrud
             'export', 'print_view'                => 'export',
             'import_form', 'import_upload', 'import_execute', 'import_template' => 'import',
             'list', 'trash_list', 'sub_grid'          => 'view',
+            'file_manager', 'file_manager_list', 'file_manager_upload',
+            'file_manager_create_folder', 'file_manager_rename',
+            'file_manager_delete', 'file_manager_tree',
+            'file_manager_search', 'file_manager_move',
+            'file_manager_copy', 'file_manager_file_info' => 'view',
             default                                   => 'view',
         };
     }
@@ -3055,6 +3460,17 @@ class GroceryCrud
             'import_upload' => $this->ajaxImportUpload(),
             'import_execute'=> $this->ajaxImportExecute(),
             'import_template' => $this->ajaxImportTemplate(),
+            'file_manager'          => $this->ajaxFileManager(),
+            'file_manager_list'     => $this->ajaxFileManagerList(),
+            'file_manager_upload'   => $this->ajaxFileManagerUpload(),
+            'file_manager_create_folder' => $this->ajaxFileManagerCreateFolder(),
+            'file_manager_rename'   => $this->ajaxFileManagerRename(),
+            'file_manager_delete'   => $this->ajaxFileManagerDelete(),
+            'file_manager_tree'     => $this->ajaxFileManagerTree(),
+            'file_manager_search'   => $this->ajaxFileManagerSearch(),
+            'file_manager_move'     => $this->ajaxFileManagerMove(),
+            'file_manager_copy'     => $this->ajaxFileManagerCopy(),
+            'file_manager_file_info' => $this->ajaxFileManagerFileInfo(),
             'batch_action'  => $this->ajaxBatchAction(),
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),

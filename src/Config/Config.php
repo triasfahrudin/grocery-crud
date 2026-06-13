@@ -121,4 +121,16 @@ class Config extends BaseConfig
         'allowedTypes'  => 'csv,xlsx',
         'uploadPath'    => 'uploads/import/',
     ];
+
+    /**
+     * Konfigurasi File Manager.
+     */
+    public array $fileManagerConfig = [
+        'basePath'      => FCPATH . 'uploads/',
+        'baseUrl'       => 'uploads/',
+        'allowedTypes'  => 'jpg|jpeg|png|gif|webp|svg|pdf|doc|docx|xls|xlsx|csv|zip|rar|txt|mp3|mp4|json|xml|sql|md|log',
+        'maxSize'       => 10240, // KB (10 MB)
+        'thumbWidth'    => 120,
+        'thumbHeight'   => 120,
+    ];
 }
