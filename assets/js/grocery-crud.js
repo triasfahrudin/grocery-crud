@@ -2623,53 +2623,7 @@
         $tableContainer.show();
     }
 
-    $(document).ready(function () {
-        bootstrapPolyfill();
-        bindEvents();
-        initRelationPopovers();
-
-        // Muat otomatis visibilitas kolom yang disimpan dari localStorage
-        $('.grocery-crud-wrapper').each(function () {
-            var $wrapper = $(this);
-            var url = window.location.href;
-            try {
-                var raw = localStorage.getItem('gc_settings_' + btoa(url));
-                console.log('[GC_AUTO] url=', url, 'has_raw=', !!raw, 'menu_len=', $wrapper.find('.gc-columns-menu .form-check').length);
-                if (raw) {
-                    var settings = JSON.parse(raw);
-                    console.log('[GC_AUTO] settings=', settings);
-                    if (settings.columnOrder && settings.columnOrder.length) {
-                        console.log('[GC_AUTO] applyColumnOrder', settings.columnOrder);
-                        applyColumnOrder($wrapper, settings.columnOrder);
-                        console.log('[GC_AUTO] after applyColumnOrder');
-                    }
-                    if (settings.columns) {
-                        $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
-                            var col = $(this).data('column');
-                            if (settings.columns[col] !== undefined) {
-                                console.log('[GC_AUTO] toggling col', col, 'to', settings.columns[col]);
-                                $(this).prop('checked', settings.columns[col]).trigger('change');
-                            }
-                        });
-                    }
-                }
-            } catch (e) {
-                console.log('[GC_AUTO] error', e);
-            }
-            // Inisialisasi table-dragger setelah pengaturan dipulihkan
-            initTableDragger($wrapper);
-        });
-
-        // Simpan pesan konfirmasi
-        $('.grocery-crud-wrapper').each(function () {
-            var $wrapper = $(this);
-            var deleteMsg = $wrapper.find('[data-confirm-delete]').data('confirm-delete');
-            if (deleteMsg) {
-                $wrapper.data('confirm-delete', deleteMsg);
-            }
-        });
-
-        // ======== File Manager Helpers ========
+    // ======== File Manager Helpers ========
 
     /**
      * Memuat panel File Manager.
@@ -2964,6 +2918,52 @@
             }
         });
     }
+
+    $(document).ready(function () {
+        bootstrapPolyfill();
+        bindEvents();
+        initRelationPopovers();
+
+        // Muat otomatis visibilitas kolom yang disimpan dari localStorage
+        $('.grocery-crud-wrapper').each(function () {
+            var $wrapper = $(this);
+            var url = window.location.href;
+            try {
+                var raw = localStorage.getItem('gc_settings_' + btoa(url));
+                console.log('[GC_AUTO] url=', url, 'has_raw=', !!raw, 'menu_len=', $wrapper.find('.gc-columns-menu .form-check').length);
+                if (raw) {
+                    var settings = JSON.parse(raw);
+                    console.log('[GC_AUTO] settings=', settings);
+                    if (settings.columnOrder && settings.columnOrder.length) {
+                        console.log('[GC_AUTO] applyColumnOrder', settings.columnOrder);
+                        applyColumnOrder($wrapper, settings.columnOrder);
+                        console.log('[GC_AUTO] after applyColumnOrder');
+                    }
+                    if (settings.columns) {
+                        $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
+                            var col = $(this).data('column');
+                            if (settings.columns[col] !== undefined) {
+                                console.log('[GC_AUTO] toggling col', col, 'to', settings.columns[col]);
+                                $(this).prop('checked', settings.columns[col]).trigger('change');
+                            }
+                        });
+                    }
+                }
+            } catch (e) {
+                console.log('[GC_AUTO] error', e);
+            }
+            // Inisialisasi table-dragger setelah pengaturan dipulihkan
+            initTableDragger($wrapper);
+        });
+
+        // Simpan pesan konfirmasi
+        $('.grocery-crud-wrapper').each(function () {
+            var $wrapper = $(this);
+            var deleteMsg = $wrapper.find('[data-confirm-delete]').data('confirm-delete');
+            if (deleteMsg) {
+                $wrapper.data('confirm-delete', deleteMsg);
+            }
+        });
 
     // ======== File Manager Event Handlers ========
 
