@@ -572,7 +572,7 @@ class TailwindTheme implements ThemeInterface
                         $html .= '<i class="bi bi-paperclip mr-1"></i> ' . basename((string) $value) . '</a>';
                     }
                     $html .= '</div>';
-                    $html .= '<input type="hidden" name="' . $fieldName . '_existing" value="' . htmlspecialchars(basename((string) $value)) . '">';
+                    $html .= '<input type="hidden" name="' . $fieldName . '_existing" value="' . htmlspecialchars((string) $value) . '">';
                 }
                 break;
             case 'richtext':

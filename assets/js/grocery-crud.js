@@ -3058,23 +3058,6 @@
         fmCreateFolder($container);
     });
 
-    // Upload button -> trigger file input
-    $(document).on('click', '.gc-fm-upload-btn', function (e) {
-        e.preventDefault();
-        var $container = $(this).closest('.gc-fm-content');
-        $container.find('.gc-fm-upload-input').click();
-    });
-
-    // Upload input change -> upload
-    $(document).on('change', '.gc-fm-upload-input', function () {
-        var $container = $(this).closest('.gc-fm-content');
-        var files = this.files;
-        if (files && files.length > 0) {
-            fmUpload($container, files);
-        }
-        this.value = ''; // reset supaya file yang sama bisa dipilih ulang
-    });
-
     // Search
     $(document).on('click', '.gc-fm-search-btn', function (e) {
         e.preventDefault();
