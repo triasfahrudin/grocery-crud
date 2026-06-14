@@ -190,6 +190,9 @@ class GroceryCrud
     /** @var ?callable Callback untuk mendapatkan info pengguna saat ini untuk penguncian: fn(): array{id: string, name: string} */
     private $lockUserCallback = null;
 
+    /** @var array<string, callable> Callback aksi kustom: label => fn(mixed $id, array $row): array{success: bool, message: string} */
+    private array $actionCallbacks = [];
+
     /** @var int Menit sebelum kunci record kedaluwarsa secara otomatis */
     private int $lockMinutes = 5;
 
@@ -669,6 +672,30 @@ class GroceryCrud
         }
 
         $this->customActions[] = $action;
+        return $this;
+    }
+
+    /**
+     * Mendaftarkan callback handler untuk aksi kustom.
+     *
+     * Saat tombol aksi kustom diklik, label aksi dikirim via AJAX
+     * dan callback yang terdaftar akan dipanggil.
+     *
+     * Callback menerima (mixed $id, array $row) dan harus mengembalikan
+     * array ['success' => bool, 'message' => string].
+     *
+     * Contoh:
+     *   $crud->setActionCallback('Activate', function ($id, $row) {
+     *       return ['success' => true, 'message' => 'Product activated.'];
+     *   });
+     *
+     * @param string $label    Label aksi (harus sama dengan yang dipakai di addAction)
+     * @param callable $callback fn(mixed $id, array $row): array{success: bool, message: string}
+     * @return $this
+     */
+    public function setActionCallback(string $label, callable $callback): self
+    {
+        $this->actionCallbacks[$label] = $callback;
         return $this;
     }
 
@@ -2261,6 +2288,48 @@ class GroceryCrud
     }
 
     /**
+     * Menangani aksi kustom yang diklik dari tombol di daftar.
+     *
+     * Menerima gc_action=custom_action, action_label (label aksi), dan id (primary key).
+     * Memanggil callback yang terdaftar via setActionCallback().
+     */
+    public function ajaxCustomAction(mixed $id): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        $request = Services::request();
+        $actionLabel = $request->getPost('action_label') ?? '';
+
+        if ($actionLabel === '' || !isset($this->actionCallbacks[$actionLabel])) {
+            return $this->jsonResponse(false, [
+                'message' => $this->getLang('invalid_action') ?? 'Invalid action.',
+            ]);
+        }
+
+        try {
+            // Ambil data baris untuk dikirim ke callback
+            $row = $this->model->getRawRow($id);
+
+            if ($row === null) {
+                return $this->jsonResponse(false, [
+                    'message' => $this->getLang('record_not_found') ?? 'Record not found.',
+                ]);
+            }
+
+            $result = ($this->actionCallbacks[$actionLabel])($id, $row);
+
+            return $this->jsonResponse(
+                $result['success'] ?? false,
+                ['message' => $result['message'] ?? 'Action completed.']
+            );
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Memulihkan record yang di-soft-delete.
      */
     public function ajaxRestore(mixed $id): ResponseInterface
@@ -3532,7 +3601,7 @@ class GroceryCrud
     private function getActionPermission(string $action): string
     {
         return match ($action) {
-            'add_form', 'add', 'clone'                  => 'add',
+            'add_form', 'add', 'clone', 'custom_action'  => 'add',
             'edit_form', 'edit', 'inline_save'       => 'edit',
             'delete', 'batch_action', 'restore'      => 'delete',
             'export', 'print_view'                => 'export',
@@ -3583,6 +3652,7 @@ class GroceryCrud
             'file_manager_copy'     => $this->ajaxFileManagerCopy(),
             'file_manager_file_info' => $this->ajaxFileManagerFileInfo(),
             'batch_action'  => $this->ajaxBatchAction(),
+            'custom_action' => $this->ajaxCustomAction($this->getRequestId()),
             'clone'         => $this->ajaxClone($this->getRequestId()),
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),

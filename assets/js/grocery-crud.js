@@ -694,6 +694,36 @@
         });
     }
 
+    function handleCustomAction($btn) {
+        var $wrapper = $btn.closest('.grocery-crud-wrapper');
+        var id = $btn.data('id');
+        var actionLabel = $btn.data('action');
+
+        if (!actionLabel) return;
+
+        showLoading();
+        $.ajax({
+            url: window.location.href,
+            method: 'POST',
+            data: { gc_action: 'custom_action', action_label: actionLabel, id: id },
+            dataType: 'json',
+            success: function (response) {
+                if (response.success) {
+                    showAlert(response.message, 'success');
+                    refreshList($wrapper);
+                } else {
+                    showAlert(response.message || 'Action failed.', 'danger');
+                }
+            },
+            error: function () {
+                showAlert('An error occurred.', 'danger');
+            },
+            complete: function () {
+                hideLoading();
+            }
+        });
+    }
+
     function loadTrashList($btn) {
         var $wrapper = $btn.closest('.grocery-crud-wrapper');
 
@@ -1235,6 +1265,12 @@
         $(document).off('click', '.btn-gc-clone').on('click', '.btn-gc-clone', function (e) {
             e.preventDefault();
             cloneRecord($(this));
+        });
+
+        // Tombol aksi kustom (dengan data-action)
+        $(document).off('click', '.gc-custom-action').on('click', '.gc-custom-action', function (e) {
+            e.preventDefault();
+            handleCustomAction($(this));
         });
 
         // Tombol daftar sampah

@@ -451,7 +451,7 @@ class Bootstrap5Theme implements ThemeInterface
                         if ($actionCss !== '') {
                             $actionClasses .= ' ' . htmlspecialchars($actionCss);
                         }
-                        $html .= '<a href="' . $url . '" class="' . $actionClasses . '" title="' . htmlspecialchars($actionLabel) . '" data-id="' . $rowId . '">';
+                        $html .= '<a href="' . $url . '" class="' . $actionClasses . '" title="' . htmlspecialchars($actionLabel) . '" data-id="' . $rowId . '" data-action="' . htmlspecialchars($actionLabel) . '">';
                         if ($actionIcon !== '') {
                             $html .= '<i class="' . htmlspecialchars($actionIcon) . '"></i>';
                         } else {
