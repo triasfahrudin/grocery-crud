@@ -894,8 +894,13 @@
         html += '</div>';
 
         // Lingkup ekspor: Semua catatan vs Hanya yang difilter
+        var hasColumnFilter = false;
+        $wrapper.find('.gc-column-filter').each(function () {
+            if ($(this).val()) hasColumnFilter = true;
+        });
         var hasFilters = $wrapper.find('.gc-filter-item').length > 0
-            || ($wrapper.data('gcAdvancedFilters') && $wrapper.data('gcAdvancedFilters').length > 0);
+            || ($wrapper.data('gcAdvancedFilters') && $wrapper.data('gcAdvancedFilters').length > 0)
+            || hasColumnFilter;
         html += '<div class="mb-3 border-top pt-3">';
         html += '<label class="fw-bold small mb-2"><i class="bi bi-funnel me-1"></i>Export Scope</label>';
         html += '<div class="form-check">';
@@ -958,7 +963,7 @@
                 // Filter kolom (dari input filter di atas kolom tabel)
                 var filters = {};
                 $wrapper.find('.gc-column-filter').each(function () {
-                    var field = $(this).data('field');
+                    var field = $(this).data('filterField');
                     var val = $(this).val();
                     if (field && val) {
                         filters[field] = val;
