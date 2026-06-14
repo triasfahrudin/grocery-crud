@@ -136,6 +136,12 @@ class GroceryCrud
     /** @var bool Apakah kita sedang melihat record yang terhapus (trashed) */
     private bool $trashedView = false;
 
+    /** @var bool Mengaktifkan fitur duplikasi record */
+    private bool $enableClone = false;
+
+    /** @var array<int, string> Nama field yang dikecualikan saat duplikasi */
+    private array $cloneExcludeFields = [];
+
     /** @var array<string, string> */
     private array $batchActions = [];
 
@@ -664,6 +670,32 @@ class GroceryCrud
         $this->softDelete = $enabled;
         $this->ensureInitialized();
         $this->model->setSoftDelete($enabled);
+        return $this;
+    }
+
+    // ======== Duplikasi (Clone) ========
+
+    /**
+     * Mengaktifkan fitur duplikasi record.
+     *
+     * Menambahkan tombol "Duplikat" di kolom aksi pada tampilan daftar.
+     * Record asli akan disalin (kecuali primary key dan field yang dikecualikan)
+     * dan disimpan sebagai record baru.
+     *
+     * @param bool $enabled Aktifkan atau nonaktifkan duplikasi
+     * @param array<int, string> $excludeFields Nama field yang tidak akan disalin
+     * @return $this
+     */
+    public function setClone(bool $enabled = true, array $excludeFields = []): self
+    {
+        $this->enableClone = $enabled;
+        $this->cloneExcludeFields = $excludeFields;
+
+        // Tambahkan 'clone' ke daftar aksi jika diaktifkan
+        if ($enabled && !in_array('clone', $this->actions, true)) {
+            $this->actions[] = 'clone';
+        }
+
         return $this;
     }
 
@@ -2243,6 +2275,55 @@ class GroceryCrud
     }
 
     /**
+     * Menduplikasi record berdasarkan primary key.
+     */
+    public function ajaxClone(mixed $id): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        try {
+            // Ambil data lama untuk activity log sebelum duplikasi
+            $oldData = $this->activityLog !== null ? $this->model->getRawRow($id) : null;
+
+            // Panggil callback sebelum duplikasi
+            $this->callbackManager->executeBefore('beforeClone', [
+                'table'      => $this->table,
+                'primaryKey' => $this->primaryKey,
+                'id'         => $id,
+            ]);
+
+            // Duplikasi record
+            $newId = $this->model->clone($id, $this->cloneExcludeFields);
+
+            if ($newId === false) {
+                return $this->jsonResponse(false, [
+                    'message' => $this->getLang('clone_fail') ?? 'Failed to clone record.',
+                ]);
+            }
+
+            // Panggil callback setelah duplikasi
+            $this->callbackManager->executeAfter('afterClone', [
+                'table'       => $this->table,
+                'primaryKey'  => $this->primaryKey,
+                'originalId'  => $id,
+                'newId'       => $newId,
+                'oldData'     => $oldData,
+            ]);
+
+            // Catat aktivitas sebagai insert
+            $this->logActivityInsert($newId, $oldData ?? []);
+
+            return $this->jsonResponse(true, [
+                'message' => $this->getLang('clone_success') ?? 'Record cloned successfully.',
+            ]);
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(false, [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
      * Mendapatkan daftar record yang dihapus (soft-deleted).
      */
     public function ajaxTrashList(): ResponseInterface
@@ -3018,6 +3099,8 @@ class GroceryCrud
             'calendarField'       => $this->calendarField,
             'calendarTitleField'  => $this->calendarTitleField,
             'enableFileManager'   => $this->fileManagerExplicitlyEnabled,
+            'enableClone'          => $this->enableClone,
+            'cloneExcludeFields'   => $this->cloneExcludeFields,
         ]);
     }
 
@@ -3434,7 +3517,7 @@ class GroceryCrud
     private function getActionPermission(string $action): string
     {
         return match ($action) {
-            'add_form', 'add'                        => 'add',
+            'add_form', 'add', 'clone'                  => 'add',
             'edit_form', 'edit', 'inline_save'       => 'edit',
             'delete', 'batch_action', 'restore'      => 'delete',
             'export', 'print_view'                => 'export',
@@ -3485,6 +3568,7 @@ class GroceryCrud
             'file_manager_copy'     => $this->ajaxFileManagerCopy(),
             'file_manager_file_info' => $this->ajaxFileManagerFileInfo(),
             'batch_action'  => $this->ajaxBatchAction(),
+            'clone'         => $this->ajaxClone($this->getRequestId()),
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),
             'sub_grid'      => $this->ajaxSubGrid(),
@@ -3525,6 +3609,7 @@ class GroceryCrud
             'edit'          => $this->apiUpdate($this->getRequestId()),
             'edit_form'     => $this->apiFormData('edit', $this->getRequestId()),
             'delete'        => $this->apiDelete($this->getRequestId()),
+            'clone'         => $this->apiClone($this->getRequestId()),
             'restore'       => $this->apiRestore($this->getRequestId()),
             'trash_list'    => $this->apiTrashList(),
             'export'        => $this->ajaxExport($this->getExportFormat()),
@@ -3858,6 +3943,59 @@ class GroceryCrud
             return $this->apiResponse(
                 null,
                 $this->getLang('restore_success') ?? 'Record restored successfully.'
+            );
+        } catch (\Throwable $e) {
+            return $this->apiError($e->getMessage(), 500);
+        }
+    }
+
+    /**
+     * API: Menduplikasi record berdasarkan primary key.
+     */
+    private function apiClone(mixed $id): ResponseInterface
+    {
+        if (empty($id)) {
+            return $this->apiError('Record ID is required.', 400);
+        }
+
+        $this->ensureInitialized();
+
+        try {
+            $oldData = $this->activityLog !== null ? $this->model->getRawRow($id) : null;
+
+            // Panggil callback sebelum duplikasi
+            $this->callbackManager->executeBefore('beforeClone', [
+                'table'      => $this->table,
+                'primaryKey' => $this->primaryKey,
+                'id'         => $id,
+            ]);
+
+            // Duplikasi record
+            $newId = $this->model->clone($id, $this->cloneExcludeFields);
+
+            if ($newId === false) {
+                return $this->apiError(
+                    $this->getLang('clone_fail') ?? 'Failed to clone record.',
+                    500
+                );
+            }
+
+            // Panggil callback setelah duplikasi
+            $this->callbackManager->executeAfter('afterClone', [
+                'table'       => $this->table,
+                'primaryKey'  => $this->primaryKey,
+                'originalId'  => $id,
+                'newId'       => $newId,
+                'oldData'     => $oldData,
+            ]);
+
+            // Catat aktivitas sebagai insert
+            $this->logActivityInsert($newId, $oldData ?? []);
+
+            return $this->apiResponse(
+                [$this->primaryKey => $newId],
+                $this->getLang('clone_success') ?? 'Record cloned successfully.',
+                201
             );
         } catch (\Throwable $e) {
             return $this->apiError($e->getMessage(), 500);

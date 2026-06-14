@@ -94,6 +94,11 @@ class Config extends BaseConfig
     public bool $enablePdfExport = true;
 
     /**
+     * Apakah akan mengaktifkan fitur duplikasi record.
+     */
+    public bool $enableClone = false;
+
+    /**
      * Format ekspor.
      */
     public array $exportFormats = ['csv', 'excel', 'pdf', 'print'];

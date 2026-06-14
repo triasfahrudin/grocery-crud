@@ -267,6 +267,37 @@ class CrudModel
             ->update([$this->softDeleteField => null]);
     }
 
+    // ======== Duplikasi (Clone) ========
+
+    /**
+     * Menduplikasi record berdasarkan primary key.
+     *
+     * Mengambil data mentah record asli, menghapus primary key dan field
+     * yang dikecualikan, lalu menyimpannya sebagai record baru.
+     *
+     * @param mixed $id Primary key record yang akan diduplikasi
+     * @param array<int, string> $excludeFields Nama field yang dikecualikan dari duplikasi
+     * @return mixed Inserted ID atau false jika gagal
+     */
+    public function clone(mixed $id, array $excludeFields = []): mixed
+    {
+        $row = $this->getRawRow($id);
+
+        if ($row === null) {
+            return false;
+        }
+
+        // Hapus primary key agar auto-increment
+        unset($row[$this->primaryKey]);
+
+        // Hapus field yang dikecualikan
+        foreach ($excludeFields as $field) {
+            unset($row[$field]);
+        }
+
+        return $this->insert($row);
+    }
+
     /**
      * Menghapus permanen sebuah record (hard delete terlepas dari pengaturan soft delete).
      */

@@ -65,8 +65,10 @@ class Bootstrap5Theme implements ThemeInterface
         $hasEdit      = in_array('edit', $actions, true);
         $hasDelete    = in_array('delete', $actions, true);
         $hasAdd       = in_array('add', $actions, true);
+        $enableClone  = (bool) ($data['enableClone'] ?? false);
+        $hasClone     = $enableClone && in_array('clone', $actions, true);
         $primaryKey   = $data['primaryKey'] ?? 'id';
-        $showActions  = $hasEdit || $hasDelete;
+        $showActions  = $hasEdit || $hasDelete || $hasClone;
         $customActions = $data['customActions'] ?? [];
         $useDatatables = $data['useDatatables'] ?? false;
         $crudId       = $data['crudId'] ?? 'crud_' . uniqid();
@@ -102,6 +104,7 @@ class Bootstrap5Theme implements ThemeInterface
         if ($trashedView) {
             $hasDelete = false;
             $hasEdit   = false;
+            $hasClone  = false;
         }
 
         $totalPages   = $perPage > 0 ? (int) ceil($totalCount / $perPage) : 1;
@@ -119,6 +122,7 @@ class Bootstrap5Theme implements ThemeInterface
         $lblNoRecords   = $lang['no_records'] ?? 'No records found.';
         $lblEdit        = $lang['edit'] ?? 'Edit';
         $lblDelete      = $lang['delete'] ?? 'Delete';
+        $lblClone       = $lang['clone'] ?? 'Clone';
         $lblSelectAll   = $lang['select_all'] ?? 'Select All';
         $lblFilter      = $lang['filter'] ?? 'Filter';
         $lblAll         = $lang['all'] ?? 'All';
@@ -423,6 +427,11 @@ class Bootstrap5Theme implements ThemeInterface
                     if ($hasEdit) {
                         $html .= '<button type="button" class="btn btn-outline-primary btn-gc-edit" data-id="' . $rowId . '" title="' . $lblEdit . '">';
                         $html .= '<i class="bi bi-pencil"></i></button>';
+                    }
+
+                    if ($hasClone) {
+                        $html .= '<button type="button" class="btn btn-outline-info btn-gc-clone" data-id="' . $rowId . '" title="' . $lblClone . '">';
+                        $html .= '<i class="bi bi-copy"></i></button>';
                     }
 
                     foreach ($customActions as $action) {
