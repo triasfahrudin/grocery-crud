@@ -125,6 +125,8 @@ class TableRenderer
         $themeName = ucfirst($theme->getName());
         $cssV = filemtime(__DIR__ . '/../../assets/css/grocery-crud.css');
         $jsV  = filemtime(__DIR__ . '/../../assets/js/grocery-crud.js');
+        $fileManagerJsPath = __DIR__ . '/../../assets/js/grocery-crud-file-manager.js';
+        $fileManagerJsV = file_exists($fileManagerJsPath) ? filemtime($fileManagerJsPath) : $jsV;
 
         $navbarFixCss = <<<'CSS'
 <style>
@@ -161,6 +163,7 @@ CSS;
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/table-dragger@2.0.5/dist/table-dragger.min.js"></script>
     <script src="/assets/grocery-crud/js/grocery-crud.js?v={$jsV}"></script>
+    <script src="/assets/grocery-crud/js/grocery-crud-file-manager.js?v={$fileManagerJsV}"></script>
 </body>
 </html>
 HTML;
