@@ -263,9 +263,9 @@
                     // Pulihkan urutan kolom yang disimpan (DB settings > localStorage)
                     try {
                         var settings = null;
-                        var dbRaw = $newWrapper.data('dbSettings');
+                        var dbRaw = $newWrapper.attr('data-db-settings');
                         if (dbRaw) {
-                            settings = dbRaw;
+                            settings = JSON.parse(dbRaw);
                         } else {
                             var url = window.location.href;
                             var raw = localStorage.getItem('gc_settings_' + btoa(url));
@@ -3030,12 +3030,12 @@
                 var settings = null;
 
                 // 1. Prioritaskan settings dari database (data-db-settings attribute)
-                var dbSettingsRaw = $wrapper.data('dbSettings');
+                var dbSettingsRaw = $wrapper.attr('data-db-settings');
                 if (dbSettingsRaw) {
-                    settings = dbSettingsRaw;
-                    // Simpan juga ke localStorage sebagai cache
                     try {
-                        localStorage.setItem('gc_settings_' + btoa(url), JSON.stringify(settings));
+                        settings = JSON.parse(dbSettingsRaw);
+                        // Simpan juga ke localStorage sebagai cache
+                        localStorage.setItem('gc_settings_' + btoa(url), dbSettingsRaw);
                     } catch (e) {}
                 }
 
