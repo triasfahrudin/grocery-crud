@@ -77,6 +77,7 @@ class TableRenderer
             'enableActivityLogViewer' => $crudData['enableActivityLogViewer'] ?? false,
             'calendarField'       => $crudData['calendarField'] ?? null,
             'calendarTitleField'  => $crudData['calendarTitleField'] ?? null,
+            'enableFileManager'   => $crudData['enableFileManager'] ?? false,
         ];
     }
 
