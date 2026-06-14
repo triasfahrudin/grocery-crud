@@ -39,6 +39,7 @@ class GroceryCrud
     private UploadManager $uploadManager;
     private ?ImportManager $importManager = null;
     private ?FileManager $fileManager = null;
+    private bool $fileManagerExplicitlyEnabled = false;
     private TableRenderer $renderer;
     private ThemeInterface $theme;
 
@@ -576,9 +577,11 @@ class GroceryCrud
         $this->uploadFieldConfigs[$field] = $config;
         $this->uploadManager->configureField($field, $config);
 
-        // Otomatis aktifkan File Manager jika belum diaktifkan, agar tombol
+        // Otomatis aktifkan File Manager jika belum diaktifkan, agar fitur
         // "Pilih dari File Manager" di form upload bisa berfungsi tanpa perlu
         // pengguna memanggil setFileManager() secara manual.
+        // Catatan: tombol toolbar File Manager independen hanya muncul jika
+        // setFileManager() dipanggil secara eksplisit.
         if ($this->fileManager === null) {
             $this->fileManager = new FileManager($this->config);
         }
@@ -766,6 +769,7 @@ class GroceryCrud
         }
 
         $this->fileManager = new FileManager($this->config);
+        $this->fileManagerExplicitlyEnabled = true;
 
         return $this;
     }
@@ -3013,7 +3017,7 @@ class GroceryCrud
             'enableActivityLogViewer' => $this->enableActivityLogViewer && $this->activityLog !== null,
             'calendarField'       => $this->calendarField,
             'calendarTitleField'  => $this->calendarTitleField,
-            'enableFileManager'   => $this->fileManager !== null,
+            'enableFileManager'   => $this->fileManagerExplicitlyEnabled,
         ]);
     }
 
