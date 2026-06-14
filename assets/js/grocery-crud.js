@@ -480,12 +480,14 @@
      * Simpan urutan kolom saat ini dari menu kolom ke localStorage.
      */
     function saveColumnOrder($wrapper) {
-        var menu = $wrapper.find('.gc-columns-menu');
-        if (!menu.length) return;
+        // Baca urutan dari header tabel (sumber kebenaran setelah drag-drop)
+        var $table = $wrapper.find('.gc-table');
+        if (!$table.length) return;
         var order = [];
-        menu.find('.form-check-input').each(function () {
-            order.push($(this).data('column'));
+        $table[0].querySelectorAll('thead th[data-column]').forEach(function (th) {
+            order.push(th.getAttribute('data-column'));
         });
+        if (!order.length) return;
         var url = window.location.href;
         try {
             var key = 'gc_settings_' + btoa(url);
@@ -1590,9 +1592,14 @@
                 columnOrder: [],
                 filters: $wrapper.data('gcAdvancedFilters') || []
             };
+            // Baca urutan kolom dari header tabel (setelah drag-drop, ini yang akurat)
+            $wrapper.find('.gc-table th[data-column]').each(function () {
+                var col = $(this).data('column');
+                settings.columnOrder.push(col);
+            });
+            // Baca visibilitas dari menu checkbox
             $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                 settings.columns[$(this).data('column')] = $(this).is(':checked');
-                settings.columnOrder.push($(this).data('column'));
             });
             try {
                 localStorage.setItem('gc_settings_' + btoa(url), JSON.stringify(settings));
@@ -3002,21 +3009,19 @@
             var $wrapper = $(this);
             var url = window.location.href;
             try {
+                // Inisialisasi menu kolom dari header tabel (penting untuk konsistensi)
+                populateColumnsAndFilters($wrapper);
+
                 var raw = localStorage.getItem('gc_settings_' + btoa(url));
-                console.log('[GC_AUTO] url=', url, 'has_raw=', !!raw, 'menu_len=', $wrapper.find('.gc-columns-menu .form-check').length);
                 if (raw) {
                     var settings = JSON.parse(raw);
-                    console.log('[GC_AUTO] settings=', settings);
                     if (settings.columnOrder && settings.columnOrder.length) {
-                        console.log('[GC_AUTO] applyColumnOrder', settings.columnOrder);
                         applyColumnOrder($wrapper, settings.columnOrder);
-                        console.log('[GC_AUTO] after applyColumnOrder');
                     }
                     if (settings.columns) {
                         $wrapper.find('.gc-columns-menu input[type="checkbox"]').each(function () {
                             var col = $(this).data('column');
                             if (settings.columns[col] !== undefined) {
-                                console.log('[GC_AUTO] toggling col', col, 'to', settings.columns[col]);
                                 $(this).prop('checked', settings.columns[col]).trigger('change');
                             }
                         });
