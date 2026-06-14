@@ -22,6 +22,7 @@ Library CRUD generator full-featured untuk CodeIgniter 4. Terinspirasi dari Groc
 - **Settings** — Save/load/reset konfigurasi kolom & filter ke localStorage
 - **Theme System** — Bootstrap 5 & AdminLTE 4, mudah ditambahkan tema baru
 - **Multi-language** — English & Indonesian bawaan
+- **RBAC / Permissions** — Role-based access control: batasi aksi CRUD per peran pengguna
 - **Custom Actions** — Tombol aksi kustom per baris dengan kondisi tampil/sembunyi dinamis
 - **Conditional Actions** — Tampilkan/sembunyikan tombol aksi berdasarkan data baris (callback per row)
 - **Custom Action Callback** — Handler server-side untuk tombol aksi kustom (klik → AJAX → callback)
@@ -332,6 +333,79 @@ $crud->setActionCallback('Activate', function ($id, $row) {
 2. Server cari callback terdaftar untuk label "Activate"
 3. Callback dijalankan — terima `$id` + `$row` (data mentah record)
 4. List di-refresh otomatis setelah berhasil
+
+## Role-Based Access Control (RBAC)
+
+Fitur **RBAC** membatasi aksi CRUD berdasarkan peran pengguna. Cocok untuk aplikasi multi-user dengan hak akses berbeda (admin, editor, viewer, dll.).
+
+### Konsep
+
+- **Role** — nama peran (contoh: `admin`, `editor`, `viewer`)
+- **Actions** — aksi yang diizinkan: `add`, `edit`, `delete`, `view`, `export`, `import`
+- **Permission Callback** — fungsi yang mengembalikan peran pengguna saat ini
+
+### Penggunaan Dasar
+
+```php
+$crud = new GroceryCrud();
+$crud->setTable('products');
+
+// 1. Tentukan izin per peran
+$crud->setPermission('admin',  ['add', 'edit', 'delete', 'view', 'export', 'import']);
+$crud->setPermission('editor', ['add', 'edit', 'view', 'export']);
+$crud->setPermission('viewer', ['view', 'export']);
+
+// 2. Callback: ambil peran dari session
+$crud->setPermissionCallback(function () {
+    return session()->get('role'); // 'admin', 'editor', 'viewer'
+});
+
+return $crud->render();
+```
+
+### Yang Terjadi
+
+| Role | Add | Edit | Delete | View | Export | Import |
+|------|:---:|:----:|:------:|:----:|:------:|:------:|
+| `admin` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `editor` | ✅ | ✅ | ❌ | ✅ | ✅ | ❌ |
+| `viewer` | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+
+Tombol dan aksi AJAX yang tidak diizinkan akan otomatis disembunyikan/ditolak.
+
+### Integrasi Database
+
+Untuk permission yang tersimpan di database:
+
+```php
+// Ambil izin dari database
+$permModel = model('App\Models\PermissionModel');
+$allowedActions = $permModel->getAllowedActions(
+    session()->get('role'),
+    'products'
+);
+
+$crud->setPermissionCallback(function () {
+    return session()->get('role');
+});
+
+$crud->setPermission(session()->get('role'), $allowedActions);
+```
+
+### Permission untuk Aksi Baru
+
+| Action | Izin yang Diperlukan |
+|--------|---------------------|
+| `clone` | `add` (karena clone = insert baru) |
+| `custom_action` | `add` (default), bisa disesuaikan |
+| `batch_action` | `delete` |
+| `restore` | `delete` |
+| `export` | `export` |
+| `import_*` | `import` |
+
+### Tanpa RBAC
+
+Jika `setPermission()` dan `setPermissionCallback()` tidak dipanggil, **semua aksi diizinkan** — backward compatible sepenuhnya.
 
 ## REST API Mode
 
@@ -718,6 +792,13 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | `unsetFilters()` | Sembunyikan tombol Filters |
 | `unsetColumns()` | Sembunyikan tombol Columns |
 | `unsetSettings()` | Sembunyikan tombol Settings |
+
+### RBAC / Permissions
+
+| Method | Deskripsi |
+|--------|-----------|
+| `setPermission(string $role, array $actions)` | Izin aksi untuk peran tertentu (`add`, `edit`, `delete`, `view`, `export`, `import`) |
+| `setPermissionCallback(callable $callback)` | Callback untuk mendapatkan peran user saat ini (`fn(): ?string`)
 
 ## Tipe Field yang Didukung
 
