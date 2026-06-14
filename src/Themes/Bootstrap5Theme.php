@@ -1607,7 +1607,12 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '<button type="button" class="btn btn-primary btn-sm gc-fm-new-folder"><i class="bi bi-folder-plus me-1"></i>' . $lblNewFolder . '</button>';
             $html .= '<button type="button" class="btn btn-success btn-sm gc-fm-upload-btn"><i class="bi bi-cloud-arrow-up me-1"></i>' . $lblUpload . '</button>';
             $html .= '<form class="gc-fm-upload-form d-none" method="post" enctype="multipart/form-data">';
-            $html .= '<input type="file" class="gc-fm-upload-input" multiple accept="' . htmlspecialchars($data['allowedTypes'] ?? '*') . '">';
+            $accept = $data['allowedTypes'] ?? '*';
+            if ($accept !== '*') {
+                $exts = array_map(fn($ext) => '.' . trim($ext), explode('|', $accept));
+                $accept = implode(',', $exts);
+            }
+            $html .= '<input type="file" class="gc-fm-upload-input" multiple accept="' . htmlspecialchars($accept) . '">';
             $html .= '</form>';
         }
         $html .= '<div class="ms-auto d-flex gap-2">';

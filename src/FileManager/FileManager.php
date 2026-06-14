@@ -15,6 +15,9 @@ class FileManager
     private array $allowedTypes;
     private int $maxSize;
 
+    /** @var string Wildcard untuk mengizinkan semua tipe file */
+    private const ALLOW_ALL = '*';
+
     /** @var array<string, string> Mapping ekstensi ke ikon CSS */
     private const ICON_MAP = [
         'folder'             => 'bi-folder',
@@ -82,8 +85,27 @@ class FileManager
         $fmConfig = $config->fileManagerConfig;
 
         $this->basePath = rtrim($fmConfig['basePath'] ?? FCPATH . 'uploads/', '/');
-        $this->allowedTypes = $fmConfig['allowedTypes'] ?? '*';
+        $this->allowedTypes = $this->normalizeAllowedTypes($fmConfig['allowedTypes'] ?? self::ALLOW_ALL);
         $this->maxSize = ($fmConfig['maxSize'] ?? 10240) * 1024; // KB → bytes
+    }
+
+    /**
+     * Normalisasi allowedTypes: string pipe-separated atau array → selalu array.
+     *
+     * @param string|array $types
+     * @return array
+     */
+    private function normalizeAllowedTypes(string|array $types): array
+    {
+        if (is_array($types)) {
+            return $types;
+        }
+
+        if ($types === self::ALLOW_ALL || $types === '') {
+            return [self::ALLOW_ALL];
+        }
+
+        return explode('|', $types);
     }
 
     /**
@@ -317,9 +339,8 @@ class FileManager
 
         // Validasi tipe file
         $ext = strtolower($file->getExtension());
-        if ($this->allowedTypes !== '*') {
-            $allowed = explode('|', $this->allowedTypes);
-            if (!in_array($ext, $allowed, true)) {
+        if (!in_array(self::ALLOW_ALL, $this->allowedTypes, true)) {
+            if (!in_array($ext, $this->allowedTypes, true)) {
                 throw GroceryCrudException::uploadFailed('file', 'File type not allowed: ' . $ext);
             }
         }
