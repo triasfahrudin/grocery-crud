@@ -22,7 +22,10 @@ Library CRUD generator full-featured untuk CodeIgniter 4. Terinspirasi dari Groc
 - **Settings** — Save/load/reset konfigurasi kolom & filter ke localStorage
 - **Theme System** — Bootstrap 5 & AdminLTE 4, mudah ditambahkan tema baru
 - **Multi-language** — English & Indonesian bawaan
-- **Custom Actions** — Tombol aksi kustom per baris
+- **Custom Actions** — Tombol aksi kustom per baris dengan kondisi tampil/sembunyi dinamis
+- **Conditional Actions** — Tampilkan/sembunyikan tombol aksi berdasarkan data baris (callback per row)
+- **Custom Action Callback** — Handler server-side untuk tombol aksi kustom (klik → AJAX → callback)
+- **Clone/Duplicate Record** — Duplikasi record dengan satu klik, exclude field tertentu
 - **Repeater Fields** — Grup sub-field yang dapat diulang (Nova-style)
 - **Dynamic Form Conditions** — Show/hide atau enable/disable field berdasarkan nilai field lain (dependsOn)
 - **Field Type Detection** — Auto-detect tipe field dari database
@@ -260,6 +263,76 @@ $crud->setImportable(true);
 
 > **Catatan:** CSV import bekerja tanpa dependensi tambahan. XLSX membutuhkan `composer require phpoffice/phpspreadsheet`.
 
+### 13. Clone / Duplicate Record
+
+Duplikasi record dengan satu klik dari kolom aksi. Primary key otomatis dihapus, field tertentu bisa dikecualikan:
+
+```php
+$crud = new GroceryCrud();
+$crud->setTable('products');
+
+// Aktifkan clone (semua field disalin)
+$crud->setClone();
+
+// Atau kecualikan field tertentu (unique, timestamp, dll)
+$crud->setClone(true, ['name', 'slug', 'created_at', 'updated_at']);
+
+return $crud->render();
+```
+
+**Yang terjadi saat diklik:**
+- Data mentah record asli diambil
+- Primary key dihapus (auto-increment)
+- Field yang dikecualikan dihapus
+- Data disimpan sebagai record baru
+- Activity log: tercatat sebagai aksi **Created**
+
+> **Tips:** Kecualikan field dengan `UNIQUE` constraint (seperti `name`, `slug`, `sku`) agar clone tidak gagal.
+
+### 14. Conditional Actions
+
+Tampilkan atau sembunyikan tombol aksi kustom berdasarkan data setiap baris:
+
+```php
+// Tombol "Approve" hanya muncul untuk record dengan status 'pending'
+$crud->addAction('Approve', 'bi-check-circle', '#', 'btn-success', function ($row) {
+    return ($row['_raw']['status'] ?? $row['status']) === 'pending';
+});
+
+// Tombol "Activate" hanya untuk produk inactive
+$crud->addAction('Activate', 'bi-toggle-on', '#', 'btn-success', function ($row) {
+    return ($row['_raw']['is_active'] ?? 0) == 0;
+});
+```
+
+Parameter ke-5 (`$condition`) menerima callback `fn(array $row): bool`. Return `true` = tombol muncul, `false` = disembunyikan.
+
+> **Penting:** Gunakan `$row['_raw']['field']` untuk mengakses nilai asli database, karena `$row['field']` mungkin sudah diubah oleh `callbackColumn`.
+
+### 15. Custom Action Callback
+
+Daftarkan callback server-side yang dijalankan saat tombol aksi kustom diklik:
+
+```php
+// 1. Tambahkan tombol dengan kondisi
+$crud->addAction('Activate', 'bi-toggle-on', '#', 'btn-success', function ($row) {
+    return ($row['_raw']['is_active'] ?? 0) == 0;
+});
+
+// 2. Daftarkan callback handler
+$crud->setActionCallback('Activate', function ($id, $row) {
+    $db = \Config\Database::connect();
+    $db->table('products')->where('id', $id)->update(['is_active' => 1]);
+    return ['success' => true, 'message' => 'Product activated successfully.'];
+});
+```
+
+**Alur klik:**
+1. JS kirim POST: `gc_action=custom_action&action_label=Activate&id=X`
+2. Server cari callback terdaftar untuk label "Activate"
+3. Callback dijalankan — terima `$id` + `$row` (data mentah record)
+4. List di-refresh otomatis setelah berhasil
+
 ## REST API Mode
 
 Gunakan `setApiMode()` untuk mengubah CRUD menjadi **headless REST API** yang mengembalikan JSON murni (tanpa HTML) — cocok untuk SPA, mobile app, atau integrasi eksternal.
@@ -318,6 +391,8 @@ $routes->add('api/contacts/(:any)', 'ApiContacts::index/$1');
 | `DELETE` | `/api/contacts?id=123&gc_action=restore` | **restore** | Restore soft-deleted record |
 | `POST` | `/api/contacts?gc_action=import_upload` | **import_upload** | Upload file import |
 | `POST` | `/api/contacts?gc_action=import_execute` | **import_execute** | Eksekusi import |
+| `POST` | `/api/contacts?id=123&gc_action=clone` | **clone** | Duplikasi record |
+| `POST` | `/api/contacts?id=123&gc_action=custom_action&action_label=Activate` | **custom_action** | Jalankan aksi kustom dengan callback |
 | `GET` | `/api/contacts?export=1` | **export** | Export CSV/Excel |
 
 ### Response Format
@@ -618,7 +693,9 @@ Untuk membuat theme kustom, implement interface `GroceryCrud\Themes\ThemeInterfa
 | Method | Deskripsi |
 |--------|-----------|
 | `setActions(string ...$actions)` | Set default actions (`add`, `edit`, `delete`) |
-| `addAction(string $label, string $icon, string $url, string $cssClass)` | Custom action button per baris |
+| `addAction(string $label, string $icon, string $url, string $cssClass, ?callable $condition)` | Custom action button per baris dengan kondisi opsional (parameter ke-5: `fn($row): bool`) |
+| `setActionCallback(string $label, callable $callback)` | Daftarkan callback handler untuk aksi kustom (dipanggil saat tombol diklik) |
+| `setClone(bool $enabled, array $excludeFields)` | Aktifkan fitur duplikasi record dengan field yang dikecualikan |
 
 ### Batch Actions
 
