@@ -1120,6 +1120,21 @@ td.gc-inline-editor-active::after {
     pointer-events: none;
 }
 
+/* File Manager modal — perlebar untuk UX yang lebih baik */
+#gc-file-manager-picker-modal .modal-dialog {
+    max-width: min(95vw, 1400px);
+}
+
+#gc-file-manager-picker-modal .modal-body {
+    min-height: 60vh;
+    max-height: 80vh;
+}
+
+/* Inline File Manager — maksimalkan lebar card */
+.gc-file-manager {
+    width: 100%;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .gc-fm-sidebar {
