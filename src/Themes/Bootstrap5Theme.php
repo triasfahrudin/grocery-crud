@@ -233,7 +233,7 @@ class Bootstrap5Theme implements ThemeInterface
         }
 
         $html .= '</div></div>';
-        $html .= '<div class="card-body">';
+        $html .= '<div class="card-body gc-list-content">';
 
         // Filter panel (hidden by default)
         if ($enableFilters) {

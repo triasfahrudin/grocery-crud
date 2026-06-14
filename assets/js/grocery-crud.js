@@ -2644,8 +2644,12 @@
             success: function (response) {
                 hideLoading();
                 if (response.success && response.html) {
-                    $wrapper.find('.gc-list-content').html(response.html);
-                    $wrapper.find('.gc-list-content').data('fm-path', '');
+                    var $target = $wrapper.find('.gc-list-content');
+                    if (!$target.length) {
+                        $target = $wrapper.find('.card-body').first();
+                    }
+                    $target.html(response.html);
+                    $target.data('fm-path', '');
                 } else {
                     showAlert(response.message || 'Failed to load file manager.', 'danger');
                 }
