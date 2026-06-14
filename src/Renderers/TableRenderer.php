@@ -78,6 +78,8 @@ class TableRenderer
             'calendarField'       => $crudData['calendarField'] ?? null,
             'calendarTitleField'  => $crudData['calendarTitleField'] ?? null,
             'enableFileManager'   => $crudData['enableFileManager'] ?? false,
+            'enableClone'          => $crudData['enableClone'] ?? false,
+            'cloneExcludeFields'   => $crudData['cloneExcludeFields'] ?? [],
         ];
     }
 
