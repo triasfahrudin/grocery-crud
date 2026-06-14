@@ -375,21 +375,197 @@ Tombol dan aksi AJAX yang tidak diizinkan akan otomatis disembunyikan/ditolak.
 
 ### Integrasi Database
 
-Untuk permission yang tersimpan di database:
+Untuk permission yang tersimpan di database (multi-tenant, admin panel, dll):
+
+#### 1. Migrasi — Buat Tabel `permissions`
 
 ```php
-// Ambil izin dari database
-$permModel = model('App\Models\PermissionModel');
-$allowedActions = $permModel->getAllowedActions(
-    session()->get('role'),
-    'products'
-);
+// app/Database/Migrations/CreatePermissionsTable.php
+use CodeIgniter\Database\Migration;
 
-$crud->setPermissionCallback(function () {
-    return session()->get('role');
-});
+class CreatePermissionsTable extends Migration
+{
+    public function up(): void
+    {
+        $this->forge->addField([
+            'id'         => ['type' => 'INT', 'unsigned' => true, 'auto_increment' => true],
+            'role'       => ['type' => 'VARCHAR', 'constraint' => 50],
+            'table_name' => ['type' => 'VARCHAR', 'constraint' => 100],
+            'can_view'   => ['type' => 'TINYINT', 'default' => 0],
+            'can_add'    => ['type' => 'TINYINT', 'default' => 0],
+            'can_edit'   => ['type' => 'TINYINT', 'default' => 0],
+            'can_delete' => ['type' => 'TINYINT', 'default' => 0],
+            'can_export' => ['type' => 'TINYINT', 'default' => 0],
+            'created_at' => ['type' => 'DATETIME', 'null' => true],
+            'updated_at' => ['type' => 'DATETIME', 'null' => true],
+        ]);
+        $this->forge->addKey('id', true);
+        $this->forge->addUniqueKey(['role', 'table_name']);
+        $this->forge->createTable('permissions');
 
-$crud->setPermission(session()->get('role'), $allowedActions);
+        // Seed default permissions
+        $tables = ['products', 'categories', 'tags'];
+        $now = date('Y-m-d H:i:s');
+
+        // Admin: semua akses
+        foreach ($tables as $table) {
+            $this->db->table('permissions')->insert([
+                'role' => 'admin', 'table_name' => $table,
+                'can_view' => 1, 'can_add' => 1, 'can_edit' => 1,
+                'can_delete' => 1, 'can_export' => 1,
+                'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
+
+        // Editor: tanpa delete
+        foreach ($tables as $table) {
+            $this->db->table('permissions')->insert([
+                'role' => 'editor', 'table_name' => $table,
+                'can_view' => 1, 'can_add' => 1, 'can_edit' => 1,
+                'can_delete' => 0, 'can_export' => 1,
+                'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
+
+        // Viewer: hanya lihat + ekspor
+        foreach ($tables as $table) {
+            $this->db->table('permissions')->insert([
+                'role' => 'viewer', 'table_name' => $table,
+                'can_view' => 1, 'can_add' => 0, 'can_edit' => 0,
+                'can_delete' => 0, 'can_export' => 1,
+                'created_at' => $now, 'updated_at' => $now,
+            ]);
+        }
+    }
+
+    public function down(): void
+    {
+        $this->forge->dropTable('permissions');
+    }
+}
+```
+
+Jalankan: `php spark migrate`
+
+#### 2. Model — `PermissionModel`
+
+```php
+// app/Models/PermissionModel.php
+namespace App\Models;
+
+use CodeIgniter\Model;
+
+class PermissionModel extends Model
+{
+    protected $table      = 'permissions';
+    protected $primaryKey = 'id';
+    protected $returnType = 'array';
+
+    protected $allowedFields = [
+        'role', 'table_name',
+        'can_view', 'can_add', 'can_edit', 'can_delete', 'can_export',
+    ];
+
+    protected $useTimestamps = true;
+
+    /**
+     * Dapatkan aksi yang diizinkan untuk role + tabel tertentu.
+     *
+     * @return string[] Contoh: ['view', 'add', 'edit', 'export']
+     */
+    public function getAllowedActions(string $role, string $tableName): array
+    {
+        $row = $this->where('role', $role)
+                    ->where('table_name', $tableName)
+                    ->first();
+
+        if ($row === null) {
+            return [];
+        }
+
+        $actions = [];
+        if ($row['can_view'])   $actions[] = 'view';
+        if ($row['can_add'])    $actions[] = 'add';
+        if ($row['can_edit'])   $actions[] = 'edit';
+        if ($row['can_delete']) $actions[] = 'delete';
+        if ($row['can_export']) $actions[] = 'export';
+
+        return $actions;
+    }
+}
+```
+
+#### 3. Controller — Terapkan RBAC dari Database
+
+```php
+// app/Controllers/Products.php
+namespace App\Controllers;
+
+use GroceryCrud\GroceryCrud;
+
+class Products extends BaseController
+{
+    public function index()
+    {
+        $crud = new GroceryCrud();
+        $crud->setTable('products');
+        $crud->setColumns('name', 'price', 'stock');
+
+        // 🔐 Terapkan RBAC dari database
+        $this->applyRbac($crud, 'products');
+
+        return $crud->render();
+    }
+
+    /**
+     * Helper: ambil izin dari database dan terapkan ke GroceryCrud.
+     */
+    private function applyRbac(GroceryCrud $crud, string $tableName): void
+    {
+        // Ambil role dari session (set saat login)
+        $role = session()->get('role', 'viewer');
+
+        // Query permission dari database
+        $permModel = model('App\Models\PermissionModel');
+        $allowedActions = $permModel->getAllowedActions($role, $tableName);
+
+        if (!empty($allowedActions)) {
+            // Callback: GroceryCrud akan memanggil ini untuk cek izin
+            $crud->setPermissionCallback(function () use ($role) {
+                return $role;
+            });
+
+            // Daftarkan izin untuk role ini
+            $crud->setPermission($role, $allowedActions);
+        }
+    }
+}
+```
+
+#### 4. Struktur Tabel `permissions`
+
+| Kolom | Tipe | Deskripsi |
+|-------|------|-----------|
+| `id` | INT PK | Auto-increment |
+| `role` | VARCHAR(50) | Nama peran (`admin`, `editor`, `viewer`) |
+| `table_name` | VARCHAR(100) | Nama tabel yang diatur |
+| `can_view` | TINYINT | Izin melihat daftar |
+| `can_add` | TINYINT | Izin menambah record |
+| `can_edit` | TINYINT | Izin mengubah record |
+| `can_delete` | TINYINT | Izin menghapus record |
+| `can_export` | TINYINT | Izin ekspor data |
+| UNIQUE | (`role`, `table_name`) | Satu baris per role + tabel |
+
+#### 5. Menambah Permission via SQL
+
+```sql
+-- Beri editor akses penuh ke tabel contacts
+INSERT INTO permissions (role, table_name, can_view, can_add, can_edit, can_delete, can_export)
+VALUES ('editor', 'contacts', 1, 1, 1, 1, 1);
+
+-- Beri viewer akses lihat saja ke tabel reports
+INSERT INTO permissions (role, table_name, can_view, can_add, can_edit, can_delete, can_export)
+VALUES ('viewer', 'reports', 1, 0, 0, 0, 1);
 ```
 
 ### Permission untuk Aksi Baru
