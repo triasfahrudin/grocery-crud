@@ -3013,10 +3013,11 @@
     // Klik folder tree (sidebar)
     $(document).on('click', '.gc-fm-tree-item > a', function (e) {
         e.preventDefault();
-        var $item = $(this).parent();
-        var $container = $(this).closest('.gc-fm-content');
+        var $item = $(this).closest('.gc-fm-tree-item');
+        var $fileManager = $(this).closest('.gc-file-manager');
+        var $container = $fileManager.find('.gc-fm-content');
         var path = $item.data('path');
-        if (path !== undefined) {
+        if (path !== undefined && $container.length) {
             fmNavigateTo($container, path);
         }
     });
@@ -3043,8 +3044,11 @@
     // Refresh tree
     $(document).on('click', '.gc-fm-refresh-tree', function (e) {
         e.preventDefault();
-        var $container = $(this).closest('.gc-fm-content');
-        fmRefreshTree($container);
+        var $fileManager = $(this).closest('.gc-file-manager');
+        var $container = $fileManager.find('.gc-fm-content');
+        if ($container.length) {
+            fmRefreshTree($container);
+        }
     });
 
     // Tombol folder baru
