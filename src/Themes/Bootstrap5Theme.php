@@ -435,6 +435,13 @@ class Bootstrap5Theme implements ThemeInterface
                     }
 
                     foreach ($customActions as $action) {
+                        // Lewati jika condition callback mengembalikan false
+                        if (isset($action['condition']) && is_callable($action['condition'])) {
+                            if (!$action['condition']($row)) {
+                                continue;
+                            }
+                        }
+
                         $rowId = (string) ($row[$primaryKey] ?? '');
                         $url = str_replace('{id}', $rowId, $action['url'] ?? '#');
                         $actionLabel = $action['label'] ?? '';

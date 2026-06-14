@@ -67,7 +67,7 @@ class GroceryCrud
     /** @var array<int, string> */
     private array $actions = [];
 
-    /** @var array<int, array<string, string>> */
+    /** @var array<int, array<string, mixed>> */
     private array $customActions = [];
 
     /** @var array<string, string> */
@@ -645,15 +645,30 @@ class GroceryCrud
 
     /**
      * Menambahkan tombol aksi kustom.
+     *
+     * @param string $label    Label tombol (teks tooltip)
+     * @param string $icon     Kelas ikon Bootstrap Icons (misal: 'bi-check')
+     * @param string $url      URL aksi, gunakan {id} sebagai placeholder primary key
+     * @param string $cssClass Kelas CSS tambahan untuk tombol
+     * @param ?callable $condition Callback opsional: fn(array $row): bool —
+     *                              return true untuk menampilkan tombol, false untuk menyembunyikan.
+     *                              Menerima data baris saat ini sebagai parameter.
+     * @return $this
      */
-    public function addAction(string $label, string $icon, string $url, string $cssClass = ''): self
+    public function addAction(string $label, string $icon, string $url, string $cssClass = '', ?callable $condition = null): self
     {
-        $this->customActions[] = [
+        $action = [
             'label'    => $label,
             'icon'     => $icon,
             'url'      => $url,
             'cssClass' => $cssClass,
         ];
+
+        if ($condition !== null) {
+            $action['condition'] = $condition;
+        }
+
+        $this->customActions[] = $action;
         return $this;
     }
 
