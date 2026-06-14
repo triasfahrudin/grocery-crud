@@ -1752,7 +1752,7 @@ class Bootstrap5Theme implements ThemeInterface
         $lblDownload = $lang['file_manager_download'] ?? 'Download';
         $lblPreview = $lang['file_manager_preview'] ?? 'Preview';
 
-        $html = '<div class="gc-fm-item d-flex align-items-center px-3 py-2 border-bottom' . $itemClass . $clickable . '" data-path="' . $path . '" data-name="' . $name . '" data-isdir="' . ($isDir ? '1' : '0') . '" data-ext="' . $ext . '">';
+        $html = '<div class="gc-fm-item d-flex align-items-center px-3 py-2 border-bottom ' . $itemClass . $clickable . '" data-path="' . $path . '" data-name="' . $name . '" data-isdir="' . ($isDir ? '1' : '0') . '" data-ext="' . $ext . '">';
 
         // Icon
         $html .= '<div class="gc-fm-col-icon text-center me-3 ' . $iconColor . '" style="width:24px;"><i class="bi ' . $icon . '"></i></div>';
