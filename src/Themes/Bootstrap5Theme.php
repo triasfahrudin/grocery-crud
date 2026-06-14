@@ -99,6 +99,8 @@ class Bootstrap5Theme implements ThemeInterface
         $enableInlineEditing = (bool) ($data['enableInlineEditing'] ?? false);
         $inlineEditFieldTypes = $data['inlineEditFieldTypes'] ?? [];
         $inlineFieldInfo      = $data['inlineFieldInfo'] ?? [];
+        $hasDbSettings        = (bool) ($data['hasDbSettings'] ?? false);
+        $dbSettings           = $data['dbSettings'] ?? null;
 
         // Override actions for trashed view
         if ($trashedView) {
@@ -132,7 +134,9 @@ class Bootstrap5Theme implements ThemeInterface
         $lblNext        = $lang['next'] ?? 'Next';
 
         // Header
-        $html = '<div class="grocery-crud-wrapper" id="' . $crudId . '">';
+        $html = '<div class="grocery-crud-wrapper" id="' . $crudId . '"'
+            . ($hasDbSettings ? ' data-db-settings="' . htmlspecialchars(json_encode($dbSettings)) . '"' : '')
+            . '>';
         $html .= '<div class="card shadow-sm mb-4">';
         $html .= '<div class="card-header bg-white d-flex justify-content-between align-items-center py-3">';
         $html .= '<h5 class="mb-0 fw-bold"><i class="bi bi-table me-2"></i>' . $subject . '</h5>';

@@ -80,6 +80,8 @@ class TableRenderer
             'enableFileManager'   => $crudData['enableFileManager'] ?? false,
             'enableClone'          => $crudData['enableClone'] ?? false,
             'cloneExcludeFields'   => $crudData['cloneExcludeFields'] ?? [],
+            'dbSettings'           => $crudData['dbSettings'] ?? null,
+            'hasDbSettings'        => $crudData['hasDbSettings'] ?? false,
         ];
     }
 

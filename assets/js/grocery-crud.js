@@ -260,15 +260,19 @@
                         });
                     }
 
-                    // Pulihkan urutan kolom yang disimpan dari localStorage
+                    // Pulihkan urutan kolom yang disimpan (DB settings > localStorage)
                     try {
-                        var url = window.location.href;
-                        var raw = localStorage.getItem('gc_settings_' + btoa(url));
-                        if (raw) {
-                            var settings = JSON.parse(raw);
-                            if (settings.columnOrder && settings.columnOrder.length) {
-                                applyColumnOrder($newWrapper, settings.columnOrder);
-                            }
+                        var settings = null;
+                        var dbRaw = $newWrapper.data('dbSettings');
+                        if (dbRaw) {
+                            settings = dbRaw;
+                        } else {
+                            var url = window.location.href;
+                            var raw = localStorage.getItem('gc_settings_' + btoa(url));
+                            if (raw) settings = JSON.parse(raw);
+                        }
+                        if (settings && settings.columnOrder && settings.columnOrder.length) {
+                            applyColumnOrder($newWrapper, settings.columnOrder);
                         }
                     } catch (e) {}
                     // Inisialisasi table-dragger pada tabel yang telah di-refresh
@@ -1603,6 +1607,17 @@
             });
             try {
                 localStorage.setItem('gc_settings_' + btoa(url), JSON.stringify(settings));
+
+                // Juga simpan ke server jika DB settings diaktifkan
+                if ($wrapper.data('dbSettings') !== undefined || $wrapper.attr('data-db-settings') !== undefined) {
+                    $.ajax({
+                        url: window.location.href,
+                        method: 'POST',
+                        data: { gc_action: 'save_settings', settings: JSON.stringify(settings) },
+                        dataType: 'json'
+                    });
+                }
+
                 showAlert('Settings saved.', 'success');
             } catch (e) {
                 showAlert('Could not save settings.', 'danger');
@@ -3004,7 +3019,7 @@
         bindEvents();
         initRelationPopovers();
 
-        // Muat otomatis visibilitas kolom yang disimpan dari localStorage
+        // Muat otomatis visibilitas kolom yang disimpan
         $('.grocery-crud-wrapper').each(function () {
             var $wrapper = $(this);
             var url = window.location.href;
@@ -3012,9 +3027,27 @@
                 // Inisialisasi menu kolom dari header tabel (penting untuk konsistensi)
                 populateColumnsAndFilters($wrapper);
 
-                var raw = localStorage.getItem('gc_settings_' + btoa(url));
-                if (raw) {
-                    var settings = JSON.parse(raw);
+                var settings = null;
+
+                // 1. Prioritaskan settings dari database (data-db-settings attribute)
+                var dbSettingsRaw = $wrapper.data('dbSettings');
+                if (dbSettingsRaw) {
+                    settings = dbSettingsRaw;
+                    // Simpan juga ke localStorage sebagai cache
+                    try {
+                        localStorage.setItem('gc_settings_' + btoa(url), JSON.stringify(settings));
+                    } catch (e) {}
+                }
+
+                // 2. Fallback ke localStorage
+                if (!settings) {
+                    var raw = localStorage.getItem('gc_settings_' + btoa(url));
+                    if (raw) {
+                        settings = JSON.parse(raw);
+                    }
+                }
+
+                if (settings) {
                     if (settings.columnOrder && settings.columnOrder.length) {
                         applyColumnOrder($wrapper, settings.columnOrder);
                     }

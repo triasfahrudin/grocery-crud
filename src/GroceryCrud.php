@@ -193,6 +193,12 @@ class GroceryCrud
     /** @var array<string, callable> Callback aksi kustom: label => fn(mixed $id, array $row): array{success: bool, message: string} */
     private array $actionCallbacks = [];
 
+    /** @var ?callable Callback untuk mendapatkan ID pengguna saat ini: fn(): string */
+    private $settingUserIdResolver = null;
+
+    /** @var array<string, mixed>|null Settings dari database (di-cache per request) */
+    private ?array $dbSettings = null;
+
     /** @var int Menit sebelum kunci record kedaluwarsa secara otomatis */
     private int $lockMinutes = 5;
 
@@ -697,6 +703,150 @@ class GroceryCrud
     {
         $this->actionCallbacks[$label] = $callback;
         return $this;
+    }
+
+    // ======== Pengaturan Tabel per Pengguna (Database) ========
+
+    /**
+     * Mengaktifkan penyimpanan pengaturan tabel ke database per pengguna.
+     *
+     * Pengaturan (urutan kolom, visibilitas, filter) disimpan ke tabel
+     * `gc_user_settings` di database, bukan hanya localStorage.
+     * Ini memungkinkan pengaturan tetap ada meskipun ganti browser/device.
+     *
+     * Callback harus mengembalikan string ID unik pengguna (misal: user_id dari session).
+     *
+     * Contoh:
+     *   $crud->setSettingUserId(fn() => (string) session()->get('userId'));
+     *
+     * @param callable $resolver fn(): string — mengembalikan ID pengguna saat ini
+     * @return $this
+     */
+    public function setSettingUserId(callable $resolver): self
+    {
+        $this->settingUserIdResolver = $resolver;
+        return $this;
+    }
+
+    /**
+     * Memastikan tabel gc_user_settings ada di database.
+     */
+    private function ensureSettingsTable(): void
+    {
+        $this->ensureInitialized();
+        $this->db->query("
+            CREATE TABLE IF NOT EXISTS gc_user_settings (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id VARCHAR(100) NOT NULL,
+                table_name VARCHAR(100) NOT NULL,
+                settings JSON NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                UNIQUE KEY uk_user_table (user_id, table_name)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+    }
+
+    /**
+     * AJAX: Simpan pengaturan tabel ke database.
+     */
+    public function ajaxSaveSettings(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->settingUserIdResolver === null) {
+            return $this->jsonResponse(false, ['message' => 'Settings user ID not configured.']);
+        }
+
+        $userId = call_user_func($this->settingUserIdResolver);
+        if (empty($userId)) {
+            return $this->jsonResponse(false, ['message' => 'User not authenticated.']);
+        }
+
+        $request = Services::request();
+        $settings = $request->getPost('settings') ?? '{}';
+
+        try {
+            $this->ensureSettingsTable();
+
+            $this->db->query(
+                "INSERT INTO gc_user_settings (user_id, table_name, settings)
+                 VALUES (?, ?, ?)
+                 ON DUPLICATE KEY UPDATE settings = VALUES(settings), updated_at = NOW()",
+                [$userId, $this->table, $settings]
+            );
+
+            return $this->jsonResponse(true, ['message' => 'Settings saved.']);
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(false, ['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * AJAX: Muat pengaturan tabel dari database.
+     */
+    public function ajaxLoadSettings(): ResponseInterface
+    {
+        $this->ensureInitialized();
+
+        if ($this->settingUserIdResolver === null) {
+            return $this->jsonResponse(false, ['message' => 'Settings user ID not configured.']);
+        }
+
+        $userId = call_user_func($this->settingUserIdResolver);
+        if (empty($userId)) {
+            return $this->jsonResponse(false, ['message' => 'User not authenticated.']);
+        }
+
+        try {
+            $this->ensureSettingsTable();
+
+            $row = $this->db->query(
+                "SELECT settings FROM gc_user_settings WHERE user_id = ? AND table_name = ?",
+                [$userId, $this->table]
+            )->getRowArray();
+
+            if ($row === null) {
+                return $this->jsonResponse(true, ['settings' => null]);
+            }
+
+            return $this->jsonResponse(true, ['settings' => json_decode($row['settings'], true)]);
+        } catch (\Throwable $e) {
+            return $this->jsonResponse(false, ['message' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Muat pengaturan dari database (di-cache, untuk inject ke page data).
+     */
+    private function loadDbSettings(): ?array
+    {
+        if ($this->dbSettings !== null) {
+            return $this->dbSettings;
+        }
+
+        if ($this->settingUserIdResolver === null) {
+            return null;
+        }
+
+        $userId = call_user_func($this->settingUserIdResolver);
+        if (empty($userId)) {
+            return null;
+        }
+
+        try {
+            $this->ensureSettingsTable();
+
+            $row = $this->db->query(
+                "SELECT settings FROM gc_user_settings WHERE user_id = ? AND table_name = ?",
+                [$userId, $this->table]
+            )->getRowArray();
+
+            $this->dbSettings = $row ? json_decode($row['settings'], true) : null;
+            return $this->dbSettings;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     // ======== Hapus Lunak (Soft Delete) ========
@@ -3185,6 +3335,8 @@ class GroceryCrud
             'enableFileManager'   => $this->fileManagerExplicitlyEnabled,
             'enableClone'          => $this->enableClone,
             'cloneExcludeFields'   => $this->cloneExcludeFields,
+            'dbSettings'           => $this->loadDbSettings(),
+            'hasDbSettings'        => $this->settingUserIdResolver !== null,
         ]);
     }
 
@@ -3606,7 +3758,7 @@ class GroceryCrud
             'delete', 'batch_action', 'restore'      => 'delete',
             'export', 'print_view'                => 'export',
             'import_form', 'import_upload', 'import_execute', 'import_template' => 'import',
-            'list', 'trash_list', 'sub_grid'          => 'view',
+            'list', 'trash_list', 'sub_grid', 'load_settings', 'save_settings' => 'view',
             'file_manager', 'file_manager_list', 'file_manager_upload',
             'file_manager_create_folder', 'file_manager_rename',
             'file_manager_delete', 'file_manager_tree',
@@ -3653,6 +3805,8 @@ class GroceryCrud
             'file_manager_file_info' => $this->ajaxFileManagerFileInfo(),
             'batch_action'  => $this->ajaxBatchAction(),
             'custom_action' => $this->ajaxCustomAction($this->getRequestId()),
+            'save_settings' => $this->ajaxSaveSettings(),
+            'load_settings' => $this->ajaxLoadSettings(),
             'clone'         => $this->ajaxClone($this->getRequestId()),
             'restore'       => $this->ajaxRestore($this->getRequestId()),
             'trash_list'    => $this->ajaxTrashList(),
