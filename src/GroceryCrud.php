@@ -575,6 +575,14 @@ class GroceryCrud
     {
         $this->uploadFieldConfigs[$field] = $config;
         $this->uploadManager->configureField($field, $config);
+
+        // Otomatis aktifkan File Manager jika belum diaktifkan, agar tombol
+        // "Pilih dari File Manager" di form upload bisa berfungsi tanpa perlu
+        // pengguna memanggil setFileManager() secara manual.
+        if ($this->fileManager === null) {
+            $this->fileManager = new FileManager($this->config);
+        }
+
         return $this;
     }
 
