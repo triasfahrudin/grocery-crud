@@ -3005,6 +3005,7 @@ class GroceryCrud
             'enableActivityLogViewer' => $this->enableActivityLogViewer && $this->activityLog !== null,
             'calendarField'       => $this->calendarField,
             'calendarTitleField'  => $this->calendarTitleField,
+            'enableFileManager'   => $this->fileManager !== null,
         ]);
     }
 

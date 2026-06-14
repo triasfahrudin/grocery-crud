@@ -141,6 +141,14 @@ class Bootstrap5Theme implements ThemeInterface
             $html .= '</button>';
         }
 
+        // File Manager button
+        $enableFileManager = (bool) ($data['enableFileManager'] ?? false);
+        if ($enableFileManager) {
+            $html .= '<button type="button" class="btn btn-outline-secondary btn-sm gc-btn-file-manager" title="' . ($lang['file_manager'] ?? 'File Manager') . '">';
+            $html .= '<i class="bi bi-folder2-open me-1"></i>' . ($lang['file_manager'] ?? 'File Manager');
+            $html .= '</button>';
+        }
+
         // Export buttons
         if ($enableExport && !empty($exportFormats)) {
             $html .= '<div class="dropdown me-2">';
